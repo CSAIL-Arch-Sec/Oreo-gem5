@@ -285,6 +285,22 @@ BaseSimpleCPU::setupFetchRequest(const RequestPtr &req)
     Addr instAddr = thread->pcState().instAddr();
     Addr fetchPC = (instAddr & decoder->pcMask()) + t_info.fetchOffset;
 
+    // [Shixin] Apply protect KASLR mask if enabled
+    protectKaslrCheck(fetchPC, TextFetch);
+    fetchPC = protectKaslrMask(fetchPC);
+
+    // Debug output
+    static size_t i, j = 0;
+    if (i++ < 10) {
+        printf("@@@ Fetch: Inst PC %lx, Fetch PC %lx, decoder->pcMask() %lx, t_info.fetchOffset %lx\n",
+               instAddr, fetchPC, decoder->pcMask(), t_info.fetchOffset);
+    }
+    if (instAddr >= 0xffffffff80000000 && j++ < 100) {
+        printf("@@@ Fetch: Inst PC %lx, Fetch PC %lx, decoder->pcMask() %lx, t_info.fetchOffset %lx\n",
+               instAddr, fetchPC, decoder->pcMask(), t_info.fetchOffset);
+    }
+    // [Shixin]
+
     // set up memory request for instruction fetch
     DPRINTF(Fetch, "Fetch: Inst PC:%08p, Fetch PC:%08p\n", instAddr, fetchPC);
 
@@ -302,6 +318,9 @@ BaseSimpleCPU::serviceInstCountEvents()
 void
 BaseSimpleCPU::preExecute()
 {
+    // [Shixin] Counter to limit debug print size
+    static size_t j = 0;
+
     SimpleExecContext &t_info = *threadInfo[curThread];
     SimpleThread* thread = t_info.thread;
 
@@ -344,6 +363,10 @@ BaseSimpleCPU::preExecute()
         //If we decoded an instruction and it's microcoded, start pulling
         //out micro ops
         if (instPtr && instPtr->isMacroop()) {
+//            if (pc_state.instAddr() > 0xffffffff80000000 && j++ < 200) {
+//                printf("@@@ pc = %lx micro pc = %lx macroop = %s", pc_state.instAddr(), pc_state.microPC(), instPtr->getName().c_str());
+//                instPtr->printMicroop();
+//            }
             curMacroStaticInst = instPtr;
             curStaticInst =
                 curMacroStaticInst->fetchMicroop(pc_state.microPC());
@@ -352,7 +375,14 @@ BaseSimpleCPU::preExecute()
         }
     } else {
         //Read the next micro op from the macro op
+//        if (pc_state.instAddr() > 0xffffffff80000000 && j++ < 200) {
+//            printf("@@@ pc = %lx micro pc = %lx macroop = %s", pc_state.instAddr(), pc_state.microPC(), curMacroStaticInst->getName().c_str());
+//            curMacroStaticInst->printMicroop();
+//        }
         curStaticInst = curMacroStaticInst->fetchMicroop(pc_state.microPC());
+//        if (pc_state.instAddr() > 0xffffffff80000000 && j++ < 200) {
+//            printf("@@@ current microop = %s\n", curStaticInst->getName().c_str());
+//        }
     }
 
     //If we decoded an instruction this "tick", record information about it.

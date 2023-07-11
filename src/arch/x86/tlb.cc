@@ -433,6 +433,12 @@ TLB::translate(const RequestPtr &req,
                     stats.wrMisses++;
                 }
                 if (FullSystem) {
+                    // [Shixin] Debug output
+//                    static int i = 0;
+//                    if (i++ == 0) {
+//                        printf("@@@ In full system, start page table walk\n",
+//                               vaddr, tc->pcState().instAddr());
+//                    }
                     Fault fault = walker->start(tc, translation, req, mode);
                     if (timing || fault != NoFault) {
                         // This gets ignored in atomic mode.

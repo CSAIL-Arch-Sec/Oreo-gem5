@@ -123,12 +123,20 @@ ElfObject::ElfObject(ImageFileDataPtr ifd) : ObjectFile(ifd)
     _programHeaderCount = ehdr.e_phnum;
     _programHeaderSize = ehdr.e_phentsize;
 
+    // [Shixin] Debug output
+    printf("@@@ Entry: %lx, _programHeaderCount: %lx, _programHeaderSize: %lx\n",
+           entry, _programHeaderCount, _programHeaderSize);
+
     // Go through all the segments in the program and record them.
     for (int i = 0; i < ehdr.e_phnum; ++i) {
         GElf_Phdr phdr;
         if (gelf_getphdr(elf, i, &phdr) == 0) {
             panic("gelf_getphdr failed for segment %d.", i);
         }
+
+        // [Shixin] Debug output
+        printf("@@@ No %d phdr.p_vaddr = %lx\n", i, phdr.p_vaddr);
+
 
         if (phdr.p_type == PT_LOAD)
             handleLoadableSegment(phdr, i);

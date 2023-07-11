@@ -312,6 +312,14 @@ class SimpleExecContext : public ExecContext
         if (reg.is(InvalidRegClass))
             return 0;
         (*execContextStats.numRegReads[reg.classValue()])++;
+
+        // [Shixin] Debug output
+//        auto val = thread->getReg(reg);
+//        static int i = 0;
+//        if (val >= 0x4000000 && val < 0x6000000 || i++ < 10) {
+//            printf("@@@ getRegOperand for pc = %lx and val = %lx\n", thread->pcState().instAddr(), val);
+//        }
+
         return thread->getReg(reg);
     }
 

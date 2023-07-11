@@ -41,8 +41,10 @@ class SimpleCore(BaseCPUCore):
     SimpleCore creates a single SimObject of that type.
     """
 
+    # [Shixin] Add kaslr config
     def __init__(
-        self, cpu_type: CPUTypes, core_id: int, isa: Optional[ISA] = None
+        self, cpu_type: CPUTypes, core_id: int, isa: Optional[ISA] = None,
+            protect_kaslr: bool = False, kaslr_offset: int = 0,
     ):
 
         # If the ISA is not specified, we infer it via the `get_runtime_isa`
@@ -55,7 +57,9 @@ class SimpleCore(BaseCPUCore):
 
         super().__init__(
             core=SimpleCore.cpu_simobject_factory(
-                isa=isa, cpu_type=cpu_type, core_id=core_id
+                isa=isa, cpu_type=cpu_type, core_id=core_id,
+                protect_kaslr=protect_kaslr,
+                kaslr_offset=kaslr_offset,
             ),
             isa=isa,
         )
@@ -66,7 +70,9 @@ class SimpleCore(BaseCPUCore):
         return self._cpu_type
 
     @classmethod
-    def cpu_simobject_factory(cls, cpu_type: CPUTypes, isa: ISA, core_id: int):
+    def cpu_simobject_factory(cls, cpu_type: CPUTypes, isa: ISA, core_id: int,
+                              protect_kaslr: bool = False,
+                              kaslr_offset: int = 0):
         """
         A factory used to return the SimObject core object given the cpu type,
         and ISA target. An exception will be thrown if there is an
@@ -95,6 +101,7 @@ class SimpleCore(BaseCPUCore):
             CPUTypes.TIMING: "TimingSimpleCPU",
             CPUTypes.KVM: "KvmCPU",
             CPUTypes.MINOR: "MinorCPU",
+            CPUTypes.NONCACHING: "NonCachingSimpleCPU",
         }
 
         if isa not in _isa_string_map:
@@ -144,6 +151,21 @@ class SimpleCore(BaseCPUCore):
                 f"Cannot find CPU type '{cpu_type.name}' for '{isa.name}' "
                 "ISA. Please ensure you have compiled the correct version of "
                 "gem5."
+            )
+
+        # [Shixin] Add kaslr config
+        from m5.objects.BaseSimpleCPU import BaseSimpleCPU
+
+        if protect_kaslr:
+            print("@@@ In simple_core enable protect_kaslr")
+        else:
+            print("@@@ In simple_core disable protect_kaslr")
+
+        if issubclass(to_return_cls, BaseSimpleCPU):
+            return to_return_cls(
+                cpu_id=core_id,
+                protectKaslr=protect_kaslr,
+                kaslrOffset=kaslr_offset,
             )
 
         return to_return_cls(cpu_id=core_id)

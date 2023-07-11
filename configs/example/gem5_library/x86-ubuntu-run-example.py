@@ -1,3 +1,5 @@
+import argparse
+
 from gem5.utils.requires import requires
 from gem5.components.boards.x86_board import X86Board
 from gem5.components.memory.single_channel import SingleChannelDDR3_1600
@@ -5,10 +7,59 @@ from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import
 from gem5.components.processors.simple_switchable_processor import SimpleSwitchableProcessor
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.isas import ISA
-from gem5.components.processors.cpu_types import CPUTypes
+from gem5.components.processors.cpu_types import CPUTypes, get_cpu_type_from_str
 from gem5.resources.resource import Resource, CustomResource, CustomDiskImageResource
 from gem5.simulate.simulator import Simulator
 from gem5.simulate.exit_event import ExitEvent
+
+
+parser = argparse.ArgumentParser(
+    description="An example configuration script to run the x86 ubuntu FS simulation."
+)
+
+parser.add_argument(
+    "--protect-kaslr",
+    action="store_true",
+    help="Whether to protect KASLR.",
+)
+
+parser.add_argument(
+    "--kaslr-offset",
+    type=int,
+    default=0xc000000,
+    help="KASLR offset.",
+)
+
+# Possible options:
+#   atomic, kvm, o3, timing, minor, noncaching
+parser.add_argument(
+    "--starting-core",
+    type=str,
+    default="noncaching",
+    help="Starting core type.",
+)
+parser.add_argument(
+    "--switch-core",
+    type=str,
+    default="noncaching",
+    help="Switch core type.",
+)
+
+
+args = parser.parse_args()
+
+if args.protect_kaslr:
+    protect_kaslr = True
+else:
+    protect_kaslr = False
+
+kaslr_offset = args.kaslr_offset
+print("@@@ KASLR offset:", kaslr_offset)
+
+starting_core = get_cpu_type_from_str(args.starting_core)
+switch_core = get_cpu_type_from_str(args.switch_core)
+print(starting_core)
+print(switch_core)
 
 # This runs a check to ensure the gem5 binary is compiled to X86 and supports
 # the MESI Two Level coherence protocol.
@@ -42,9 +93,12 @@ memory = SingleChannelDDR3_1600("2GiB")
 # we start with KVM cores to simulate the OS boot, then switch to the Timing
 # cores for the command we wish to run after boot.
 processor = SimpleSwitchableProcessor(
-    starting_core_type=CPUTypes.KVM,
-    switch_core_type=CPUTypes.O3,
+    # starting_core_type=CPUTypes.NONCACHING,
+    starting_core_type=starting_core,
+    switch_core_type=switch_core,
     num_cores=2,
+    protect_kaslr=protect_kaslr,
+    kaslr_offset=kaslr_offset,
 )
 
 # Here we setup the board. The X86Board allows for Full-System X86 simulations.
@@ -64,22 +118,42 @@ board = X86Board(
 command = "m5 exit;" \
           + "echo 'This is running on O3 CPU cores.';" \
           + "head /proc/kallsyms;" \
-          + "sleep 1;" \
+          + "sleep 1; m5 checkpoint; ls;" \
           + "m5 exit;"
+
+# command = "m5 checkpoint;" \
+#           + "m5 exit;" \
+#           + "echo 'This is running on O3 CPU cores.';" \
+#           + "head /proc/kallsyms;" \
+#           + "sleep 1;" \
+#           + "m5 exit;"
+
+# command = "m5 exit;" \
+#           + "echo 'This is running on NonCaching CPU cores.';" \
+#           + "ls;" \
+#           + "m5 checkpoint;" \
+#           + "ls;" \
+#           + "sleep 1;" \
+#           + "m5 exit;"
 
 # Here we set the Full System workload.
 # The `set_workload` function for the X86Board takes a kernel, a disk image,
 # and, optionally, a the contents of the "readfile". In the case of the
 # "x86-ubuntu-18.04-img", a file to be executed as a script after booting the
 # system.
+if protect_kaslr:
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect"
+else:
+    kernel_local_path = "/root/linux/vmlinux_gem5"
 board.set_kernel_disk_workload(
     kernel=
     # Resource("x86-linux-kernel-5.4.49",),
     CustomResource(
-        local_path="/root/linux/vmlinux",
+        local_path=kernel_local_path,
     ),
     disk_image=Resource("x86-ubuntu-18.04-img"),
     readfile_contents=command,
+    # TODO: Set checkpoint here
 )
 
 simulator = Simulator(

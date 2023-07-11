@@ -109,6 +109,12 @@ static Fault
 readMemAtomic(ExecContext *xc, trace::InstRecord *traceData, Addr addr,
               uint64_t &mem, unsigned dataSize, Request::Flags flags)
 {
+    // [Shixin]
+    // NOTE: Kernel text is readable, so our defense also need to handle load address.
+//    static int i = 0;
+//    if (i++ < 100) {
+//        printf("@@@ 1 readMemAtomic with addr = %lx\n", addr);
+//    }
     memset(&mem, 0, sizeof(mem));
     const std::vector<bool> byte_enable(dataSize, true);
     Fault fault = xc->readMem(addr, (uint8_t *)&mem, dataSize,
@@ -120,6 +126,12 @@ readMemAtomic(ExecContext *xc, trace::InstRecord *traceData, Addr addr,
         mem = letoh(mem);
         if (traceData)
             traceData->setData(mem);
+    } else {
+        // [Shixin] Debug output
+//        static size_t j = 0;
+//        if (j++ < 10) {
+//            printf("@@@ 1 Fault when readMemAtomic with addr = %lx\n", addr);
+//        }
     }
     return fault;
 }
@@ -149,6 +161,11 @@ readMemAtomic(ExecContext *xc, trace::InstRecord *traceData, Addr addr,
               std::array<uint64_t, N> &mem, unsigned dataSize,
               unsigned flags)
 {
+    // [Shixin]
+//    static int i = 0;
+//    if (i++ < 100) {
+//        printf("@@@ 2 readMemAtomic with addr = %lx\n", addr);
+//    }
     Fault fault = NoFault;
 
     switch (dataSize) {
@@ -163,6 +180,13 @@ readMemAtomic(ExecContext *xc, trace::InstRecord *traceData, Addr addr,
     }
     if (fault == NoFault && traceData)
         traceData->setData(mem[0]);
+    // [Shixin]
+//    if (fault != NoFault) {
+//        static int j = 0;
+//        if (j++ < 10) {
+//            printf("@@@ 2 Fault when readMemAtomic with addr = %lx\n", addr);
+//        }
+//    }
     return fault;
 }
 

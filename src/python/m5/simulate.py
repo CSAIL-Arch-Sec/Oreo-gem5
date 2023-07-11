@@ -356,6 +356,8 @@ def switchCpus(system, cpuList, verbose=True):
     new_cpus = [new_cpu for old_cpu, new_cpu in cpuList]
     old_cpu_set = set(old_cpus)
     memory_mode_name = new_cpus[0].memory_mode()
+    print("@@@ Old cpu memory mode", old_cpus[0].memory_mode())
+    print("@@@ New cpu memory mode", new_cpus[0].memory_mode())
     for old_cpu, new_cpu in cpuList:
         if not isinstance(old_cpu, objects.BaseCPU):
             raise TypeError("%s is not of type BaseCPU" % old_cpu)

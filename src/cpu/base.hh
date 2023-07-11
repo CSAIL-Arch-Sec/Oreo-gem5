@@ -103,6 +103,51 @@ class BaseCPU : public ClockedObject
 {
   protected:
 
+    // [Shixin] Protect KASLR
+    bool protectKaslr;
+    const Addr addrMask = 0xffffffffc1ffffff;
+    const Addr textMin = 0xffffffff80000000;
+    const Addr textEnd = 0xffffffff82000000;
+    const Addr textMax = 0xffffffffc0000000;
+    Addr kaslrOffset;
+
+    Addr protectKaslrMask(Addr addr) {
+        // This function only apply mask to address in KASLR randomization
+        //   region when protect KASLR is enabled.
+        if (protectKaslr && addr >= textMin && addr < textMax) {
+            return addr & addrMask;
+        }
+        return addr;
+    }
+
+    bool protectKaslrValid(Addr addr) {
+//        if (!protectKaslr) {
+//            return true;
+//        }
+        // This function is only used to check when protect KASLR is enabled,
+        //   whether address in the KASLR randomization region is valid
+        if (addr >= textMin && addr < textMax) {
+            return (addr >= textMin + kaslrOffset && addr < textEnd + kaslrOffset);
+        }
+        return true;
+    }
+
+    enum TextMemAccessType {
+        TextFetch,
+        TextLoad,
+        TextStore,
+        TextAmo,
+        NumTextMemAccessType,
+    };
+
+    virtual void protectKaslrCheck(Addr addr, TextMemAccessType t) { };
+    virtual void protectKaslrAssert() { };
+
+    const char *textMemAccessTypeStr[NumTextMemAccessType] = {
+            "Fetch", "Load", "Store", "Amo"};
+
+    // [Shixin]
+
     /// Instruction count used for SPARC misc register
     /// @todo unify this with the counters that cpus individually keep
     Tick instCnt;

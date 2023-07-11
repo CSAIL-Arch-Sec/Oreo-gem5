@@ -80,7 +80,9 @@ class KernelWorkload(Workload):
         "Mask to apply to kernel addresses. If zero, "
         "auto-calculated to be the most restrictive.",
     )
-    load_addr_offset = Param.UInt64(0, "Address to offset the kernel with")
+    # [Shixin] Remove Delta from kernel physical address
+    # TODO: Config this in running script instead!!!
+    load_addr_offset = Param.UInt64(0xFFFFFFFFF5000000, "Address to offset the kernel with")
 
     command_line = Param.String("a", "boot flags to pass to the kernel")
 

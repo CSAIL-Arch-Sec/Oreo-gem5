@@ -383,7 +383,11 @@ AtomicSimpleCPU::readMem(Addr addr, uint8_t *data, unsigned size,
     Fault fault = NoFault;
 
     while (1) {
-        predicate = genMemFragmentRequest(req, frag_addr, size, flags,
+        // [Shixin] Protect KASLR: mask address in KASLR region
+        protectKaslrCheck(frag_addr, TextLoad);
+        Addr mask_addr = protectKaslrMask(frag_addr);
+
+        predicate = genMemFragmentRequest(req, mask_addr, size, flags,
                                           byte_enable, frag_size, size_left);
 
         // translate to physical address
@@ -470,7 +474,11 @@ AtomicSimpleCPU::writeMem(uint8_t *data, unsigned size, Addr addr,
     Fault fault = NoFault;
 
     while (1) {
-        predicate = genMemFragmentRequest(req, frag_addr, size, flags,
+        // [Shixin] Protect KASLR: mask address in KASLR region
+        protectKaslrCheck(frag_addr, TextStore);
+        Addr mask_addr = protectKaslrMask(frag_addr);
+
+        predicate = genMemFragmentRequest(req, mask_addr, size, flags,
                                           byte_enable, frag_size, size_left);
 
         // translate to physical address
@@ -574,8 +582,12 @@ AtomicSimpleCPU::amoMem(Addr addr, uint8_t* data, unsigned size,
 
     dcache_latency = 0;
 
+    // [Shixin] Protect KASLR: mask address in KASLR region
+    protectKaslrCheck(addr, TextAmo);
+    Addr mask_addr = protectKaslrMask(addr);
+
     req->taskId(taskId());
-    req->setVirt(addr, size, flags, dataRequestorId(),
+    req->setVirt(mask_addr, size, flags, dataRequestorId(),
                  thread->pcState().instAddr(), std::move(amo_op));
 
     // translate to physical address
@@ -656,6 +668,9 @@ AtomicSimpleCPU::tick()
 
         bool needToFetch = !isRomMicroPC(pc.microPC()) && !curMacroStaticInst;
         if (needToFetch) {
+            // [Shixin] Protect KASLR: reset error record for the new inst fetch and execution
+            resetErrorRecord();
+
             ifetch_req->taskId(taskId());
             setupFetchRequest(ifetch_req);
             fault = thread->mmu->translateAtomic(ifetch_req, thread->getTC(),
@@ -685,10 +700,24 @@ AtomicSimpleCPU::tick()
             Tick stall_ticks = 0;
             if (curStaticInst) {
                 fault = curStaticInst->execute(&t_info, traceData);
+                // [Shixin] Counter to limit debug print size
+//                static size_t j = 0;
+//
+//                if (thread->pcState().instAddr() > 0xffffffff80000000 && k++ < 200) {
+//                    printf("@@@ execute microop %s ", curStaticInst->getName().c_str());
+//                    if (fault == NoFault) {
+//                        printf("with no fault\n");
+//                    } else {
+//                        printf("with fault\n");
+//                    }
+//                }
 
                 // keep an instruction count
                 if (fault == NoFault) {
                     countInst();
+//                    if (thread->pcState().instAddr() > 0xffffffff80000000 && k++ < 200) {
+//                        printf("@@@ commit pc %lx inst %s\n", thread->pcState().instAddr(), curStaticInst->getName().c_str());
+//                    }
                     ppCommit->notify(std::make_pair(thread, curStaticInst));
                 } else if (traceData) {
                     traceFault();
@@ -726,6 +755,13 @@ AtomicSimpleCPU::tick()
             }
 
         }
+
+        // [Shixin] Protect KASLR: panic on incorrect access of address
+        //   in KASLR region at "commit time" (when execution of all microops is finished)
+        if (curStaticInst && curStaticInst->isLastMicroop()) {
+            protectKaslrAssert();
+        }
+
         if (fault != NoFault || !t_info.stayAtPC)
             advancePC(fault);
     }
@@ -751,6 +787,17 @@ AtomicSimpleCPU::fetchInstMem()
     // ifetch_req is initialized to read the instruction
     // directly into the CPU object's inst field.
     pkt.dataStatic(decoder->moreBytesPtr());
+
+    // [Shixin] Counter to limit debug print size
+//    static size_t j = 0;
+//
+//    if (ifetch_req->getVaddr() > 0xffffffff80000000 && j++ < 20) {
+//        printf("Atomic get inst");
+//        for (size_t k = 0; k < ifetch_req->getSize(); k++) {
+//            printf(" %lx", *(((uint8_t *) decoder->moreBytesPtr()) + k));
+//        }
+//        printf("\n");
+//    }
 
     Tick latency = sendPacket(icachePort, &pkt);
     panic_if(pkt.isError(), "Instruction fetch (%s) failed: %s",

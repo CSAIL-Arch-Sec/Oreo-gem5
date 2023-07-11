@@ -132,6 +132,57 @@ class BaseSimpleCPU : public BaseCPU
 
     std::unique_ptr<PCStateBase> preExecuteTempPC;
 
+    // [Shixin] KASLR related check
+    bool textMemAccessError[NumTextMemAccessType] = {false, false, false, false};
+    Addr textMemAccessErrorAddr[NumTextMemAccessType] = {0, 0, 0, 0};
+
+    void resetErrorRecord() {
+//        if (!protectKaslr) {
+//            return;
+//        }
+        for (size_t i = 0; i < NumTextMemAccessType; i++) {
+            textMemAccessError[i] = false;
+            textMemAccessErrorAddr[i] = 0;
+        }
+    }
+
+    void protectKaslrCheck(Addr addr, TextMemAccessType t) override {
+//        if (!protectKaslr) {
+//            return;
+//        }
+
+//        if (t == TextStore || t == TextAmo) {
+//            printf("@@@ Warning: store/amo access in kernel text region with address %lx\n", addr);
+//        }
+        textMemAccessError[t] |= !protectKaslrValid(addr);
+        if (textMemAccessError[t]) {
+            textMemAccessErrorAddr[t] = addr;
+        }
+    }
+
+    // Panic if addr is in possible region but has incorrect Delta.
+    void protectKaslrAssert() override {
+//        if (!protectKaslr) {
+//            return;
+//        }
+        bool panic_or_not = false;
+        for (size_t i = 0; i < NumTextMemAccessType; i++) {
+            if (textMemAccessError[i]) {
+                panic_or_not = true;
+                printf("@@@ %s address %lx in KASLR region with wrong Delta\n",
+                       textMemAccessTypeStr[i], textMemAccessErrorAddr[i]);
+            }
+        }
+        if (panic_or_not) {
+            panic("@@@ FAULT: Invalid mem access in KASLR region with wrong Delta\n");
+//            SimpleExecContext &t_info = *threadInfo[curThread];
+//            SimpleThread* thread = t_info.thread;
+//            Addr pc = thread->pcState().instAddr();
+//            panic("@@@ FAULT: pc %lx Invalid mem access in KASLR region with wrong Delta\n", pc);
+        }
+    }
+    // [Shixin]
+
   public:
     void checkForInterrupts();
     void setupFetchRequest(const RequestPtr &req);

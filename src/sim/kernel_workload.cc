@@ -53,6 +53,10 @@ KernelWorkload::KernelWorkload(const Params &p) : Workload(p),
         _start = image.minAddr();
         _end = image.maxAddr();
 
+        // [Shixin] Debug output
+        printf("@@@ _start = %lx, _end = %lx\n", _start, _end);
+        printf("@@@ _loadAddrOffset = %lx\n", _loadAddrOffset);
+
         // If load_addr_mask is set to 0x0, then calculate the smallest mask to
         // cover all kernel addresses so gem5 can relocate the kernel to a new
         // offset.
@@ -113,6 +117,12 @@ KernelWorkload::initState()
         }
         // Load program sections into memory
         image.write(phys_mem);
+
+        // [Shixin] Debug output
+        printf("@@@ Kernel start = %#x\n", image.minAddr());
+        printf("@@@ Kernel end   = %#x\n", image.maxAddr());
+        printf("@@@ Kernel entry = %#x\n", mapper(kernelObj->entryPoint()));
+        printf("@@@ Kernel loaded...\n");
 
         DPRINTF(Loader, "Kernel start = %#x\n", _start);
         DPRINTF(Loader, "Kernel end   = %#x\n", _end);

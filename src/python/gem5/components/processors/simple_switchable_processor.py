@@ -45,12 +45,15 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
     fast/detailed CPU setups.
     """
 
+    # [Shixin] Add kaslr config
     def __init__(
         self,
         starting_core_type: CPUTypes,
         switch_core_type: CPUTypes,
         num_cores: int,
         isa: Optional[ISA] = None,
+        protect_kaslr: bool = False,
+        kaslr_offset: int = 0,
     ) -> None:
         """
         :param starting_core_type: The CPU type for each type in the processor
@@ -83,14 +86,19 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
         self._current_is_start = True
 
         self._mem_mode = get_mem_mode(starting_core_type)
+        print("@@@ Mem mode is", self._mem_mode)
 
         switchable_cores = {
             self._start_key: [
-                SimpleCore(cpu_type=starting_core_type, core_id=i, isa=isa)
+                SimpleCore(cpu_type=starting_core_type, core_id=i, isa=isa,
+                           protect_kaslr=protect_kaslr,
+                           kaslr_offset=kaslr_offset)
                 for i in range(num_cores)
             ],
             self._switch_key: [
-                SimpleCore(cpu_type=switch_core_type, core_id=i, isa=isa)
+                SimpleCore(cpu_type=switch_core_type, core_id=i, isa=isa,
+                           protect_kaslr=protect_kaslr,
+                           kaslr_offset=kaslr_offset)
                 for i in range(num_cores)
             ],
         }

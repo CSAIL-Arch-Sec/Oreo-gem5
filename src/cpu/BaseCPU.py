@@ -155,6 +155,11 @@ class BaseCPU(ClockedObject):
 
     tracer = Param.InstTracer(default_tracer, "Instruction tracer")
 
+    # [Shixin] Protect KASLR
+    protectKaslr = Param.Bool(False, "Protect KASLR or not")
+    kaslrOffset = Param.UInt64(0, "KASLR offset")
+    # [Shixin]
+
     icache_port = RequestPort("Instruction Port")
     dcache_port = RequestPort("Data Port")
     _cached_ports = ["icache_port", "dcache_port"]

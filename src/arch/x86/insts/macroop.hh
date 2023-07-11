@@ -84,6 +84,14 @@ class MacroopBase : public X86StaticInst
             return microops[microPC];
     }
 
+    // [Shixin] Function used for debug output
+    void printMicroop() const override {
+        for (int i = 0; i < numMicroops; i++) {
+            printf(" %s", microops[i]->getName().c_str());
+        }
+        printf("\n");
+    }
+
     std::string
     generateDisassembly(Addr pc,
                         const loader::SymbolTable *symtab) const override

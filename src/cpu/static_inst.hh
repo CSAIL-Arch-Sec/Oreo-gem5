@@ -313,6 +313,11 @@ class StaticInst : public RefCounted, public StaticInstFlags
      */
     virtual StaticInstPtr fetchMicroop(MicroPC upc) const;
 
+    // [Shixin] Function for debug output
+    virtual void printMicroop() const {
+        printf(" nothing to print ");
+    };
+
     /**
      * Return the target address for a PC-relative branch.
      * Invalid if not a PC-relative branch (i.e. isDirectCtrl()

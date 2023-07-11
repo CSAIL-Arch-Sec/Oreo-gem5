@@ -130,6 +130,9 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
       _dataRequestorId(p.system->getRequestorId(this, "data")),
       _taskId(context_switch_task_id::Unknown), _pid(invldPid),
       _switchedOut(p.switched_out), _cacheLineSize(p.system->cacheLineSize()),
+      // [Shixin] Config whether to protect kaslr
+      protectKaslr(p.protectKaslr),
+      kaslrOffset(p.kaslrOffset),
       interrupts(p.interrupts), numThreads(p.numThreads), system(p.system),
       previousCycle(0), previousState(CPU_STATE_SLEEP),
       functionTraceStream(nullptr), currentFunctionStart(0),

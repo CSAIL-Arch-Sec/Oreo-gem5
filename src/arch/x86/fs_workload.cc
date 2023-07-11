@@ -317,7 +317,9 @@ FsWorkload::initState()
     cr0.pg = 1;
     tc->setMiscReg(misc_reg::Cr0, cr0);
 
-    tc->pcState(kernelObj->entryPoint());
+    // [Shixin] Fix gem5 original bug
+    // NOTE: load offset should be applied in the beginning!
+    tc->pcState((kernelObj->entryPoint() & loadAddrMask()) + loadAddrOffset());
 
     // We should now be in long mode. Yay!
 
