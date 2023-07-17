@@ -514,6 +514,7 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
     bool predict_taken;
 
     if (!inst->isControl()) {
+        // Update next_pc
         inst->staticInst->advancePC(next_pc);
         inst->setPredTarg(next_pc);
         inst->setPredTaken(false);
@@ -521,6 +522,8 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
     }
 
     ThreadID tid = inst->threadNumber;
+    // Update next_pc based on prediction result
+    // TODO: Should use a masked pc here!
     predict_taken = branchPred->predict(inst->staticInst, inst->seqNum,
                                         next_pc, tid);
 
@@ -552,6 +555,13 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
 bool
 Fetch::fetchCacheLine(Addr vaddr, ThreadID tid, Addr pc)
 {
+    // [Shixin] Add mask before preforming cache access
+    static size_t i = 0;
+    if (vaddr > 0xffffffff80000000 && i++ < 100) {
+        printf("@@@ Fetch virtual address %lx (masked: %lx)\n", vaddr, cpu->protectKaslrMask(vaddr));
+    }
+    vaddr = cpu->protectKaslrMask(vaddr);
+
     Fault fault = NoFault;
 
     assert(!cpu->switchedOut());
@@ -620,6 +630,10 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
 
     // If translation was successful, attempt to read the icache block.
     if (fault == NoFault) {
+        static size_t i = 0;
+        if (mem_req->getVaddr() > 0xffffffff80000000 && i++ < 100) {
+            printf("@@@ Fetch Phy addr %lx\n", mem_req->getPaddr());
+        }
         // Check that we're not going off into random memory
         // If we have, just wait around for commit to squash something and put
         // us on the right track
@@ -635,6 +649,10 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
         PacketPtr data_pkt = new Packet(mem_req, MemCmd::ReadReq);
         data_pkt->dataDynamic(new uint8_t[fetchBufferSize]);
 
+        // [Shixin] Note: We have fetchBufferBlockPC = mem_req->getVaddr(), so
+        //            fetchBufferPC[tid] is using masked PC. Therefore, in our
+        //            implementation, we should apply mask when compare with it
+        //            or use it to calculate offset.
         fetchBufferPC[tid] = fetchBufferBlockPC;
         fetchBufferValid[tid] = false;
         DPRINTF(Fetch, "Fetch: Doing instruction read.\n");
@@ -662,6 +680,10 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
             ppFetchRequestSent->notify(mem_req);
         }
     } else {
+        static size_t i = 0;
+        if (mem_req->getVaddr() > 0xffffffff80000000 && i++ < 100) {
+            printf("@@@ Vaddr %lx translation error\n", mem_req->getVaddr());
+        }
         // Don't send an instruction to decode if we can't handle it.
         if (!(numInst < fetchWidth) ||
                 !(fetchQueue[tid].size() < fetchQueueSize)) {
@@ -1130,6 +1152,12 @@ Fetch::fetch(bool &status_change)
 
         fetchStatus[tid] = Running;
         status_change = true;
+
+        static size_t i = 0;
+        if (fetchAddr > 0xffffffff80000000 && i++ < 100) {
+            printf("@@@ Fetch fetchAddr %lx is complete\n", fetchAddr);
+        }
+
     } else if (fetchStatus[tid] == Running) {
         // Align the fetch PC so its at the start of a fetch buffer segment.
         Addr fetchBufferBlockPC = fetchBufferAlignPC(fetchAddr);
@@ -1138,7 +1166,9 @@ Fetch::fetch(bool &status_change)
         // to the next cache block, AND we have no remaining ucode
         // from a macro-op, then start fetch from icache.
         if (!(fetchBufferValid[tid] &&
-                    fetchBufferBlockPC == fetchBufferPC[tid]) && !inRom &&
+                // [Shixin] Apply mask before comparison
+                cpu->protectKaslrMask(fetchBufferBlockPC) == fetchBufferPC[tid]) &&
+                !inRom &&
                 !macroop[tid]) {
             DPRINTF(Fetch, "[tid:%i] Attempting to translate and read "
                     "instruction, starting at PC %s.\n", tid, this_pc);
@@ -1192,8 +1222,10 @@ Fetch::fetch(bool &status_change)
     // Need to halt fetch if quiesce instruction detected
     bool quiesce = false;
 
+    // instSize = 8
     const unsigned numInsts = fetchBufferSize / instSize;
-    unsigned blkOffset = (fetchAddr - fetchBufferPC[tid]) / instSize;
+    // [Shixin] Apply mask before calculate offset
+    unsigned blkOffset = (cpu->protectKaslrMask(fetchAddr) - fetchBufferPC[tid]) / instSize;
 
     auto *dec_ptr = decoder[tid];
     const Addr pc_mask = dec_ptr->pcMask();
@@ -1210,11 +1242,27 @@ Fetch::fetch(bool &status_change)
         fetchAddr = (this_pc.instAddr() + pcOffset) & pc_mask;
         Addr fetchBufferBlockPC = fetchBufferAlignPC(fetchAddr);
 
+//        static size_t i = 0;
+//        if (i < 100) {
+//            printf("@@@ instAddr = %lx fetchAddr = %lx pcOffset = %lx pc_mask = %lx\n",
+//                   this_pc.instAddr(), fetchAddr, pcOffset, pc_mask);
+//            i++;
+//        }
+
         if (needMem) {
+
+            static size_t i = 0;
+            if (fetchAddr > 0xffffffff80000000 && i++ < 100) {
+                printf("@@@ fetchAddr = %lx fetchBufferBlockPC = %lx fetchBufferBlockPC[tid] = %lx\n",
+                       fetchAddr, fetchBufferBlockPC, fetchBufferPC[tid]);
+            }
+
+            // NOTE: need use the mem just got from the cache, not "need to access mem"
             // If buffer is no longer valid or fetchAddr has moved to point
             // to the next cache block then start fetch from icache.
             if (!fetchBufferValid[tid] ||
-                fetchBufferBlockPC != fetchBufferPC[tid])
+                // [Shixin] Apply mask before comparison
+                cpu->protectKaslrMask(fetchBufferBlockPC) != fetchBufferPC[tid])
                 break;
 
             if (blkOffset >= numInsts) {
@@ -1239,14 +1287,23 @@ Fetch::fetch(bool &status_change)
         do {
             if (!(curMacroop || inRom)) {
                 if (dec_ptr->instReady()) {
+                    // New macroop & not inRom -> need to decode the new macroop
                     staticInst = dec_ptr->decode(this_pc);
 
                     // Increment stat of fetched instructions.
                     ++fetchStats.insts;
 
                     if (staticInst->isMacroop()) {
+                        // Get a macroop
                         curMacroop = staticInst;
                     } else {
+                        // Get a new inst which is not a macroop
+                        // Guess: clear pcOffset since there is no need to fetch more bytes
+//                        static size_t i = 0;
+//                        if (i < 100) {
+//                            printf("@@@ Not a macroop for PC = %lx\n", this_pc.instAddr());
+//                            i++;
+//                        }
                         pcOffset = 0;
                     }
                 } else {
@@ -1285,6 +1342,7 @@ Fetch::fetch(bool &status_change)
 
             // If we're branching after this instruction, quit fetching
             // from the same block.
+            // TODO: Check how to quit when we're branching???
             predictedBranch |= this_pc.branching();
             predictedBranch |= lookupAndUpdateNextPC(instruction, *next_pc);
             if (predictedBranch) {
@@ -1293,13 +1351,31 @@ Fetch::fetch(bool &status_change)
 
             newMacro |= this_pc.instAddr() != next_pc->instAddr();
 
+//            static size_t i = 0;
+//            if (!curMacroop && !inRom && i++ < 100) {
+//                if (newMacro) {
+//                    if (curMacroop) {
+//                        printf("@@@ Increase PC for macroop with PC = %lx\n", this_pc.instAddr());
+//                    } else {
+//                        printf("@@@ Increase PC for not a macroop PC = %lx\n", this_pc.instAddr());
+//                    }
+//                } else {
+//                    if (curMacroop) {
+//                        printf("@@@ Not increase PC for macroop with PC = %lx\n", this_pc.instAddr());
+//                    } else {
+//                        printf("@@@ Not increase PC for not a macroop PC = %lx\n", this_pc.instAddr());
+//                    }
+//                }
+//            }
+
             // Move to the next instruction, unless we have a branch.
             set(this_pc, *next_pc);
             inRom = isRomMicroPC(this_pc.microPC());
 
             if (newMacro) {
                 fetchAddr = this_pc.instAddr() & pc_mask;
-                blkOffset = (fetchAddr - fetchBufferPC[tid]) / instSize;
+                // [Shixin] Apply mask before calculating offset
+                blkOffset = (cpu->protectKaslrMask(fetchAddr) - fetchBufferPC[tid]) / instSize;
                 pcOffset = 0;
                 curMacroop = NULL;
             }
@@ -1312,6 +1388,8 @@ Fetch::fetch(bool &status_change)
                 quiesce = true;
                 break;
             }
+            // TODO: Check when branch is predicted to be taken, whether this loop would stop and how to stop it!!!
+            // [Shixin] Maybe I should add a break cond here???
         } while ((curMacroop || dec_ptr->instReady()) &&
                  numInst < fetchWidth &&
                  fetchQueue[tid].size() < fetchQueueSize);
@@ -1343,7 +1421,8 @@ Fetch::fetch(bool &status_change)
     // a state that would preclude fetching
     fetchAddr = (this_pc.instAddr() + pcOffset) & pc_mask;
     Addr fetchBufferBlockPC = fetchBufferAlignPC(fetchAddr);
-    issuePipelinedIfetch[tid] = fetchBufferBlockPC != fetchBufferPC[tid] &&
+    // [Shixin] Apply mask before comparison
+    issuePipelinedIfetch[tid] = cpu->protectKaslrMask(fetchBufferBlockPC) != fetchBufferPC[tid] &&
         fetchStatus[tid] != IcacheWaitResponse &&
         fetchStatus[tid] != ItlbWait &&
         fetchStatus[tid] != IcacheWaitRetry &&
@@ -1542,6 +1621,9 @@ Fetch::pipelineIcacheAccesses(ThreadID tid)
 
     // Align the fetch PC so its at the start of a fetch buffer segment.
     Addr fetchBufferBlockPC = fetchBufferAlignPC(fetchAddr);
+
+    //
+    fetchBufferBlockPC = cpu->protectKaslrMask(fetchBufferBlockPC);
 
     // Unless buffer already got the block, fetch it from icache.
     if (!(fetchBufferValid[tid] && fetchBufferBlockPC == fetchBufferPC[tid])) {

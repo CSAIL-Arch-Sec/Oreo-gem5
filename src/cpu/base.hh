@@ -101,9 +101,8 @@ class CPUProgressEvent : public Event
 
 class BaseCPU : public ClockedObject
 {
-  protected:
-
     // [Shixin] Protect KASLR
+public:
     bool protectKaslr;
     const Addr addrMask = 0xffffffffc1ffffff;
     const Addr textMin = 0xffffffff80000000;
@@ -121,9 +120,9 @@ class BaseCPU : public ClockedObject
     }
 
     bool protectKaslrValid(Addr addr) {
-//        if (!protectKaslr) {
-//            return true;
-//        }
+        if (!protectKaslr) {
+            return true;
+        }
         // This function is only used to check when protect KASLR is enabled,
         //   whether address in the KASLR randomization region is valid
         if (addr >= textMin && addr < textMax) {
@@ -147,6 +146,8 @@ class BaseCPU : public ClockedObject
             "Fetch", "Load", "Store", "Amo"};
 
     // [Shixin]
+
+protected:
 
     /// Instruction count used for SPARC misc register
     /// @todo unify this with the counters that cpus individually keep

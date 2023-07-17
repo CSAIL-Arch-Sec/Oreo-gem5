@@ -118,7 +118,7 @@ board = X86Board(
 command = "m5 exit;" \
           + "echo 'This is running on O3 CPU cores.';" \
           + "head /proc/kallsyms;" \
-          + "sleep 1; m5 checkpoint; ls;" \
+          + "sleep 1; ls;" \
           + "m5 exit;"
 
 # command = "m5 checkpoint;" \

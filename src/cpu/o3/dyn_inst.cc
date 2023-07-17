@@ -99,6 +99,13 @@ DynInst::DynInst(const Arrays &arrays, const StaticInstPtr &static_inst,
 {
     set(pc, _pc);
     set(predPC, pred_pc);
+
+    // [Shixin] Pre-check whether fetch address is valid during fetch
+    //          The check result is used at commit time.
+    if (!cpu->protectKaslrValid(pc->instAddr())) {
+        kaslrIMemDelayError(true);
+    }
+
 }
 
 DynInst::DynInst(const Arrays &arrays, const StaticInstPtr &_staticInst,
@@ -403,6 +410,13 @@ DynInst::initiateMemRead(Addr addr, unsigned size, Request::Flags flags,
                                const std::vector<bool> &byte_enable)
 {
     assert(byte_enable.size() == size);
+
+    // [Shixin] Apply mask to load address
+    if (!cpu->protectKaslrValid(addr)) {
+        kaslrDMemDelayError(true);
+    }
+    addr = cpu->protectKaslrMask(addr);
+
     return cpu->pushRequest(
         dynamic_cast<DynInstPtr::PtrType>(this),
         /* ld */ true, nullptr, size, addr, flags, nullptr, nullptr,
@@ -425,6 +439,13 @@ DynInst::writeMem(uint8_t *data, unsigned size, Addr addr,
                         const std::vector<bool> &byte_enable)
 {
     assert(byte_enable.size() == size);
+
+    // [Shixin] Apply mask to store address
+    if (!cpu->protectKaslrValid(addr)) {
+        kaslrDMemDelayError(true);
+    }
+    addr = cpu->protectKaslrMask(addr);
+
     return cpu->pushRequest(
         dynamic_cast<DynInstPtr::PtrType>(this),
         /* st */ false, data, size, addr, flags, res, nullptr,
@@ -435,6 +456,12 @@ Fault
 DynInst::initiateMemAMO(Addr addr, unsigned size, Request::Flags flags,
                               AtomicOpFunctorPtr amo_op)
 {
+    // [Shixin] Apply mask to load address
+    if (!cpu->protectKaslrValid(addr)) {
+        kaslrDMemDelayError(true);
+    }
+    addr = cpu->protectKaslrMask(addr);
+
     // atomic memory instructions do not have data to be written to memory yet
     // since the atomic operations will be executed directly in cache/memory.
     // Therefore, its `data` field is nullptr.

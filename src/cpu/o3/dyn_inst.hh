@@ -186,6 +186,9 @@ class DynInst : public ExecContext, public RefCounted
         ReqMade,
         MemOpDone,
         HtmFromTransaction,
+        KaslrIMemDelayError,    /// [Shixin] Protect Kaslr delay fetch error
+        KaslrTagetDelayError,   /// [Shixin] Protect Kaslr delay target error
+        KaslrDMemDelayError,    /// [Shixin] Protect Kaslr delay ld/st error
         MaxFlags
     };
 
@@ -379,6 +382,36 @@ class DynInst : public ExecContext, public RefCounted
 
     bool notAnInst() const { return instFlags[NotAnInst]; }
     void setNotAnInst() { instFlags[NotAnInst] = true; }
+
+    /** [Shixin] Whether or not fetch address in KASLR region has wrong detla. */
+    bool kaslrIMemDelayError() const { return instFlags[KaslrIMemDelayError]; }
+    void kaslrIMemDelayError(bool b) { instFlags[KaslrIMemDelayError] = b; }
+
+    /** [Shixin] Whether or not resolved branch target in KASLR region has wrong detla. */
+    bool kaslrTargetDelayError() const { return instFlags[KaslrTagetDelayError]; }
+    void kaslrTargetDelayError(bool b) { instFlags[KaslrTagetDelayError] = b; }
+
+    /** [Shixin] Whether or not ld/st address in KASLR region has wrong detla. */
+    bool kaslrDMemDelayError() const { return instFlags[KaslrDMemDelayError]; }
+    void kaslrDMemDelayError(bool b) { instFlags[KaslrDMemDelayError] = b; }
+
+    /** [Shixin] Whether or not this inst fetch addr/target/mem access is in invalid kaslr region. */
+    bool getKaslrError() const {
+        return instFlags[KaslrIMemDelayError] || instFlags[KaslrTagetDelayError] || instFlags[KaslrDMemDelayError];
+    }
+    void printKaslrError() const {
+        printf("@@@ Invalid access type(s) in KASLR region:");
+        if (instFlags[KaslrIMemDelayError]) {
+            printf(" IMem");
+        }
+        if (instFlags[KaslrTagetDelayError]) {
+            printf(" Target");
+        }
+        if (instFlags[KaslrDMemDelayError]) {
+            printf(" Dmem");
+        }
+        printf("\n");
+    }
 
 
     ////////////////////////////////////////////

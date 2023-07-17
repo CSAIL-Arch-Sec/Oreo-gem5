@@ -900,6 +900,8 @@ Commit::commit()
         // If we're not currently squashing, then get instructions.
         getInsts();
 
+        // [Shixin] TODO: DOUBLE CHECK WHY commitInsts is called after getInsts.
+        //            try to exchange them and see whether this would work orzzz.
         // Try to commit any instructions.
         commitInsts();
     }
@@ -1187,6 +1189,13 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
         }
 
         return false;
+    }
+
+    // [Shixin] Get whether there is a delayed KASLR error
+    bool kaslrDelayedError = head_inst->getKaslrError();
+    if (inst_fault) {
+        head_inst->printKaslrError();
+        panic("@@@ Access invalid address in KASLR region\n");
     }
 
     // Check if the instruction caused a fault.  If so, trap.

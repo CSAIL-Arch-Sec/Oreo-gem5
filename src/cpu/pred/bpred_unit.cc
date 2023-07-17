@@ -132,6 +132,7 @@ bool
 BPredUnit::predict(const StaticInstPtr &inst, const InstSeqNum &seqNum,
                    PCStateBase &pc, ThreadID tid)
 {
+    // TODO: Check whether remove delta in pc is enough for implementing our defense.
     // See if branch predictor predicts taken.
     // If so, get its target addr either from the BTB or the RAS.
     // Save off record of branch stuff so the RAS can be fixed

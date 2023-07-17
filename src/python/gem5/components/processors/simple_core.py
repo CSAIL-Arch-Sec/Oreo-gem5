@@ -154,14 +154,14 @@ class SimpleCore(BaseCPUCore):
             )
 
         # [Shixin] Add kaslr config
-        from m5.objects.BaseSimpleCPU import BaseSimpleCPU
+        from m5.objects.BaseCPU import BaseCPU
 
         if protect_kaslr:
-            print("@@@ In simple_core enable protect_kaslr")
+            print("@@@ In cpu core enable protect_kaslr")
         else:
-            print("@@@ In simple_core disable protect_kaslr")
+            print("@@@ In cpu core disable protect_kaslr")
 
-        if issubclass(to_return_cls, BaseSimpleCPU):
+        if issubclass(to_return_cls, BaseCPU):
             return to_return_cls(
                 cpu_id=core_id,
                 protectKaslr=protect_kaslr,
