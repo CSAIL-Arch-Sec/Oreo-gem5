@@ -109,7 +109,7 @@ NonCachingSimpleCPU::fetchInstMem()
     Addr offset = ifetch_req->getPaddr() - bd->range().start();
     memcpy(decoder->moreBytesPtr(), bd->ptr() + offset, ifetch_req->getSize());
     // [Shixin] Debug output
-    if (ifetch_req->getVaddr() > 0xffffffff80000000) {
+    if (ifetch_req->getVaddr() > 0xffffffff80000000 && j++ < 100) {
         printf("@@@ Noncaching get inst");
         for (size_t k = 0; k < ifetch_req->getSize(); k++) {
             printf(" %lx", *(((uint8_t *) decoder->moreBytesPtr()) + k));
