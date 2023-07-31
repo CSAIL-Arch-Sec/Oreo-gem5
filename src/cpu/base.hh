@@ -45,6 +45,8 @@
 #include <vector>
 
 #include "arch/generic/interrupts.hh"
+#include "arch/generic/pcstate.hh"
+#include "arch/x86/pcstate.hh"
 #include "base/statistics.hh"
 #include "debug/Mwait.hh"
 #include "mem/htm.hh"
@@ -108,13 +110,52 @@ public:
     const Addr textMin = 0xffffffff80000000;
     const Addr textEnd = 0xffffffff82000000;
     const Addr textMax = 0xffffffffc0000000;
+    // TODO: In the final design, we should not set kaslrOffset here.
+    //   It should be read from page table / TLB during address translation.
     Addr kaslrOffset;
+
+    std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC) {
+        auto pcBase = origPC.as<X86ISA::PCState>().clone();
+        auto &pcState = pcBase->as<X86ISA::PCState>();
+        auto pc = pcState.instAddr();
+        auto npc = pcState.npc();
+        pcState.pc(protectKaslrMask(pc));
+        pcState.npc(protectKaslrMask(npc));
+        return std::unique_ptr<PCStateBase>(pcBase);
+
+//        auto origAddr = origPC.instAddr();
+//        auto mask_this_pc = origPC.clone();
+//        mask_this_pc->protectKaslrUpdatePC(protectKaslrMask(origAddr));
+//        return std::unique_ptr<PCStateBase>(mask_this_pc);
+    }
 
     Addr protectKaslrMask(Addr addr) {
         // This function only apply mask to address in KASLR randomization
         //   region when protect KASLR is enabled.
         if (protectKaslr && addr >= textMin && addr < textMax) {
             return addr & addrMask;
+        }
+        return addr;
+    }
+
+    std::unique_ptr<PCStateBase> protectKaslrApplyOffset(const PCStateBase &origPC, Addr offset) {
+        auto pcBase = origPC.as<X86ISA::PCState>().clone();
+        auto &pcState = pcBase->as<X86ISA::PCState>();
+        auto pc = pcState.instAddr();
+        auto npc = pcState.npc();
+        pcState.pc(protectKaslrApplyOffset(pc, offset));
+        pcState.npc(protectKaslrApplyOffset(npc, offset));
+        return std::unique_ptr<PCStateBase>(pcBase);
+
+//        auto origAddr = origPC.instAddr();
+//        auto mask_this_pc = origPC.clone();
+//        mask_this_pc->protectKaslrUpdatePC(protectKaslrApplyOffset(origAddr, offset));
+//        return std::unique_ptr<PCStateBase>(mask_this_pc);
+    }
+
+    Addr protectKaslrApplyOffset(Addr addr, Addr offset) {
+        if (protectKaslr && addr >= textMin && addr < textMax) {
+            return (addr & addrMask) | offset;
         }
         return addr;
     }

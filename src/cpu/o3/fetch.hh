@@ -486,6 +486,9 @@ class Fetch
     /** The PC of the first instruction loaded into the fetch buffer. */
     Addr fetchBufferPC[MaxThreads];
 
+    /** [Shixin] The corrPC of the first instruction loaded into the fetch buffer. */
+    Addr fetchBufferCorrKaslrOffset[MaxThreads];
+
     /** The size of the fetch queue in micro-ops */
     unsigned fetchQueueSize;
 

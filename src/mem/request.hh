@@ -370,6 +370,9 @@ class Request
         VALID_HTM_ABORT_CAUSE = 0x00000400,
         /** Whether or not the instruction count is valid. */
         VALID_INST_COUNT      = 0x00000800,
+        // [Shixin] other flags for KASLR defense
+        /** Whether or not the kaslr offset is valid */
+        VALID_CORR_KASLR_OFFSET    = 0x00001000,
         /**
          * These flags are *not* cleared when a Request object is reused
          * (assigned a new address).
@@ -444,6 +447,10 @@ class Request
 
     /** The virtual address of the request. */
     Addr _vaddr = MaxAddr;
+
+    /** [Shixin] The correct KASLR delta mask of the request vaddr. */
+    // TODO: Get this value from page table / TLB in the final impl.
+    Addr _corrKaslrOffset = 0xc000000;
 
     /**
      * Extra data for the request, such as the return value of
@@ -834,6 +841,19 @@ class Request
     {
         assert(privateFlags.isSet(VALID_VADDR));
         return _vaddr;
+    }
+
+    /** [Shixin] Accessor function for corrKaslrOffset. */
+    bool
+    hasCorrKaslrOffset() const
+    {
+        return privateFlags.isSet(VALID_CORR_KASLR_OFFSET);
+    }
+
+    Addr
+    getCorrKaslrOffset() const
+    {
+        return _corrKaslrOffset;
     }
 
     /** Accesssor for the requestor id. */

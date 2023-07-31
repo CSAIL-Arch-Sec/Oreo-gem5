@@ -835,6 +835,7 @@ LSQ::pushRequest(const DynInstPtr& inst, bool isLoad, uint8_t *data,
     /* This is the place were instructions get the effAddr. */
     if (request->isTranslationComplete()) {
         if (request->isMemAccessRequired()) {
+            // [Shixin] TODO: Ensure that the effAddr is unmasked
             inst->effAddr = request->getVaddr();
             inst->effSize = size;
             inst->effAddrValid(true);

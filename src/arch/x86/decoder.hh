@@ -346,6 +346,14 @@ class Decoder : public InstDecoder
                     "Calculating the instruction size: "
                     "basePC: %#x offset: %#x origPC: %#x size: %d\n",
                     basePC, offset, origPC, size);
+            // [Shixin] It's very likely that origPC = nextPC.pc()
+            //          according to some output test
+//            static size_t i = 0;
+//            if (basePC >= 0xffffffff80000000 && i++ < 100) {
+//                printf("Calculating the instruction size: "
+//                       "basePC: %lx offset: %lx origPC: %lx size: %d, nextPC.pc(): %lx\n",
+//                        basePC, offset, origPC, size, nextPC.pc());
+//            }
             nextPC.size(size);
             nextPC.npc(nextPC.pc() + size);
         }

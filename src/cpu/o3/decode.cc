@@ -291,7 +291,8 @@ Decode::squash(const DynInstPtr &inst, ThreadID tid)
     toFetch->decodeInfo[tid].mispredictInst = inst;
     toFetch->decodeInfo[tid].squash = true;
     toFetch->decodeInfo[tid].doneSeqNum = inst->seqNum;
-    set(toFetch->decodeInfo[tid].nextPC, *inst->branchTarget());
+    // [Shixin] Apply mask to fetch pc sent to fetch stage
+    set(toFetch->decodeInfo[tid].nextPC, *cpu->protectKaslrMask(*inst->branchTarget()));
 
     // Looking at inst->pcState().branching()
     // may yield unexpected results if the branch
@@ -714,8 +715,11 @@ Decode::decodeInsts(ThreadID tid)
         {
             ++stats.branchResolved;
 
-            std::unique_ptr<PCStateBase> target = inst->branchTarget();
-            if (*target != inst->readPredTarg()) {
+            // [Shixin] The PC-relative target should be corr PC.
+            // TODO: DOULE CHECK!!!
+            auto origTarget = inst->branchTarget();
+            auto target = cpu->protectKaslrMask(*origTarget);
+            if (*target != *cpu->protectKaslrMask(inst->readPredTarg())) {
                 ++stats.branchMispred;
 
                 // Might want to set some sort of boolean and just do

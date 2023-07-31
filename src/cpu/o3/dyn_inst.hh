@@ -562,7 +562,17 @@ class DynInst : public ExecContext, public RefCounted
     {
         std::unique_ptr<PCStateBase> next_pc(pc->clone());
         staticInst->advancePC(*next_pc);
-        return *next_pc != *predPC;
+
+        // [Shixin] Debug output
+        static size_t i = 0;
+        if (isIndirectCtrl() && pc->instAddr() >= 0xffffffff80000000 && i++ < 100) {
+            printf("@@@ Resolve indirect branch: %lx, pred_target: %lx, res_target: %lx\n",
+                   pc->instAddr(), predPC->instAddr(), next_pc->instAddr());
+        }
+        // [Shixin] Don't squash when offset is the same while only delta is different
+        auto mask_next_pc = cpu->protectKaslrMask(*next_pc);
+        auto mask_pred_pc = cpu->protectKaslrMask(*predPC);
+        return *mask_next_pc != *mask_pred_pc;
     }
 
     //

@@ -100,9 +100,10 @@ DynInst::DynInst(const Arrays &arrays, const StaticInstPtr &static_inst,
     set(pc, _pc);
     set(predPC, pred_pc);
 
-    // [Shixin] Pre-check whether fetch address is valid during fetch
-    //          The check result is used at commit time.
+    // [Shixin] Only used for temporarily testing corr_pc passed to dyn inst.
+    // TODO: Remove this before adding different delta!!!
     if (!cpu->protectKaslrValid(pc->instAddr())) {
+        panic("@@@ DynInst pc is not corrpc\n");
         kaslrIMemDelayError(true);
     }
 
@@ -412,6 +413,8 @@ DynInst::initiateMemRead(Addr addr, unsigned size, Request::Flags flags,
     assert(byte_enable.size() == size);
 
     // [Shixin] Apply mask to load address
+    // TODO: Maybe we should not apply mask here
+    // TODO: Move this to place where translation is finished!!!
     if (!cpu->protectKaslrValid(addr)) {
         kaslrDMemDelayError(true);
     }
@@ -441,6 +444,8 @@ DynInst::writeMem(uint8_t *data, unsigned size, Addr addr,
     assert(byte_enable.size() == size);
 
     // [Shixin] Apply mask to store address
+    // TODO: Maybe we should not apply mask here
+    // TODO: Move this to place where translation is finished!!!
     if (!cpu->protectKaslrValid(addr)) {
         kaslrDMemDelayError(true);
     }
@@ -456,7 +461,9 @@ Fault
 DynInst::initiateMemAMO(Addr addr, unsigned size, Request::Flags flags,
                               AtomicOpFunctorPtr amo_op)
 {
-    // [Shixin] Apply mask to load address
+    // [Shixin] Apply mask to amo address
+    // TODO: Maybe we should not apply mask here
+    // TODO: Move this to place where translation is finished!!!
     if (!cpu->protectKaslrValid(addr)) {
         kaslrDMemDelayError(true);
     }

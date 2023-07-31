@@ -67,6 +67,11 @@ class PCStateBase : public Serializable
   public:
     virtual ~PCStateBase() = default;
 
+    /** [Shixin] Should only be used by KASLR defense mask. */
+//    void protectKaslrUpdatePC(Addr newPC) {
+//        _pc = newPC;
+//    }
+
     template<class Target>
     Target &
     as()
@@ -283,6 +288,9 @@ class PCStateWithNext : public PCStateBase
     void
     setNPC(Addr val)
     {
+//        if (val >= 0xffffffff80000000) {
+//            printf("set npc (%lx) with val %lx\n", _npc, val);
+//        }
         npc(val);
     }
 
@@ -375,6 +383,10 @@ class SimplePCState : public PCStateWithNext
     void
     advance() override
     {
+//        if (this->_pc == 0xffffffff8112117b) {
+//            printf("_pc: %lx, _npc: %lx\n", this->_pc, this->_npc);
+//        }
+//        printf("_pc: %lx, _npc: %lx\n", this->_pc, this->_npc);
         this->_pc = this->_npc;
         this->_npc += InstWidth;
     }
@@ -498,6 +510,10 @@ class DelaySlotPCState : public SimplePCState<InstWidth>
     void
     advance() override
     {
+//        if (this->_pc == 0xffffffff8112117b) {
+//            printf("_pc: %lx, _npc: %lx\n", this->_pc, this->_npc);
+//        }
+//        printf("_pc: %lx, _npc: %lx\n", this->_pc, this->_npc);
         this->_pc = this->_npc;
         this->_npc = this->_nnpc;
         this->_nnpc += InstWidth;

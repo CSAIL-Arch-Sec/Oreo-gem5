@@ -510,6 +510,7 @@ BaseSimpleCPU::advancePC(const Fault &fault)
         // instruction in flight at the same time.
         const InstSeqNum cur_sn(0);
 
+        // TODO: Check whether we use branch predictor in noncaching CPU
         if (*t_info.predPC == thread->pcState()) {
             // Correctly predicted branch
             branchPred->update(cur_sn, curThread);

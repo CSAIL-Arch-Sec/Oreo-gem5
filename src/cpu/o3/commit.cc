@@ -1020,6 +1020,28 @@ Commit::commitInsts()
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
+                // [Shixin] Protect KASLR: check whether the real inst addr is correct
+                if (nextInstAddrAvail) {
+                    if (pc[tid]->instAddr() != nextInstAddr[tid]) {
+                        panic("### KASLR violation, wrong pc: %lx, corr pc: %lx\n",
+                              pc[tid]->instAddr(), nextInstAddr[tid]);
+                    }
+                } else {
+                    printf("### First commited inst pc: %lx (not checked)\n", pc[tid]->instAddr());
+                }
+                auto next_pc = std::unique_ptr<PCStateBase>(head_inst->pcState().clone());
+                head_inst->staticInst->advancePC(*next_pc);
+
+                static size_t i = 0;
+                if (head_inst->pcState().instAddr() >= 0xffffffff80000000 && i++ < 100) {
+                    printf("@@@ retire pc: %lx, next pc: %lx\n",
+                           head_inst->pcState().instAddr(), next_pc->instAddr());
+                }
+
+                nextInstAddr[tid] = next_pc->instAddr();
+                nextInstAddrAvail = true;
+                // [Shixin]
+
                 ++num_committed;
                 stats.committedInstType[tid][head_inst->opClass()]++;
                 ppCommit->notify(head_inst);
@@ -1192,11 +1214,11 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
     }
 
     // [Shixin] Get whether there is a delayed KASLR error
-    bool kaslrDelayedError = head_inst->getKaslrError();
-    if (inst_fault) {
-        head_inst->printKaslrError();
-        panic("@@@ Access invalid address in KASLR region\n");
-    }
+//    bool kaslrDelayedError = head_inst->getKaslrError();
+//    if (kaslrDelayedError) {
+//        head_inst->printKaslrError();
+//        panic("@@@ Access invalid address in KASLR region\n");
+//    }
 
     // Check if the instruction caused a fault.  If so, trap.
     Fault inst_fault = head_inst->getFault();
