@@ -310,9 +310,7 @@ class Simulator:
                 and (path_path.is_dir() or not os.access(path_path, os.W_OK))
             )
         ):
-            raise Exception(
-                f"Specified text stats output path '{path}' is invalid."
-            )
+            raise Exception(f"Specified text stats output path '{path}' is invalid.")
         addStatVisitor(path)
 
     def add_json_stats_output(self, path: str) -> None:
@@ -334,9 +332,7 @@ class Simulator:
                 and (path_path.is_dir() or not os.access(path_path, os.W_OK))
             )
         ):
-            raise Exception(
-                f"Specified json stats output path '{path}' is invalid."
-            )
+            raise Exception(f"Specified json stats output path '{path}' is invalid.")
         addStatVisitor(f"json://{path}")
 
     def get_last_exit_event_cause(self) -> str:
@@ -433,7 +429,7 @@ class Simulator:
             # any final things.
             self._board._post_instantiate()
 
-    def run(self, max_ticks: int = m5.MaxTick) -> None:
+    def run(self, max_ticks: int = m5.MaxTick, scheduled_ticks: List[int] = []) -> None:
         """
         This function will start or continue the simulator run and handle exit
         events accordingly.
@@ -456,6 +452,10 @@ class Simulator:
         # We instantiate the board if it has not already been instantiated.
         self._instantiate()
 
+        # schedule tick based exit events
+        for scheduled_tick in scheduled_ticks:
+            m5.scheduleTickExitAbsolute(scheduled_tick)
+
         # This while loop will continue until an a generator yields True.
         while True:
 
@@ -469,9 +469,7 @@ class Simulator:
             # Check to see the run is corresponding to the expected execution
             # order (assuming this check is demanded by the user).
             if self._expected_execution_order:
-                expected_enum = self._expected_execution_order[
-                    self._exit_event_count
-                ]
+                expected_enum = self._expected_execution_order[self._exit_event_count]
                 if exit_enum.value != expected_enum.value:
                     raise Exception(
                         f"Expected a '{expected_enum.value}' exit event but a "
@@ -493,15 +491,11 @@ class Simulator:
                     f"'{exit_enum.value}' has ended. Using the default "
                     "generator."
                 )
-                exit_on_completion = next(
-                    self._default_on_exit_dict[exit_enum]
-                )
+                exit_on_completion = next(self._default_on_exit_dict[exit_enum])
             except KeyError:
                 # If the user has not specified their own generator for this
                 # exit event, use the default.
-                exit_on_completion = next(
-                    self._default_on_exit_dict[exit_enum]
-                )
+                exit_on_completion = next(self._default_on_exit_dict[exit_enum])
 
             self._exit_event_count += 1
 

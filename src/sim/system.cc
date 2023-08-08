@@ -181,7 +181,11 @@ System::System(const Params &p)
       _m5opRange(p.m5ops_base ?
                  RangeSize(p.m5ops_base, 0x10000) :
                  AddrRange(1, 0)), // Create an empty range if disabled
-      redirectPaths(p.redirect_paths)
+      redirectPaths(p.redirect_paths),
+      loadAddrMask(p.load_addr_mask),
+      loadAddrOffset(p.load_addr_offset),
+      addrCheck(p.addr_check)
+
 {
     panic_if(!workload, "No workload set for system %s "
             "(could use StubWorkload?).", name());

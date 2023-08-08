@@ -46,6 +46,9 @@ class AbstractSystemBoard(System, AbstractBoard):
         processor: "AbstractProcessor",
         memory: "AbstractMemorySystem",
         cache_hierarchy: "AbstractCacheHierarchy",
+        load_addr_mask: int = 0xFFFFFFFFFFFFFFFF,
+        load_addr_offset: int = 0,
+        addr_check: bool = True,
     ):
         System.__init__(self)
         AbstractBoard.__init__(
@@ -54,6 +57,9 @@ class AbstractSystemBoard(System, AbstractBoard):
             processor=processor,
             memory=memory,
             cache_hierarchy=cache_hierarchy,
+            load_addr_mask=load_addr_mask,
+            load_addr_offset=load_addr_offset,
+            addr_check=addr_check,
         )
 
     @overrides(SimObject)

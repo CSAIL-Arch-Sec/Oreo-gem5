@@ -70,6 +70,9 @@ class AbstractBoard:
         processor: "AbstractProcessor",
         memory: "AbstractMemorySystem",
         cache_hierarchy: Optional["AbstractCacheHierarchy"],
+        load_addr_mask: int = 0xFFFFFFFFFFFFFFFF,
+        load_addr_offset: int = 0,
+        addr_check: bool = True,
     ) -> None:
         """
         :param clk_freq: The clock frequency for this board.
@@ -94,6 +97,10 @@ class AbstractBoard:
         self._cache_hierarchy = cache_hierarchy
         if cache_hierarchy is not None:
             self.cache_hierarchy = cache_hierarchy
+
+        self.load_addr_mask = load_addr_mask
+        self.load_addr_offset = load_addr_offset
+        self.addr_check = addr_check
 
         # This variable determines whether the board is to be executed in
         # full-system or syscall-emulation mode. This is set when the workload
@@ -347,9 +354,7 @@ class AbstractBoard:
         """
 
         if self._connect_things_called:
-            raise Exception(
-                "The `_connect_things` function has already been called."
-            )
+            raise Exception("The `_connect_things` function has already been called.")
 
         # Incorporate the memory into the motherboard.
         self.get_memory().incorporate_memory(self)

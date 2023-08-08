@@ -423,6 +423,10 @@ class System : public SimObject, public PCEventScope
 
     ThermalModel * thermalModel;
 
+    Addr loadAddrMask;
+    Addr loadAddrOffset;
+    bool addrCheck;
+
   protected:
     /**
      * Strips off the system name from a requestor name

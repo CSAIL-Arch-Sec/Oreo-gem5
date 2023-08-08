@@ -30,6 +30,7 @@ from ...resources.resource import AbstractResource
 from ...utils.override import overrides
 from .abstract_system_board import AbstractSystemBoard
 from ...isas import ISA
+from m5.params import *
 
 from m5.objects import (
     Pc,
@@ -76,12 +77,18 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         processor: AbstractProcessor,
         memory: AbstractMemorySystem,
         cache_hierarchy: AbstractCacheHierarchy,
+        load_addr_mask: int = 0xFFFFFFFFFFFFFFFF,
+        load_addr_offset: int = 0,
+        addr_check: bool = True,
     ) -> None:
         super().__init__(
             clk_freq=clk_freq,
             processor=processor,
             memory=memory,
             cache_hierarchy=cache_hierarchy,
+            load_addr_mask=load_addr_mask,
+            load_addr_offset=load_addr_offset,
+            addr_check=addr_check,
         )
 
         if self.get_processor().get_isa() != ISA.X86:
@@ -95,6 +102,9 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         self.pc = Pc()
 
         self.workload = X86FsLinux()
+        self.workload.load_addr_mask = self.load_addr_mask
+        self.workload.load_addr_offset = self.load_addr_offset
+        self.workload.addr_check = self.addr_check
 
         # North Bridge
         self.iobus = IOXBar()
@@ -123,9 +133,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         else:
             self.bridge = Bridge(delay="50ns")
             self.bridge.mem_side_port = self.get_io_bus().cpu_side_ports
-            self.bridge.cpu_side_port = (
-                self.get_cache_hierarchy().get_mem_side_port()
-            )
+            self.bridge.cpu_side_port = self.get_cache_hierarchy().get_mem_side_port()
 
             # # Constants similar to x86_traits.hh
             IO_address_space_base = 0x8000000000000000
@@ -135,9 +143,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
 
             self.bridge.ranges = [
                 AddrRange(0xC0000000, 0xFFFF0000),
-                AddrRange(
-                    IO_address_space_base, interrupts_address_space_base - 1
-                ),
+                AddrRange(IO_address_space_base, interrupts_address_space_base - 1),
                 AddrRange(pci_config_address_space_base, Addr.max),
             ]
 
@@ -247,9 +253,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         ]
 
         # Reserve the last 16kB of the 32-bit address space for m5ops
-        entries.append(
-            X86E820Entry(addr=0xFFFF0000, size="64kB", range_type=2)
-        )
+        entries.append(X86E820Entry(addr=0xFFFF0000, size="64kB", range_type=2))
 
         self.workload.e820_table.entries = entries
 

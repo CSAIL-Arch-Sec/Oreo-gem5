@@ -62,9 +62,7 @@ class System(SimObject):
         PyBindMethod("setMemoryMode"),
     ]
 
-    memories = VectorParam.AbstractMemory(
-        Self.all, "All memories in the system"
-    )
+    memories = VectorParam.AbstractMemory(Self.all, "All memories in the system")
     mem_mode = Param.MemoryMode("atomic", "The mode the memory system is in")
 
     thermal_model = Param.ThermalModel(NULL, "Thermal model")
@@ -83,14 +81,10 @@ class System(SimObject):
     # The memory ranges are to be populated when creating the system
     # such that these can be passed from the I/O subsystem through an
     # I/O bridge or cache
-    mem_ranges = VectorParam.AddrRange(
-        [], "Ranges that constitute main memory"
-    )
+    mem_ranges = VectorParam.AddrRange([], "Ranges that constitute main memory")
 
     # The ranges backed by a shadowed ROM
-    shadow_rom_ranges = VectorParam.AddrRange(
-        [], "Ranges  backed by a " "shadowed ROM"
-    )
+    shadow_rom_ranges = VectorParam.AddrRange([], "Ranges  backed by a " "shadowed ROM")
 
     shared_backstore = Param.String(
         "",
@@ -111,8 +105,7 @@ class System(SimObject):
 
     exit_on_work_items = Param.Bool(
         False,
-        "Exit from the simulation loop when "
-        "encountering work item annotations.",
+        "Exit from the simulation loop when " "encountering work item annotations.",
     )
     work_item_id = Param.Int(-1, "specific work item id")
     num_work_ids = Param.Int(16, "Number of distinct work item types")
@@ -155,3 +148,14 @@ class System(SimObject):
         "Base of the 64KiB PA range used for "
         "memory-mapped m5ops. Set to 0 to disable.",
     )
+
+    addr_check = Param.Bool(
+        True,
+        "whether to bounds check kernel addresses (disable for baremetal)",
+    )
+    load_addr_mask = Param.UInt64(
+        0xFFFFFFFFFFFFFFFF,
+        "Mask to apply to kernel addresses. If zero, "
+        "auto-calculated to be the most restrictive.",
+    )
+    load_addr_offset = Param.UInt64(0, "Address to offset the kernel with")
