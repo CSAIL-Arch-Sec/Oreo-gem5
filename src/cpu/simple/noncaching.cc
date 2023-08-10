@@ -91,13 +91,13 @@ Tick
 NonCachingSimpleCPU::fetchInstMem()
 {
     // [Shixin] Debug output
-    static size_t i, j = 0;
-    if (i++ < 10) {
-        printf("@@@ Fetch: Phy addr %lx\n", ifetch_req->getPaddr());
-    }
-    if (ifetch_req->getVaddr() > 0xffffffff80000000 && j++ < 100) {
-        printf("@@@ Fetch: Phy addr %lx\n", ifetch_req->getPaddr());
-    }
+//    static size_t i, j = 0;
+//    if (i++ < 10) {
+//        printf("@@@ Fetch: Phy addr %lx\n", ifetch_req->getPaddr());
+//    }
+//    if (ifetch_req->getVaddr() > 0xffffffff80000000 && j++ < 100) {
+//        printf("@@@ Fetch: Phy addr %lx\n", ifetch_req->getPaddr());
+//    }
 
     auto bd_it = memBackdoors.contains(ifetch_req->getPaddr());
     if (bd_it == memBackdoors.end())
@@ -109,13 +109,13 @@ NonCachingSimpleCPU::fetchInstMem()
     Addr offset = ifetch_req->getPaddr() - bd->range().start();
     memcpy(decoder->moreBytesPtr(), bd->ptr() + offset, ifetch_req->getSize());
     // [Shixin] Debug output
-    if (ifetch_req->getVaddr() > 0xffffffff80000000 && j++ < 100) {
-        printf("@@@ Noncaching get inst");
-        for (size_t k = 0; k < ifetch_req->getSize(); k++) {
-            printf(" %lx", *(((uint8_t *) decoder->moreBytesPtr()) + k));
-        }
-        printf("\n");
-    }
+//    if (ifetch_req->getVaddr() > 0xffffffff80000000 && j++ < 100) {
+//        printf("@@@ Noncaching get inst");
+//        for (size_t k = 0; k < ifetch_req->getSize(); k++) {
+//            printf(" %lx", *(((uint8_t *) decoder->moreBytesPtr()) + k));
+//        }
+//        printf("\n");
+//    }
     return 0;
 }
 

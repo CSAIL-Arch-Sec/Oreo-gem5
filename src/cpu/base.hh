@@ -111,16 +111,29 @@ public:
     const Addr textEnd = 0xffffffff82000000;
     const Addr textMax = 0xffffffffc0000000;
     // TODO: In the final design, we should not set kaslrOffset here.
-    //   It should be read from page table / TLB during address translation.
+    //  It should be read from page table / TLB during address translation.
+    // TODO: In the final design, we should also consider different region
+    //  when apply mask and offset
     Addr kaslrOffset;
+
+    Addr getKaslrOffsetFromPC(const PCStateBase &corrPC) {
+        return getKaslrOffsetFromPC(corrPC.instAddr());
+    }
+
+    Addr getKaslrOffsetFromPC(Addr corrAddr) {
+        if (corrAddr >= textMin && corrAddr < textMax) {
+            return corrAddr & (~addrMask);
+        }
+        return 0;
+    }
 
     std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC) {
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();
-        auto npc = pcState.npc();
+//        auto npc = pcState.npc();
         pcState.pc(protectKaslrMask(pc));
-        pcState.npc(protectKaslrMask(npc));
+//        pcState.npc(protectKaslrMask(npc)); // TODO: Check here!
         return std::unique_ptr<PCStateBase>(pcBase);
 
 //        auto origAddr = origPC.instAddr();
@@ -128,6 +141,16 @@ public:
 //        mask_this_pc->protectKaslrUpdatePC(protectKaslrMask(origAddr));
 //        return std::unique_ptr<PCStateBase>(mask_this_pc);
     }
+
+//    std::unique_ptr<PCStateBase> protectKaslrMaskNPC(const PCStateBase &origPC) {
+//        auto pcBase = origPC.as<X86ISA::PCState>().clone();
+//        auto &pcState = pcBase->as<X86ISA::PCState>();
+//        auto pc = pcState.instAddr();
+//        auto npc = pcState.npc();
+//        pcState.pc(protectKaslrMask(pc));
+//        pcState.npc(protectKaslrMask(npc));
+//        return std::unique_ptr<PCStateBase>(pcBase);
+//    }
 
     Addr protectKaslrMask(Addr addr) {
         // This function only apply mask to address in KASLR randomization
@@ -142,9 +165,9 @@ public:
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();
-        auto npc = pcState.npc();
+//        auto npc = pcState.npc();
         pcState.pc(protectKaslrApplyOffset(pc, offset));
-        pcState.npc(protectKaslrApplyOffset(npc, offset));
+//        pcState.npc(protectKaslrApplyOffset(npc, offset)); // TODO: Check here!
         return std::unique_ptr<PCStateBase>(pcBase);
 
 //        auto origAddr = origPC.instAddr();
@@ -170,6 +193,12 @@ public:
             return (addr >= textMin + kaslrOffset && addr < textEnd + kaslrOffset);
         }
         return true;
+    }
+
+    bool protectKaslrValid(Addr addr, Addr offset) {
+        // This function is only used to check when protect KASLR is enabled,
+        //   whether address in the KASLR randomization region is valid
+        return protectKaslrApplyOffset(addr, offset) == addr;
     }
 
     enum TextMemAccessType {

@@ -102,10 +102,11 @@ DynInst::DynInst(const Arrays &arrays, const StaticInstPtr &static_inst,
 
     // [Shixin] Only used for temporarily testing corr_pc passed to dyn inst.
     // TODO: Remove this before adding different delta!!!
-    if (!cpu->protectKaslrValid(pc->instAddr())) {
-        panic("@@@ DynInst pc is not corrpc\n");
-        kaslrIMemDelayError(true);
-    }
+//    static size_t i = 0;
+//    if (!cpu->protectKaslrValid(pc->instAddr()) && cpu->protectKaslr && i++ < 10) {
+//        warn("@@@ DynInst pc: %lx is not corrpc\n", pc->instAddr());
+//        kaslrIMemDelayError(true);
+//    }
 
 }
 
@@ -355,6 +356,13 @@ DynInst::execute()
 
     fault = staticInst->execute(this, traceData);
 
+//    if (pc->instAddr() == 0x7fdbb4313891 && pc->microPC() == 0x15) {
+//        warn("Execute dyn inst: %s, pc: %x, micro pc: %lx, next_pc: %lx\n",
+//             staticInst->getName().c_str(),
+//             pc->instAddr(), pc->microPC(),
+//             pc->as<X86ISA::PCState>().npc());
+//    }
+
     thread->noSquashFromTC = no_squash_from_TC;
 
     return fault;
@@ -415,9 +423,11 @@ DynInst::initiateMemRead(Addr addr, unsigned size, Request::Flags flags,
     // [Shixin] Apply mask to load address
     // TODO: Maybe we should not apply mask here
     // TODO: Move this to place where translation is finished!!!
-    if (!cpu->protectKaslrValid(addr)) {
-        kaslrDMemDelayError(true);
-    }
+//    if (!cpu->protectKaslrValid(addr)) {
+//        kaslrDMemDelayError(true);
+//    }
+    // Record the real addr (might be invalid before applying mask)
+    realAddr = addr;
     addr = cpu->protectKaslrMask(addr);
 
     return cpu->pushRequest(
@@ -446,9 +456,10 @@ DynInst::writeMem(uint8_t *data, unsigned size, Addr addr,
     // [Shixin] Apply mask to store address
     // TODO: Maybe we should not apply mask here
     // TODO: Move this to place where translation is finished!!!
-    if (!cpu->protectKaslrValid(addr)) {
-        kaslrDMemDelayError(true);
-    }
+//    if (!cpu->protectKaslrValid(addr)) {
+//        kaslrDMemDelayError(true);
+//    }
+    realAddr = addr;
     addr = cpu->protectKaslrMask(addr);
 
     return cpu->pushRequest(
@@ -464,9 +475,10 @@ DynInst::initiateMemAMO(Addr addr, unsigned size, Request::Flags flags,
     // [Shixin] Apply mask to amo address
     // TODO: Maybe we should not apply mask here
     // TODO: Move this to place where translation is finished!!!
-    if (!cpu->protectKaslrValid(addr)) {
-        kaslrDMemDelayError(true);
-    }
+//    if (!cpu->protectKaslrValid(addr)) {
+//        kaslrDMemDelayError(true);
+//    }
+    realAddr = addr;
     addr = cpu->protectKaslrMask(addr);
 
     // atomic memory instructions do not have data to be written to memory yet

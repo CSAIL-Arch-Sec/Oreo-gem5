@@ -236,6 +236,7 @@ class Simulator:
             )
 
         self._checkpoint_path = checkpoint_path
+        print("Simulator: checkpoint_path =", checkpoint_path)
 
     def schedule_simpoint(self, simpoint_start_insts: List[int]) -> None:
         """

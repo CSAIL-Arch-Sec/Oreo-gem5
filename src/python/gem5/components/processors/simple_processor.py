@@ -42,7 +42,9 @@ class SimpleProcessor(BaseCPUProcessor):
     """
 
     def __init__(
-        self, cpu_type: CPUTypes, num_cores: int, isa: Optional[ISA] = None
+        self, cpu_type: CPUTypes, num_cores: int, isa: Optional[ISA] = None,
+        protect_kaslr: bool = False,
+        kaslr_offset: int = 0,
     ) -> None:
         """
         :param cpu_type: The CPU type for each type in the processor.
@@ -64,7 +66,9 @@ class SimpleProcessor(BaseCPUProcessor):
             )
         super().__init__(
             cores=[
-                SimpleCore(cpu_type=cpu_type, core_id=i, isa=isa)
+                SimpleCore(cpu_type=cpu_type, core_id=i, isa=isa,
+                           protect_kaslr=protect_kaslr,
+                           kaslr_offset=kaslr_offset)
                 for i in range(num_cores)
             ]
         )

@@ -45,6 +45,7 @@
 #include <set>
 #include <string>
 
+#include "arch/x86/regs/int.hh"
 #include "base/compiler.hh"
 #include "base/loader/symtab.hh"
 #include "base/logging.hh"
@@ -988,6 +989,7 @@ Commit::commitInsts()
         if (commit_thread == -1 || !rob->isHeadReady(commit_thread))
             break;
 
+
         head_inst = rob->readHeadInst(commit_thread);
 
         ThreadID tid = head_inst->threadNumber;
@@ -1020,11 +1022,33 @@ Commit::commitInsts()
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
+                if (cpu->totalInsts() % 0x100000 == 0 && cpu->totalInsts() < 0x100000000) {
+                    printf("Total: %lx Commit %lx %x\n", cpu->totalInsts(), head_inst->pcState().instAddr(), head_inst->pcState().microPC());
+                }
                 // [Shixin] Protect KASLR: check whether the real inst addr is correct
-                if (nextInstAddrAvail) {
-                    if (pc[tid]->instAddr() != nextInstAddr[tid]) {
-                        panic("### KASLR violation, wrong pc: %lx, corr pc: %lx\n",
-                              pc[tid]->instAddr(), nextInstAddr[tid]);
+                auto curStaticInst = head_inst->staticInst;
+                if (curStaticInst->isMacroop() || curStaticInst->isLastMicroop()) {
+                    if (
+                        // (cpu->totalInsts() > 0x22254000 && cpu->totalInsts() < 0x22256000) ||
+                        !nextInstAddrAvail[tid] ||
+                        cpu->totalInsts() < 0x1000) {
+                        if (!nextInstAddrAvail[tid]) {
+                            printf("### Brought up a new CPU or back from an interrupt\n");
+                        }
+//                        printf("@@@ cpu %d commit total(%lx) pc %lx inst %s\n",
+//                               cpu->cpuId(),
+//                               cpu->totalInsts(),
+//                               head_inst->pcState().instAddr(), curStaticInst->getName().c_str());
+                    }
+                }
+
+                if (nextInstAddrAvail[tid]) {
+                    if (cpu->protectKaslr && pc[tid]->instAddr() != nextInstAddr[tid]) {
+                        // [Shixin] TODO: Add raising fault here!
+                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, wrong pc: %lx, corr pc: %lx\n",
+                             curTick(), cpu->cpuId(), tid,
+                             cpu->totalInsts(),
+                             pc[tid]->instAddr(), nextInstAddr[tid]);
                     }
                 } else {
                     printf("### First commited inst pc: %lx (not checked)\n", pc[tid]->instAddr());
@@ -1032,14 +1056,46 @@ Commit::commitInsts()
                 auto next_pc = std::unique_ptr<PCStateBase>(head_inst->pcState().clone());
                 head_inst->staticInst->advancePC(*next_pc);
 
-                static size_t i = 0;
-                if (head_inst->pcState().instAddr() >= 0xffffffff80000000 && i++ < 100) {
-                    printf("@@@ retire pc: %lx, next pc: %lx\n",
-                           head_inst->pcState().instAddr(), next_pc->instAddr());
-                }
+//                static bool has_violation = false;
+//                static size_t counter = 0;
+//                if (cpu->totalInsts() >= 0x395 && cpu->totalInsts() < 0x5cc
+////                    (head_inst->staticInst->getName() == "wrdh" || head_inst->staticInst->getName() == "eret") &&
+////                    counter++ < 0x300
+//                    ) {
+//                    warn("Total: %lx, pc: %lx, upc: %lx, npc: %lx, inst: %s, t0: %lx, t3: %lx, t4: %lx, t7, %lx, t9: %lx\n",
+//                           cpu->totalInsts(),
+//                           head_inst->pcState().instAddr(), head_inst->pcState().microPC(),
+//                           head_inst->pcState().as<X86ISA::PCState>().npc(),
+//                           head_inst->staticInst->getName().c_str(),
+//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(0)),
+//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(3)),
+//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(4)),
+//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(7)),
+//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(9)));
+//                }
 
                 nextInstAddr[tid] = next_pc->instAddr();
-                nextInstAddrAvail = true;
+                nextInstAddrAvail[tid] = true;
+                static size_t i = 0;
+                if (nextInstAddr[tid] >= 0xffffffff90000000) {
+//                    has_violation = true;
+                    if (nextInstAddrAvail[tid]) {
+                        warn("tick %lx cpu (%d) total inst %s (%lx) pc (%lx) set next corr pc %lx avail\n",
+                             curTick(), cpu->cpuId(), head_inst->staticInst->getName().c_str(), cpu->totalInsts(),
+                             head_inst->pcState().instAddr(), nextInstAddr[tid]);
+                    } else {
+                        warn("tick %lx cpu (%d) total inst %s (%lx) pc (%lx) set corr pc %lx not avail\n",
+                             curTick(), cpu->cpuId(), head_inst->staticInst->getName().c_str(), cpu->totalInsts(),
+                             head_inst->pcState().instAddr(), nextInstAddr[tid]);
+                    }
+                }
+
+                if (head_inst->kaslrDMemDelayError()) {
+                    // [Shixin] TODO: Add raising fault here!
+                    panic("### KASLR ld/st violation at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
+                          num_committed,
+                          pc[tid]->instAddr(), head_inst->realAddr);
+                }
                 // [Shixin]
 
                 ++num_committed;
@@ -1307,6 +1363,7 @@ Commit::commitHead(const DynInstPtr &head_inst, unsigned inst_num)
 
         // Generate trap squash event.
         generateTrapEvent(tid, inst_fault);
+        // [Shixin] NOTE: When trap, cannot commit HEAD!
         return false;
     }
 

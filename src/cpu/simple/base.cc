@@ -247,6 +247,7 @@ BaseSimpleCPU::traceFault()
 void
 BaseSimpleCPU::checkForInterrupts()
 {
+    // [Shixin] TODO: Check how PC is updated.
     SimpleExecContext&t_info = *threadInfo[curThread];
     SimpleThread* thread = t_info.thread;
     ThreadContext* tc = thread->getTC();
@@ -269,6 +270,9 @@ BaseSimpleCPU::checkForInterrupts()
             t_info.fetchOffset = 0;
             interrupts[curThread]->updateIntrInfo();
             interrupt->invoke(tc);
+            if (thread->pcState().instAddr() == 0xfffffff0 || thread->pcState().instAddr() == 0x9a000) {
+                printf("Interrupt %s being handled\n", interrupt->name());
+            }
             thread->decoder->reset();
         }
     }
@@ -290,15 +294,15 @@ BaseSimpleCPU::setupFetchRequest(const RequestPtr &req)
     fetchPC = protectKaslrMask(fetchPC);
 
     // Debug output
-    static size_t i, j = 0;
-    if (i++ < 10) {
-        printf("@@@ Fetch: Inst PC %lx, Fetch PC %lx, decoder->pcMask() %lx, t_info.fetchOffset %lx\n",
-               instAddr, fetchPC, decoder->pcMask(), t_info.fetchOffset);
-    }
-    if (instAddr >= 0xffffffff80000000 && j++ < 100) {
-        printf("@@@ Fetch: Inst PC %lx, Fetch PC %lx, decoder->pcMask() %lx, t_info.fetchOffset %lx\n",
-               instAddr, fetchPC, decoder->pcMask(), t_info.fetchOffset);
-    }
+//    static size_t i, j = 0;
+//    if (i++ < 10) {
+//        printf("@@@ Fetch: Inst PC %lx, Fetch PC %lx, decoder->pcMask() %lx, t_info.fetchOffset %lx\n",
+//               instAddr, fetchPC, decoder->pcMask(), t_info.fetchOffset);
+//    }
+//    if (instAddr >= 0xffffffff80000000 && j++ < 100) {
+//        printf("@@@ Fetch: Inst PC %lx, Fetch PC %lx, decoder->pcMask() %lx, t_info.fetchOffset %lx\n",
+//               instAddr, fetchPC, decoder->pcMask(), t_info.fetchOffset);
+//    }
     // [Shixin]
 
     // set up memory request for instruction fetch

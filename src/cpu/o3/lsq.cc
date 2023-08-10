@@ -840,6 +840,17 @@ LSQ::pushRequest(const DynInstPtr& inst, bool isLoad, uint8_t *data,
             inst->effSize = size;
             inst->effAddrValid(true);
 
+            // [Shixin] Set KASLR slient check
+            // TODO: Assert request kaslr offset is available.
+            // NOTE: We only consider the first sub req's delta!!!
+            // TODO: Add assert to ensure every sub req has the same delta!!!
+            Addr kaslrOffset = request->req()->getCorrKaslrOffset();
+            if (!cpu->protectKaslrValid(inst->realAddr, kaslrOffset)) {
+                inst->kaslrDMemDelayError(true);
+                warn("@@@ realAddr: %lx, effAddr: %lx, kaslrOffset: %lx\n",
+                     inst->realAddr, inst->effAddr, kaslrOffset);
+            }
+
             if (cpu->checker) {
                 inst->reqToVerify = std::make_shared<Request>(*request->req());
             }
@@ -952,6 +963,9 @@ void
 LSQ::SingleDataRequest::initiateTranslation()
 {
     assert(_reqs.size() == 0);
+//    if (_addr == 0x1600000808) {
+//        printf("LSQ::SingleDataRequest::initiateTranslation()\n");
+//    }
 
     addReq(_addr, _size, _byteEnable);
 
@@ -961,9 +975,19 @@ LSQ::SingleDataRequest::initiateTranslation()
         _inst->translationStarted(true);
         setState(State::Translation);
         flags.set(Flag::TranslationStarted);
+//        if (_addr == 0x1600000808 && isTranslationComplete()) {
+//            printf("!!! 1 SingleDataRequest isTranslationComplete()\n");
+//        } else {
+//            printf("!!! 1 not SingleDataRequest isTranslationComplete()\n");
+//        }
 
         _inst->savedRequest = this;
         sendFragmentToTranslation(0);
+//        if (_addr == 0x1600000808 && isTranslationComplete()) {
+//            printf("!!! 2 SingleDataRequest isTranslationComplete()\n");
+//        } else {
+//            printf("!!! 2 not SingleDataRequest isTranslationComplete()\n");
+//        }
     } else {
         _inst->setMemAccPredicate(false);
     }
@@ -984,6 +1008,10 @@ LSQ::SplitDataRequest::mainReq()
 void
 LSQ::SplitDataRequest::initiateTranslation()
 {
+//    if (_addr == 0x1600000808) {
+//        printf("LSQ::SplitDataRequest::initiateTranslation()\n");
+//    }
+
     auto cacheLineSize = _port.cacheLineSize();
     Addr base_addr = _addr;
     Addr next_addr = addrBlockAlign(_addr + cacheLineSize, cacheLineSize);
@@ -1048,6 +1076,11 @@ LSQ::SplitDataRequest::initiateTranslation()
     } else {
         _inst->setMemAccPredicate(false);
     }
+//    if (isTranslationComplete()) {
+//        printf("!!! SplitDataRequest isTranslationComplete()\n");
+//    } else {
+//        printf("!!! not SplitDataRequest isTranslationComplete()\n");
+//    }
 }
 
 LSQ::LSQRequest::LSQRequest(
@@ -1475,6 +1508,11 @@ LSQ::UnsquashableDirectRequest::initiateTranslation()
     } else {
         panic("unexpected behaviour in initiateTranslation()");
     }
+//    if (isTranslationComplete()) {
+//        printf("!!! UnsquashableDirectRequest isTranslationComplete()\n");
+//    } else {
+//        printf("!!! not UnsquashableDirectRequest isTranslationComplete()\n");
+//    }
 }
 
 void

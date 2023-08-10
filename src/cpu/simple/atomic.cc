@@ -42,6 +42,7 @@
 #include "cpu/simple/atomic.hh"
 
 #include "arch/generic/decoder.hh"
+#include "arch/x86/regs/int.hh"
 #include "base/output.hh"
 #include "cpu/exetrace.hh"
 #include "cpu/utils.hh"
@@ -650,7 +651,15 @@ AtomicSimpleCPU::tick()
         updateCycleCounters(BaseCPU::CPU_STATE_ON);
 
         if (!curStaticInst || !curStaticInst->isDelayedCommit()) {
+            if (cpuId() == 1 && totalInsts() < 10) {
+                // [Shixin] Note: pc = 0xfffffff8 here
+                printf("!!! 1.2 cpu 1 pc %lx\n", thread->pcState().instAddr());
+            }
             checkForInterrupts();
+            if (cpuId() == 1 && totalInsts() < 10) {
+                // [Shixin] Note: pc = 0xfffffff0 here
+                printf("!!! 1.3 cpu 1 pc %lx\n", thread->pcState().instAddr());
+            }
             checkPcEventQueue();
         }
 
@@ -715,6 +724,59 @@ AtomicSimpleCPU::tick()
                 // keep an instruction count
                 if (fault == NoFault) {
                     countInst();
+                    if (curStaticInst->isMacroop() || curStaticInst->isLastMicroop()) {
+                        if (!nextInstAddrAvail) {
+                            if (!nextInstAddrAvail) {
+                                printf("### Brought up a new CPU\n");
+                            }
+                            nextInstAddrAvail = true;
+                        }
+                    }
+
+                    auto next_pc = std::unique_ptr<PCStateBase>(thread->pcState().clone());
+                    curStaticInst->advancePC(*next_pc);
+
+                    if (totalInsts() % 0x100000 == 0 && totalInsts() < 0x100000000) {
+                        printf("Total: %lx Commit %lx %x\n", totalInsts(), thread->pcState().instAddr(), thread->pcState().microPC());
+                    }
+
+//                    if (thread->pcState().instAddr() == 0x7f5b547d3090) {
+//                        printf("@@@ cpu %d thread %d, inst %s, pc %lx, next_pc %lx\n",
+//                               cpuId(),
+//                               curThread,
+//                               curStaticInst->getName().c_str(),
+//                               thread->pcState().instAddr(),
+//                               next_pc->instAddr());
+//                    }
+//                    if (totalInsts() >= 0x2a219000 && totalInsts() < 0x2a219c90) {
+//                        printf("Total: %lx, pc: %lx, upc: %lx, inst: %s, t0: %lx, t2: %lx, t4: %lx, t9: %lx\n",
+//                               totalInsts(), thread->pcState().instAddr(), thread->pcState().microPC(),
+//                               curStaticInst->getName().c_str(),
+//                               thread->getReg(X86ISA::intRegMicro(0)),
+//                               thread->getReg(X86ISA::intRegMicro(2)),
+//                               thread->getReg(X86ISA::intRegMicro(4)),
+//                               thread->getReg(X86ISA::intRegMicro(9)));
+//                    }
+//
+//                    if (next_pc->instAddr() == 0xffffffff8c601000 ||
+//                        next_pc->instAddr() == 0xffffffff9a601000) {
+//                        if (curMacroStaticInst) {
+//                            printf("@@@ cpu %d commit total(%lx) pc %lx next_pc %lx inst %s macro %s\n",
+//                                   cpuId(),
+//                                   totalInsts(),
+//                                   thread->pcState().instAddr(),
+//                                   next_pc->instAddr(),
+//                                   curStaticInst->getName().c_str(),
+//                                   curMacroStaticInst->getName().c_str());
+//                        } else {
+//                            printf("@@@ cpu %d commit total(%lx) pc %lx next_pc %lx inst %s\n",
+//                                   cpuId(),
+//                                   totalInsts(),
+//                                   thread->pcState().instAddr(),
+//                                   next_pc->instAddr(),
+//                                   curStaticInst->getName().c_str());
+//                        }
+//                    }
 //                    if (thread->pcState().instAddr() > 0xffffffff80000000 && k++ < 200) {
 //                        printf("@@@ commit pc %lx inst %s\n", thread->pcState().instAddr(), curStaticInst->getName().c_str());
 //                    }
@@ -758,6 +820,7 @@ AtomicSimpleCPU::tick()
 
         // [Shixin] Protect KASLR: panic on incorrect access of address
         //   in KASLR region at "commit time" (when execution of all microops is finished)
+        // TODO: Why last microop?
         if (curStaticInst && curStaticInst->isLastMicroop()) {
             protectKaslrAssert();
         }

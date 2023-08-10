@@ -352,6 +352,16 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
             entry.global = pte.g;
             entry.patBit = bits(pte, 12);
             entry.vaddr = mbits(entry.vaddr, 63, 21);
+
+            // [Shixin] Get kaslr offset from delta in page table entry
+            // TODO: Make this 25 configurable
+            entry.kaslrOffset = pte.delta << 25;
+
+            if (entry.vaddr >= 0xffffffff80000000 && entry.vaddr < 0xffffffff82000000 && pte.delta != 6) {
+                printf("vaddr: %lx\n", entry.vaddr);
+                panic("Page table walker: Didn't get correct delta! pte = %lx\n", pte);
+            }
+
             doTLBInsert = true;
             doEndWalk = true;
             break;
@@ -372,6 +382,15 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
         entry.global = pte.g;
         entry.patBit = bits(pte, 12);
         entry.vaddr = mbits(entry.vaddr, 63, 12);
+
+        // [Shixin] Get kaslr offset from delta in page table entry
+        // TODO: Make this 25 configurable
+        entry.kaslrOffset = pte.delta << 25;
+
+        if (entry.vaddr >= 0xffffffff80000000 && entry.vaddr < 0xffffffff82000000 && pte.delta != 6) {
+            panic("Didn't get correct delta!\n");
+        }
+
         doTLBInsert = true;
         doEndWalk = true;
         break;

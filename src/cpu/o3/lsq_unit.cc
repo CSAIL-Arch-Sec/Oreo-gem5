@@ -1408,6 +1408,17 @@ LSQUnit::read(LSQRequest *request, ssize_t load_idx)
             auto st_s = store_it->instruction()->effAddr;
             auto st_e = st_s + store_size;
 
+            // [Shixin] These address must not containt delta!!!
+            if (cpu->protectKaslr &&
+                !(cpu->protectKaslrValid(req_s, 0) &&
+                  cpu->protectKaslrValid(req_e, 0) &&
+                  cpu->protectKaslrValid(st_s, 0) &&
+                  cpu->protectKaslrValid(st_e, 0))) {
+                warn("req_s: %lx, req_e: %lx, st_s: %lx, st_e: %lx\n",
+                       req_s, req_e, st_s, st_e);
+                panic("@@@ Store-to-load forwarding judgement contains delta!\n");
+            }
+
             bool store_has_lower_limit = req_s >= st_s;
             bool store_has_upper_limit = req_e <= st_e;
             bool lower_load_has_store_part = req_s < st_e;
@@ -1449,6 +1460,17 @@ LSQUnit::read(LSQRequest *request, ssize_t load_idx)
             }
 
             if (coverage == AddrRangeCoverage::FullAddrRangeCoverage) {
+                // [Shixin] Check delta here through store's delta since we are not going to access page table/TLB
+                Addr stKaslrOffset = cpu->getKaslrOffsetFromPC(store_it->instruction()->realAddr);
+                Addr ldKaslrOffset = cpu->getKaslrOffsetFromPC(request->instruction()->realAddr);
+                if (stKaslrOffset != ldKaslrOffset) {
+                    request->instruction()->kaslrDMemDelayError(true);
+                    warn("@@@ stl forwarding delta mismatch st realAddr: %lx, ld realAddr: %lx, effAddr: %lx\n",
+                         store_it->instruction()->realAddr,
+                         request->instruction()->realAddr,
+                         request->instruction()->effAddr);
+                }
+
                 // Get shift amount for offset into the store's data.
                 int shift_amt = request->mainReq()->getVaddr() -
                     store_it->instruction()->effAddr;

@@ -210,6 +210,9 @@ Fault
 TLB::translateInt(bool read, RequestPtr req, ThreadContext *tc)
 {
     DPRINTF(TLB, "Addresses references internal memory.\n");
+    // [Shixin] Clear corr kaslr offset not set warning for special case
+    req->setCorrKaslrOffset(0);
+
     Addr vaddr = req->getVaddr();
     Addr prefix = (vaddr >> 3) & IntAddrPrefixMask;
     if (prefix == IntAddrPrefixCPUID) {
@@ -492,6 +495,26 @@ TLB::translate(const RequestPtr &req,
             Addr paddr = entry->paddr | (vaddr & mask(entry->logBytes));
             DPRINTF(TLB, "Translated %#x -> %#x.\n", vaddr, paddr);
             req->setPaddr(paddr);
+
+            // [Shixin] Pass kaslr offset (delta) to request
+//            printf("@@@ vaddr %lx\n", vaddr);
+            if (entry->vaddr >= 0xffffffff80000000 && entry->vaddr < 0xffffffff82000000 && entry->kaslrOffset != 6 << 25) {
+                warn("TLB: Didn't get correct delta pc: %lx, delta: %lx\n", entry->vaddr, entry->kaslrOffset);
+            }
+
+            // [Shixin] TODO: Don't know why this is broken after restoring from a checkpoint
+            //              Fix manually. Remove it later!
+//            if (entry->vaddr >= 0xffffffff80000000 && entry->vaddr < 0xffffffff82000000) {
+//                entry->kaslrOffset = 6 << 25;
+//            } else {
+//                entry->kaslrOffset = 0;
+//            }
+
+//            if (vaddr == 0x1600000808) {
+//                printf("!!! setCorrKaslrOffset\n");
+//            }
+            req->setCorrKaslrOffset(entry->kaslrOffset);
+
             if (entry->uncacheable)
                 req->setFlags(Request::UNCACHEABLE | Request::STRICT_ORDER);
         } else {
@@ -499,12 +522,14 @@ TLB::translate(const RequestPtr &req,
             DPRINTF(TLB, "Paging disabled.\n");
             DPRINTF(TLB, "Translated %#x -> %#x.\n", vaddr, vaddr);
             req->setPaddr(vaddr);
+            req->setCorrKaslrOffset(0);
         }
     } else {
         // Real mode
         DPRINTF(TLB, "In real mode.\n");
         DPRINTF(TLB, "Translated %#x -> %#x.\n", vaddr, vaddr);
         req->setPaddr(vaddr);
+        req->setCorrKaslrOffset(0);
     }
 
     return finalizePhysical(req, tc, mode);
@@ -531,6 +556,7 @@ TLB::translateFunctional(const RequestPtr &req, ThreadContext *tc,
         if (fault != NoFault)
             return fault;
         paddr = insertBits(addr, logBytes - 1, 0, vaddr);
+        // [Shixin] TODO: Set corr kaslr offset for functional mode
     } else {
         Process *process = tc->getProcessPtr();
         const auto *pte = process->pTable->lookup(vaddr);

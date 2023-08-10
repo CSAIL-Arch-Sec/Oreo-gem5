@@ -94,6 +94,11 @@ X86FaultBase::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     pc.upc(romMicroPC(entry));
     pc.nupc(romMicroPC(entry) + 1);
     tc->pcState(pc);
+
+//    if (pc.instAddr() < 0xffffffff80000000) {
+//        printf("$$$ X86FaultBase entry: %d set pc: %lx vector %d: cs_base: %lx errorCode: %lx\n",
+//               entry, pc.instAddr(), vector, cs_base, errorCode);
+//    }
 }
 
 std::string
@@ -137,6 +142,7 @@ void
 PageFault::invoke(ThreadContext *tc, const StaticInstPtr &inst)
 {
     if (FullSystem) {
+//        printf("@@@ pagefault invoke addr: %lx\n", addr);
         // Invalidate any matching TLB entries before handling the page fault.
         tc->getMMUPtr()->demapPage(addr, 0);
         HandyM5Reg m5reg = tc->readMiscRegNoEffect(misc_reg::M5Reg);
@@ -295,6 +301,8 @@ InitInterrupt::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     pc.upc(romMicroPC(entry));
     pc.nupc(romMicroPC(entry) + 1);
     tc->pcState(pc);
+
+    printf("$$$ InitInterrupt set pc: %lx\n", pc.instAddr());
 }
 
 void
@@ -314,6 +322,8 @@ StartupInterrupt::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     tc->setMiscReg(misc_reg::CsLimit, 0xffff);
 
     tc->pcState(tc->readMiscReg(misc_reg::CsBase));
+
+    printf("$$$ StartupInterrupt set pc: %lx\n", tc->pcState().instAddr());
 }
 
 } // namespace X86ISA

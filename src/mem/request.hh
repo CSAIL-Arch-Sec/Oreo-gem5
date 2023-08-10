@@ -450,7 +450,7 @@ class Request
 
     /** [Shixin] The correct KASLR delta mask of the request vaddr. */
     // TODO: Get this value from page table / TLB in the final impl.
-    Addr _corrKaslrOffset = 0xc000000;
+    Addr _corrKaslrOffset = 0;
 
     /**
      * Extra data for the request, such as the return value of
@@ -850,9 +850,26 @@ class Request
         return privateFlags.isSet(VALID_CORR_KASLR_OFFSET);
     }
 
+    void
+    setCorrKaslrOffset(Addr offset)
+    {
+//        printf("@@@ kaslr offset from translation %lx\n", offset);
+        _corrKaslrOffset = offset;
+        privateFlags.set(VALID_CORR_KASLR_OFFSET);
+    }
+
     Addr
     getCorrKaslrOffset() const
     {
+        if (!privateFlags.isSet(VALID_CORR_KASLR_OFFSET)) {
+            printf("@@@ Try to get corr kaslr offset (%lx) while VALID_CORR_KASLR_OFFSET is not set\n",
+                   _corrKaslrOffset);
+            if (hasPaddr()) {
+                printf("vaddr: %lx, paddr: %lx\n", getVaddr(), getPaddr());
+            } else {
+                printf("vaddr: %lx, no paddr\n", getVaddr());
+            }
+        }
         return _corrKaslrOffset;
     }
 

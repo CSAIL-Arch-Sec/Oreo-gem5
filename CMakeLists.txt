@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.5)
+project(gem5)
+file(GLOB_RECURSE SOURCE_FILES "src/**/*.hh" "src/**/*.cc")
+include_directories(src)
+include_directories(include)
+include_directories(build/X86_MESI_Two_Level)
+add_executable(gem5 ${SOURCE_FILES})

@@ -291,8 +291,8 @@ Decode::squash(const DynInstPtr &inst, ThreadID tid)
     toFetch->decodeInfo[tid].mispredictInst = inst;
     toFetch->decodeInfo[tid].squash = true;
     toFetch->decodeInfo[tid].doneSeqNum = inst->seqNum;
-    // [Shixin] Apply mask to fetch pc sent to fetch stage
-    set(toFetch->decodeInfo[tid].nextPC, *cpu->protectKaslrMask(*inst->branchTarget()));
+    // [Shixin] Should not apply mask since this is used to recover corrPC when squash!!!
+    set(toFetch->decodeInfo[tid].nextPC, *inst->branchTarget());
 
     // Looking at inst->pcState().branching()
     // may yield unexpected results if the branch

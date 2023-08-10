@@ -300,9 +300,9 @@ Fetch::clearStates(ThreadID tid)
     fetchStatus[tid] = Running;
     // [Shixin] Apply mask when gain pc from cpu state
     auto maskPCState = cpu->protectKaslrMask(cpu->pcState(tid));
-    if (maskPCState->instAddr() >= 0xffffffff8d000000) {
-        panic("maskPCState->instAddr() >= 0xffffffff8d000000");
-    }
+//    if (maskPCState->instAddr() >= 0xffffffff8d000000) {
+//        panic("maskPCState->instAddr() >= 0xffffffff8d000000");
+//    }
     set(pc[tid], *maskPCState);
     // Old code
     // set(pc[tid], cpu->pcState(tid));
@@ -334,9 +334,9 @@ Fetch::resetStage()
         fetchStatus[tid] = Running;
         // [Shixin] Apply mask when gain pc from cpu state
         auto maskPCState = cpu->protectKaslrMask(cpu->pcState(tid));
-        if (maskPCState->instAddr() >= 0xffffffff8d000000) {
-            panic("maskPCState->instAddr() >= 0xffffffff8d000000");
-        }
+//        if (maskPCState->instAddr() >= 0xffffffff8d000000 && cpu->protectKaslr) {
+//            panic("maskPCState->instAddr() >= 0xffffffff8d000000");
+//        }
         set(pc[tid], *maskPCState);
         // Old code
         // set(pc[tid], cpu->pcState(tid));
@@ -532,7 +532,14 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
         // Update next_pc
         // [Shixin] Apply mask to pred target
         std::unique_ptr<PCStateBase> next_pc_helper(next_pc.clone());
+//        Addr this_addr = next_pc.instAddr();
         inst->staticInst->advancePC(*next_pc_helper);
+//        Addr next_addr = next_pc_helper->instAddr();
+//        if (next_addr == 0xffffffff8c600010 ||
+//            next_addr == 0xffffffff9a600010) {
+//            printf("Fetch non control predict inst pc: %lx, next_pc: %lx\n",
+//                   this_addr, next_addr);
+//        }
         set(next_pc, *cpu->protectKaslrMask(*next_pc_helper));
 
         // old code
@@ -544,17 +551,15 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
 
     ThreadID tid = inst->threadNumber;
     // Update next_pc based on prediction result
-    // TODO: Should use a masked pc here!
+    // [Shixin] TODO: Consider to apply mask to next_pc's npc before accessing branchPred
     predict_taken = branchPred->predict(inst->staticInst, inst->seqNum,
                                         next_pc, tid);
 
-    if (next_pc.instAddr() >= 0xffffffff8d000000) {
-        printf("@@@ predict pc without mask next_pc.instAddr() = %lx\n", next_pc.instAddr());
-    }
-    // [Shixin] Apply mask to pred target
-    // TODO: Double check
+    // NOTE:
     //   1. Why eret is considered as non-control inst
-    //      (which generated not masked next pc)
+    //      (which generated not masked next pc): it is
+    //      indeed non-control inst. It's npc is determined
+    //      by prev insts.
     //   2. Is there any other non-control inst generate
     //      not masked next_pc with masked pc?
     set(next_pc, *cpu->protectKaslrMask(next_pc));
@@ -588,9 +593,8 @@ bool
 Fetch::fetchCacheLine(Addr vaddr, ThreadID tid, Addr pc)
 {
     // [Shixin] vaddr should be masked
-    static size_t i = 0;
-    if (vaddr >= 0xffffffff8d000000 && i++ < 10) {
-        printf("@@@ Fetch virtual address %lx (masked: %lx)\n", vaddr, cpu->protectKaslrMask(vaddr));
+    if (vaddr != cpu->protectKaslrMask(vaddr)) {
+        panic("@@@ Fetch virtual address %lx (masked: %lx)\n", vaddr, cpu->protectKaslrMask(vaddr));
     }
 
     Fault fault = NoFault;
@@ -644,8 +648,9 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
 {
     ThreadID tid = cpu->contextToThread(mem_req->contextId());
     Addr fetchBufferBlockPC = mem_req->getVaddr();
-    // [Shixin] TODO: Add check corrKaslrOffset validity later
-    Addr fetchBufferBlockCorrKaslrOffset = mem_req->getCorrKaslrOffset();
+
+//    printf("fetchBufferBlockPC: %lx, fetchBufferBlockCorrKaslrOffset: %lx\n",
+//           fetchBufferBlockPC, fetchBufferBlockCorrKaslrOffset);
 
     assert(!cpu->switchedOut());
 
@@ -688,7 +693,8 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
         //            or use it to calculate offset.
         fetchBufferPC[tid] = fetchBufferBlockPC;
         // [Shixin] Record CorrKaslrOffset
-        fetchBufferCorrKaslrOffset[tid] = fetchBufferBlockCorrKaslrOffset;
+        fetchBufferCorrKaslrOffset[tid] = mem_req->getCorrKaslrOffset();
+//        printf("### fetchBufferPC[tid]: %lx, fetchBufferCorrKaslrOffset[tid]: %lx\n", fetchBufferPC[tid], fetchBufferCorrKaslrOffset[tid]);
 
         fetchBufferValid[tid] = false;
         DPRINTF(Fetch, "Fetch: Doing instruction read.\n");
@@ -716,11 +722,11 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
             ppFetchRequestSent->notify(mem_req);
         }
     } else {
-        static size_t i = 0;
+//        static size_t i = 0;
         // [Shixin] TODO: Check whether translation fault happens without our defense
-        if (mem_req->getVaddr() > 0xffffffff80000000 && i++ < 100) {
-            printf("@@@ Vaddr %lx translation error\n", mem_req->getVaddr());
-        }
+//        if (mem_req->getVaddr() >= 0xffffffff80000000 && i++ < 100) {
+//            printf("@@@ Vaddr %lx translation error\n", mem_req->getVaddr());
+//        }
         // Don't send an instruction to decode if we can't handle it.
         if (!(numInst < fetchWidth) ||
                 !(fetchQueue[tid].size() < fetchQueueSize)) {
@@ -741,11 +747,15 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
         // until commit handles the fault.  The only other way it can
         // wake up is if a squash comes along and changes the PC.
         const PCStateBase &fetch_pc = *pc[tid];
+//        printf("Translation faulted, building noop with pc %lx\n", fetch_pc.instAddr());
 
         DPRINTF(Fetch, "[tid:%i] Translation faulted, building noop.\n", tid);
         // We will use a nop in ordier to carry the fault.
         // [Shixin] fetch_pc is masked pc. Note that we cannot get correct pc
         //          since we cannot get correct Delta when translation fails.
+//        if (mem_req->getVaddr() >= 0xffffffff80000000 && i++ < 100) {
+//            printf("@@@ Vaddr %lx translation faulted, building noop\n", mem_req->getVaddr());
+//        }
         DynInstPtr instruction = buildInst(tid, nopStaticInstPtr, nullptr,
                 fetch_pc, fetch_pc, false);
         instruction->setNotAnInst();
@@ -772,14 +782,21 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst,
 {
     DPRINTF(Fetch, "[tid:%i] Squashing, setting PC to: %s.\n",
             tid, new_pc);
-
-    // [Shixin] Debug output. Remove panic if running baseline
+//    printf("Squashing, setting PC to %lx\n", new_pc.instAddr());
+    // [Shixin] TODO: Check here!
     auto mask_new_pc = cpu->protectKaslrMask(new_pc);
-    if (mask_new_pc->instAddr() >= 0xffffffff8d000000) {
-        panic("maskPCState->instAddr() >= 0xffffffff8d000000");
-    }
-    // TODO: Check here!
     set(pc[tid], *mask_new_pc);
+
+//    if (new_pc.instAddr() == 0x7fdbb4313891 && new_pc.microPC() == 0x15) {
+//        warn("squash: %s, pc: %lx, mask_pc: %lx micro pc: %lx, next_pc: %lx\n",
+//             squashInst->staticInst->getName().c_str(),
+//             new_pc.instAddr(), mask_new_pc->instAddr(), new_pc.microPC(),
+//             new_pc.as<X86ISA::PCState>().npc());
+//    }
+
+    // [Shixin] Recover corrKaslrOffset when squash
+    corrKaslrOffset[tid] = cpu->getKaslrOffsetFromPC(new_pc);
+
     fetchOffset[tid] = 0;
     if (squashInst &&
         // [Shixin] Should only compare masked pc
@@ -831,6 +848,7 @@ Fetch::squashFromDecode(const PCStateBase &new_pc, const DynInstPtr squashInst,
 {
     DPRINTF(Fetch, "[tid:%i] Squashing from decode.\n", tid);
 
+//    printf("Squashing from decode.\n");
     doSquash(new_pc, squashInst, tid);
 
     // Tell the CPU to remove any instructions that are in flight between
@@ -1114,6 +1132,7 @@ Fetch::buildInst(ThreadID tid, StaticInstPtr staticInst,
         StaticInstPtr curMacroop, const PCStateBase &this_pc,
         const PCStateBase &next_pc, bool trace)
 {
+//    printf("@@@ Call buildInst\n");
     // Get a sequence number.
     InstSeqNum seq = cpu->getAndIncrementInstSeq();
 
@@ -1122,6 +1141,10 @@ Fetch::buildInst(ThreadID tid, StaticInstPtr staticInst,
     arrays.numDests = staticInst->numDestRegs();
 
     // Create a new DynInst from the instruction fetched.
+    // [Shixin] TODO: We may need to remove or update this assert later
+//    if (!cpu->protectKaslrValid(this_pc.instAddr()) && staticInst != nopStaticInstPtr && cpu->protectKaslr) {
+//        warn("@@@ DynInst pc: %lx is not corrpc\n", this_pc.instAddr());
+//    }
     DynInstPtr instruction = new (arrays) DynInst(
             arrays, staticInst, curMacroop, this_pc, next_pc, seq, cpu);
     instruction->setTid(tid);
@@ -1168,6 +1191,8 @@ Fetch::fetch(bool &status_change)
     //////////////////////////////////////////
     // Start actual fetch
     //////////////////////////////////////////
+    static size_t counter = 0;
+    counter++;
     ThreadID tid = getFetchingThread();
 
     assert(!cpu->switchedOut());
@@ -1195,10 +1220,9 @@ Fetch::fetch(bool &status_change)
     PCStateBase &this_pc = *pc[tid];
 
     // [Shixin] Debug output
-    static size_t i = 0;
-    if (this_pc.instAddr() >= 0xffffffff8d000000 && i++ < 10) {
-        printf("@@@ fetch wrong this_pc.instAddr() = %lx\n", this_pc.instAddr());
-    }
+//    if (this_pc.instAddr() >= 0xffffffff8d000000 && cpu->protectKaslr) {
+//        printf("@@@ fetch wrong this_pc.instAddr() = %lx\n", this_pc.instAddr());
+//    }
 
     Addr pcOffset = fetchOffset[tid];
     Addr fetchAddr = (this_pc.instAddr() + pcOffset) & decoder[tid]->pcMask();
@@ -1304,22 +1328,7 @@ Fetch::fetch(bool &status_change)
         bool needMem = !inRom && !curMacroop && !dec_ptr->instReady();
         fetchAddr = (this_pc.instAddr() + pcOffset) & pc_mask;
         Addr fetchBufferBlockPC = fetchBufferAlignPC(fetchAddr);
-
-//        static size_t i = 0;
-//        if (i < 100) {
-//            printf("@@@ instAddr = %lx fetchAddr = %lx pcOffset = %lx pc_mask = %lx\n",
-//                   this_pc.instAddr(), fetchAddr, pcOffset, pc_mask);
-//            i++;
-//        }
-
         if (needMem) {
-
-//            static size_t i = 0;
-//            if (fetchAddr > 0xffffffff80000000 && i++ < 100) {
-//                printf("@@@ fetchAddr = %lx fetchBufferBlockPC = %lx fetchBufferBlockPC[tid] = %lx\n",
-//                       fetchAddr, fetchBufferBlockPC, fetchBufferPC[tid]);
-//            }
-
             // NOTE: need use the mem just got from the cache, not "need to access mem"
             // If buffer is no longer valid or fetchAddr has moved to point
             // to the next cache block then start fetch from icache.
@@ -1327,6 +1336,11 @@ Fetch::fetch(bool &status_change)
                 // [Shixin] fetchBufferBlockPC should be masked
                 fetchBufferBlockPC != fetchBufferPC[tid])
                 break;
+
+//            if (blkOffset >= numInsts) {
+//                printf("fetchAddr: %lx, fetchBufferBlockPC: %lx, fetchBufferPC[tid]: %lx, fetchBufferSize: %lx\n",
+//                       fetchAddr, fetchBufferBlockPC, fetchBufferPC[tid], fetchBufferSize);
+//            }
 
             if (blkOffset >= numInsts) {
                 // We need to process more memory, but we've run out of the
@@ -1337,6 +1351,9 @@ Fetch::fetch(bool &status_change)
             memcpy(dec_ptr->moreBytesPtr(),
                     fetchBuffer[tid] + blkOffset * instSize, instSize);
             decoder[tid]->moreBytes(this_pc, fetchAddr);
+            corrKaslrOffset[tid] = fetchBufferCorrKaslrOffset[tid];
+//            printf("counter1: %lx, corrKaslrOffset[tid] %lx, fetchAddr: %lx\n",
+//                   counter, corrKaslrOffset[tid], fetchAddr);
 
             if (dec_ptr->needMoreBytes()) {
                 blkOffset++;
@@ -1348,11 +1365,19 @@ Fetch::fetch(bool &status_change)
         // Extract as many instructions and/or microops as we can from
         // the memory we've processed so far.
         do {
+            // [Shixin] TODO: Should assert corr offset is available here!
+            auto corr_pc = cpu->protectKaslrApplyOffset(this_pc, corrKaslrOffset[tid]);
+
             if (!(curMacroop || inRom)) {
                 if (dec_ptr->instReady()) {
                     // New macroop & not inRom -> need to decode the new macroop
-                    // [Shixin] Decoder update this_pc.npc to this_pc.pc + inst_size
-                    staticInst = dec_ptr->decode(this_pc);
+                    // [Shixin] Decoder update npc to pc + inst_size, which could be final npc,
+                    //          so we should use corr_pc instead of this_pc to do this.
+                    staticInst = dec_ptr->decode(*corr_pc);
+                    // Also adapt possible npc changes to this_pc
+                    set(this_pc, *cpu->protectKaslrMask(*corr_pc));
+                    // old code
+                    // staticInst = dec_ptr->decode(this_pc);
 
                     // Increment stat of fetched instructions.
                     ++fetchStats.insts;
@@ -1390,8 +1415,25 @@ Fetch::fetch(bool &status_change)
                 newMacro |= staticInst->isLastMicroop();
             }
 
-            // [Shixin] TODO: Should assert corr offset is available here!
-            auto corr_pc = cpu->protectKaslrApplyOffset(this_pc, fetchBufferCorrKaslrOffset[tid]);
+            // [Shixin]
+            if (fetchBufferPC[tid] >= 0xffffffff80000000 && fetchBufferPC[tid] < 0xffffffff82000000 && fetchBufferCorrKaslrOffset[tid] != 6 << 25) {
+                printf("Wrong offset %lx\n", fetchBufferCorrKaslrOffset[tid]);
+            }
+//            printf("counter3: %lx, this_pc: %lx\n", counter, this_pc.instAddr());
+            // [Shixin] TODO: We might need to remove or modify this assert later
+            if (!cpu->protectKaslrValid(corr_pc->instAddr()) && cpu->protectKaslr) {
+                printf("fetchBufferPC[tid]: %lx pc[tid]: %lx\n",
+                       fetchBufferPC[tid], pc[tid]->instAddr());
+                printf("kaslrOffset: %lx\n", corrKaslrOffset[tid]);
+                warn("@@@ DynInst pc: %lx is not corrpc with delta %lx\n", corr_pc->instAddr(), corrKaslrOffset[tid]);
+            }
+//            if (corr_pc->instAddr() == 0x7fdbb4313891 && corr_pc->microPC() == 0x15) {
+//                warn("Build dyn inst: %s, pc: %x, micro pc: %lx, next_pc: %lx\n",
+//                       staticInst->getName().c_str(),
+//                       corr_pc->instAddr(), corr_pc->microPC(),
+//                       corr_pc->as<X86ISA::PCState>().npc());
+//            }
+
 //            std::unique_ptr<PCStateBase> corr_next_pc(corr_pc->clone());
 //            staticInst->advancePC(*corr_next_pc);
 //            if (corr_pc->instAddr() >= 0xffffffff80000000 || corr_pc->instAddr() == 0x100005b) {
@@ -1415,8 +1457,8 @@ Fetch::fetch(bool &status_change)
 
             set(next_pc, this_pc);
             // [Shixin] Remove panic if running baseline
-            if (next_pc->instAddr() >= 0xffffffff8d000000) {
-                panic("@@@ set(next_pc, this_pc); unmasked pc: %lx\n", next_pc->instAddr());
+            if (next_pc->instAddr() != cpu->protectKaslrMask(next_pc->instAddr())) {
+                warn("@@@ set(next_pc, this_pc); unmasked pc: %lx\n", next_pc->instAddr());
             }
 
             // If we're branching after this instruction, quit fetching
@@ -1432,9 +1474,9 @@ Fetch::fetch(bool &status_change)
 
             // Move to the next instruction, unless we have a branch.
             set(this_pc, *next_pc);
-            // [Shixin] TODO: Fix the bug where next_pc is not masked!
-            if (next_pc->instAddr() >= 0xffffffff8d000000) {
-                panic("@@@ get wrong next_pc.instAddr() = %lx\n", next_pc->instAddr());
+            // [Shixin] next_pc is masked
+            if (next_pc->instAddr() != cpu->protectKaslrMask(next_pc->instAddr())) {
+                warn("@@@ get wrong next_pc.instAddr() = %lx\n", next_pc->instAddr());
             }
             inRom = isRomMicroPC(this_pc.microPC());
 
@@ -1679,9 +1721,8 @@ Fetch::pipelineIcacheAccesses(ThreadID tid)
     // [Shixin] thid_pc is masked pc
     const PCStateBase &this_pc = *pc[tid];
     // [Shixin] Debug output
-    static size_t i = 0;
-    if (this_pc.instAddr() >= 0xffffffff8d000000 && i++ < 10) {
-        printf("@@@ pipelineIcacheAccesses wrong this_pc.instAddr() = %lx\n", this_pc.instAddr());
+    if (this_pc.instAddr() != cpu->protectKaslrMask(this_pc.instAddr())) {
+        warn("@@@ pipelineIcacheAccesses wrong this_pc.instAddr() = %lx\n", this_pc.instAddr());
     }
 
     if (isRomMicroPC(this_pc.microPC())) {

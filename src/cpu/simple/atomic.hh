@@ -60,6 +60,8 @@ class AtomicSimpleCPU : public BaseSimpleCPU
     void init() override;
 
   protected:
+    bool nextInstAddrAvail = false;
+
     EventFunctionWrapper tickEvent;
 
     const int width;

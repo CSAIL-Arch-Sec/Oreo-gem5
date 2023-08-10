@@ -405,6 +405,8 @@ def get_resource(
     # same resources at once. The timeout here is somewhat arbitarily put at 15
     # minutes.Most resources should be downloaded and decompressed in this
     # timeframe, even on the most constrained of systems.
+    # [Shixin] NOTE: If abort gem5 before deleting this lock file,
+    #               then all following simulation cannot proceed due to lock issue
     with FileLock("{}.lock".format(to_path), timeout=900):
 
         resource_json = get_resources_json_obj(resource_name)
