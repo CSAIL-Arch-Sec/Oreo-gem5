@@ -1408,7 +1408,7 @@ LSQUnit::read(LSQRequest *request, ssize_t load_idx)
             auto st_s = store_it->instruction()->effAddr;
             auto st_e = st_s + store_size;
 
-            // [Shixin] These address must not containt delta!!!
+            // [Shixin] These address must not contain delta!!!
             if (cpu->protectKaslr &&
                 !(cpu->protectKaslrValid(req_s, 0) &&
                   cpu->protectKaslrValid(req_e, 0) &&

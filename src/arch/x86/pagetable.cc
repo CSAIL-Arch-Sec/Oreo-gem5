@@ -67,6 +67,10 @@ TlbEntry::serialize(CheckpointOut &cp) const
 {
     SERIALIZE_SCALAR(paddr);
     SERIALIZE_SCALAR(vaddr);
+
+    // [Shixin] Save kaslrOffset to the checkpoint file
+    SERIALIZE_SCALAR(kaslrOffset);
+
     SERIALIZE_SCALAR(logBytes);
     SERIALIZE_SCALAR(writable);
     SERIALIZE_SCALAR(user);
@@ -82,6 +86,11 @@ TlbEntry::unserialize(CheckpointIn &cp)
 {
     UNSERIALIZE_SCALAR(paddr);
     UNSERIALIZE_SCALAR(vaddr);
+
+    // [Shixin] Restore kaslrOffset from the checkpoint file
+    UNSERIALIZE_SCALAR(kaslrOffset);
+    printf("UNSERIALIZE_SCALAR(kaslrOffset) %lx\n", kaslrOffset);
+
     UNSERIALIZE_SCALAR(logBytes);
     UNSERIALIZE_SCALAR(writable);
     UNSERIALIZE_SCALAR(user);

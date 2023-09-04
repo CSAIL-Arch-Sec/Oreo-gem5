@@ -499,7 +499,7 @@ TLB::translate(const RequestPtr &req,
             // [Shixin] Pass kaslr offset (delta) to request
 //            printf("@@@ vaddr %lx\n", vaddr);
             if (entry->vaddr >= 0xffffffff80000000 && entry->vaddr < 0xffffffff82000000 && entry->kaslrOffset != 6 << 25) {
-                warn("TLB: Didn't get correct delta pc: %lx, delta: %lx\n", entry->vaddr, entry->kaslrOffset);
+                panic("TLB: Didn't get correct delta pc: %lx, delta: %lx\n", entry->vaddr, entry->kaslrOffset);
             }
 
             // [Shixin] TODO: Don't know why this is broken after restoring from a checkpoint
