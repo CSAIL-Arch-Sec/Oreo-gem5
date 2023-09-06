@@ -213,6 +213,13 @@ def add_protect_kaslr_arguments(parser):
         action="store_true",
         help="Whether to protect KASLR.",
     )
+
+    parser.add_argument(
+        "--protect-module-kaslr",
+        action="store_true",
+        help="Whether to protect module KASLR.",
+    )
+
     parser.add_argument(
         "--kaslr-offset",
         type=int,

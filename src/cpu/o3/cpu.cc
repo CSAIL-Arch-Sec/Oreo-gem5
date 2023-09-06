@@ -814,7 +814,8 @@ CPU::trap(const Fault &fault, ThreadID tid, const StaticInstPtr &inst)
         // [Shixin] TODO: change the following line to
         //            commit.nextInstAddr[tid] = updated_addr
         //            and see whether the cpu would panic.
-        commit.nextInstAddrAvail[tid] = false;
+        // commit.nextInstAddrAvail[tid] = false;
+        commit.nextInstAddr[tid] = updated_addr;
     }
 }
 

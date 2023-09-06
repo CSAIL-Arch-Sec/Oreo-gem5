@@ -45,6 +45,7 @@
 #include <list>
 #include <string>
 
+#include "arch/x86/faults.hh"
 #include "base/compiler.hh"
 #include "base/logging.hh"
 #include "cpu/o3/cpu.hh"
@@ -842,13 +843,80 @@ LSQ::pushRequest(const DynInstPtr& inst, bool isLoad, uint8_t *data,
 
             // [Shixin] Set KASLR slient check
             // TODO: Assert request kaslr offset is available.
-            // NOTE: We only consider the first sub req's delta!!!
-            // TODO: Add assert to ensure every sub req has the same delta!!!
-            Addr kaslrOffset = request->req()->getCorrKaslrOffset();
-            if (!cpu->protectKaslrValid(inst->realAddr, kaslrOffset)) {
-                inst->kaslrDMemDelayError(true);
-                warn("@@@ realAddr: %lx, effAddr: %lx, kaslrOffset: %lx\n",
-                     inst->realAddr, inst->effAddr, kaslrOffset);
+            // NOTE: We only check validity of the first sub req's delta!!!
+            if (request->req()->hasCorrKaslrDelta()) {
+                Addr kaslrDelta = request->req()->getCorrKaslrDelta();
+                if (!cpu->protectKaslrValid(inst->realAddr, kaslrDelta)) {
+                    inst->kaslrDMemDelayError(true);
+                    warn("@@@ pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx, kaslrDelta: %lx\n",
+                         inst->pcState().instAddr(), inst->pcState().microPC(),
+                         inst->realAddr, inst->effAddr, kaslrDelta);
+                }
+                // Check whether every sub req has the same delta!!!
+                for (size_t i = 0; i < request->_reqs.size(); i++) {
+                    // TODO: Also check whether the offset is available
+                    auto req = request->_reqs.at(i);
+                    if (req->hasCorrKaslrDelta()) {
+                        auto otherDelta = req->getCorrKaslrDelta();
+                        if (kaslrDelta != otherDelta) {
+                            inst->kaslrDMemDelayError(true);
+                            warn("@@@ pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx, kaslrDelta: %lx kaslrDelta at req[%lx]: %lx\n",
+                                 inst->pcState().instAddr(), inst->pcState().microPC(),
+                                 inst->realAddr, inst->effAddr, kaslrDelta,
+                                 i, otherDelta);
+                        }
+                    } else {
+                        auto fault = request->_fault[i];
+                        auto pageFault = std::dynamic_pointer_cast<X86ISA::PageFault>(fault);
+                        if (pageFault) {
+                            if (!pageFault->unmappedFault()) {
+                                warn("@@@ corrKaslrDelta is missing when page is present (mapped) "
+                                     "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx, reqIdx: %lx\n",
+                                     inst->pcState().instAddr(), inst->pcState().microPC(),
+                                     inst->realAddr, inst->effAddr, i);
+                            } else {
+                                // corrKaslrDelta is missing since page is unmapped
+                            }
+                        } else if (fault == NoFault) {
+                            warn("@@@ corrKaslrDelta is missing wihtout any fault "
+                                 "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx, reqIdx: %lx\n",
+                                 inst->pcState().instAddr(), inst->pcState().microPC(),
+                                 inst->realAddr, inst->effAddr, i);
+                        } else {
+                            warn("@@@ corrKaslrDelta is missing while fault is not page fault "
+                                 "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx, reqIdx: %lx\n",
+                                 inst->pcState().instAddr(), inst->pcState().microPC(),
+                                 inst->realAddr, inst->effAddr, i);
+                        }
+                    }
+                }
+            } else {
+                // kaslrDelta can be unavailable only when page is not mapped, so we need to check
+                // 1. Whether there is a fault
+                // 2. Whether the fault is a page fault
+                // 3. Whether the page fault is caused by page not present
+                auto fault = request->_fault[0];
+                auto pageFault = std::dynamic_pointer_cast<X86ISA::PageFault>(fault);
+                if (pageFault) {
+                    if (!pageFault->unmappedFault()) {
+                        warn("@@@ corrKaslrDelta is missing when page is present (mapped) "
+                             "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx\n",
+                             inst->pcState().instAddr(), inst->pcState().microPC(),
+                             inst->realAddr, inst->effAddr);
+                    } else {
+                        // corrKaslrDelta is missing since page is unmapped
+                    }
+                } else if (fault == NoFault) {
+                    warn("@@@ corrKaslrDelta is missing wihtout any fault "
+                         "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx\n",
+                         inst->pcState().instAddr(), inst->pcState().microPC(),
+                         inst->realAddr, inst->effAddr);
+                } else {
+                    warn("@@@ corrKaslrDelta is missing while fault is not page fault "
+                         "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx\n",
+                         inst->pcState().instAddr(), inst->pcState().microPC(),
+                         inst->realAddr, inst->effAddr);
+                }
             }
 
             if (cpu->checker) {

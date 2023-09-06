@@ -693,8 +693,17 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
         //            or use it to calculate offset.
         fetchBufferPC[tid] = fetchBufferBlockPC;
         // [Shixin] Record CorrKaslrOffset
-        fetchBufferCorrKaslrOffset[tid] = mem_req->getCorrKaslrOffset();
-//        printf("### fetchBufferPC[tid]: %lx, fetchBufferCorrKaslrOffset[tid]: %lx\n", fetchBufferPC[tid], fetchBufferCorrKaslrOffset[tid]);
+        fetchBufferCorrKaslrDelta[tid] = mem_req->getCorrKaslrDelta();
+        // TODO: Remove this hardcoded debug output later
+        if (cpu->isKaslrMaskedAddr(fetchBufferPC[tid], BaseCPU::KaslrKernelRegion) &&
+            fetchBufferCorrKaslrDelta[tid] != 6) {
+            panic("cpu %d thread %lx wrong offset %lx for pc %lx\n",
+                 cpu->cpuId(),
+                 tid,
+                 fetchBufferCorrKaslrDelta[tid],
+                 fetchBufferPC[tid]);
+        }
+//        printf("### fetchBufferPC[tid]: %lx, fetchBufferCorrKaslrDelta[tid]: %lx\n", fetchBufferPC[tid], fetchBufferCorrKaslrDelta[tid]);
 
         fetchBufferValid[tid] = false;
         DPRINTF(Fetch, "Fetch: Doing instruction read.\n");
@@ -794,8 +803,8 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst,
 //             new_pc.as<X86ISA::PCState>().npc());
 //    }
 
-    // [Shixin] Recover corrKaslrOffset when squash
-    corrKaslrOffset[tid] = cpu->getKaslrOffsetFromPC(new_pc);
+    // [Shixin] Recover corrKaslrDelta when squash
+    corrKaslrDelta[tid] = cpu->getKaslrDeltaFromPC(new_pc);
 
     fetchOffset[tid] = 0;
     if (squashInst &&
@@ -1320,6 +1329,9 @@ Fetch::fetch(bool &status_change)
     // Loop through instruction memory from the cache.
     // Keep issuing while fetchWidth is available and branch is not
     // predicted taken
+    static size_t while_loop_counter = 0;
+    static size_t do_loop_counter = 0;
+    while_loop_counter++;
     while (numInst < fetchWidth && fetchQueue[tid].size() < fetchQueueSize
            && !predictedBranch && !quiesce) {
         // We need to process more memory if we aren't going to get a
@@ -1351,9 +1363,10 @@ Fetch::fetch(bool &status_change)
             memcpy(dec_ptr->moreBytesPtr(),
                     fetchBuffer[tid] + blkOffset * instSize, instSize);
             decoder[tid]->moreBytes(this_pc, fetchAddr);
-            corrKaslrOffset[tid] = fetchBufferCorrKaslrOffset[tid];
-//            printf("counter1: %lx, corrKaslrOffset[tid] %lx, fetchAddr: %lx\n",
-//                   counter, corrKaslrOffset[tid], fetchAddr);
+            addr1[tid] = fetchAddr;
+            corrKaslrDelta[tid] = fetchBufferCorrKaslrDelta[tid];
+//            printf("counter1: %lx, corrKaslrDelta[tid] %lx, fetchAddr: %lx\n",
+//                   counter, corrKaslrDelta[tid], fetchAddr);
 
             if (dec_ptr->needMoreBytes()) {
                 blkOffset++;
@@ -1364,9 +1377,25 @@ Fetch::fetch(bool &status_change)
 
         // Extract as many instructions and/or microops as we can from
         // the memory we've processed so far.
+        do_loop_counter++;
         do {
             // [Shixin] TODO: Should assert corr offset is available here!
-            auto corr_pc = cpu->protectKaslrApplyOffset(this_pc, corrKaslrOffset[tid]);
+            auto corr_pc = cpu->protectKaslrApplyOffset(this_pc, corrKaslrDelta[tid]);
+
+            // TODO: Remove debug output here
+            if (!cpu->protectKaslrValidDirty(corr_pc->instAddr()) && cpu->protectKaslr[0]) {
+                warn("@@@ cpu: %d thread %lx while %lx do %lx before decode (%lx) %lx %lx is not corrpc with delta %lx\n",
+                     cpu->cpuId(), tid,
+                     while_loop_counter, do_loop_counter,
+                     addr1[tid],
+                     corr_pc->instAddr(), corr_pc->microPC(),
+                     corrKaslrDelta[tid]);
+                if (inRom) {
+                    warn("inRom\n");
+                } else {
+                    warn("not inRom\n");
+                }
+            }
 
             if (!(curMacroop || inRom)) {
                 if (dec_ptr->instReady()) {
@@ -1374,6 +1403,13 @@ Fetch::fetch(bool &status_change)
                     // [Shixin] Decoder update npc to pc + inst_size, which could be final npc,
                     //          so we should use corr_pc instead of this_pc to do this.
                     staticInst = dec_ptr->decode(*corr_pc);
+
+                    // TODO: Remove debug output here
+                    if (dec_ptr->instReady()) {
+                        warn("instReady after call decode with %lx %lx\n",
+                             corr_pc->instAddr(), corr_pc->microPC());
+                    }
+
                     // Also adapt possible npc changes to this_pc
                     set(this_pc, *cpu->protectKaslrMask(*corr_pc));
                     // old code
@@ -1416,16 +1452,31 @@ Fetch::fetch(bool &status_change)
             }
 
             // [Shixin]
-            if (fetchBufferPC[tid] >= 0xffffffff80000000 && fetchBufferPC[tid] < 0xffffffff82000000 && fetchBufferCorrKaslrOffset[tid] != 6 << 25) {
-                printf("Wrong offset %lx\n", fetchBufferCorrKaslrOffset[tid]);
+            if (cpu->isKaslrMaskedAddr(fetchBufferPC[tid], BaseCPU::KaslrKernelRegion) &&
+                fetchBufferCorrKaslrDelta[tid] != 6) {
+                // TODO: Remove this later
+                panic("Wrong offset %lx\n", fetchBufferCorrKaslrDelta[tid]);
             }
-//            printf("counter3: %lx, this_pc: %lx\n", counter, this_pc.instAddr());
             // [Shixin] TODO: We might need to remove or modify this assert later
-            if (!cpu->protectKaslrValid(corr_pc->instAddr()) && cpu->protectKaslr) {
+            // [Shixin] NOTE: Actually this can happen when bp predict to jump to an
+            //              inRom microInst with a different microPC. Then delta can
+            //              be mismatched. But according to my debug test in commit
+            //              stage, whenever jumping to inRom micro inst, macro PC would
+            //              not be changed. Thus, even though inRom inst skip fetch,
+            //              it can still reuse delta gained by previous delta directly
+            //              gained from addr translation or recovered from squash (delta
+            //              of last micro inst with the same macroPC.
+            if (!cpu->protectKaslrValidDirty(corr_pc->instAddr()) && cpu->protectKaslr[0]) {
                 printf("fetchBufferPC[tid]: %lx pc[tid]: %lx\n",
                        fetchBufferPC[tid], pc[tid]->instAddr());
-                printf("kaslrOffset: %lx\n", corrKaslrOffset[tid]);
-                warn("@@@ DynInst pc: %lx is not corrpc with delta %lx\n", corr_pc->instAddr(), corrKaslrOffset[tid]);
+                printf("kaslrOffset: %lx\n", corrKaslrDelta[tid]);
+                warn("@@@ cpu: %d thread: %lx while %lx do %lx decoder %lx DynInst %s pc: %lx %lx is not corrpc with delta %lx\n",
+                     cpu->cpuId(), tid,
+                     while_loop_counter, do_loop_counter,
+                     addr1[tid],
+                     staticInst->getName().c_str(),
+                     corr_pc->instAddr(), corr_pc->microPC(),
+                     corrKaslrDelta[tid]);
             }
 //            if (corr_pc->instAddr() == 0x7fdbb4313891 && corr_pc->microPC() == 0x15) {
 //                warn("Build dyn inst: %s, pc: %x, micro pc: %lx, next_pc: %lx\n",
@@ -1471,6 +1522,25 @@ Fetch::fetch(bool &status_change)
             }
 
             newMacro |= this_pc.instAddr() != next_pc->instAddr();
+
+            // TODO: Remove this debug output later
+            if (newMacro && dec_ptr->instReady()) {
+                if ((curMacroop || dec_ptr->instReady()) &&
+                    numInst < fetchWidth &&
+                    fetchQueue[tid].size() < fetchQueueSize) {
+                    warn("Loop continue\n");
+                }
+
+                if (predictedBranch) {
+                    warn("newMacro instReady taken this_pc %lx %lx next_pc %lx %lx\n",
+                         this_pc.instAddr(), this_pc.microPC(),
+                         next_pc->instAddr(), next_pc->microPC());
+                } else {
+                    warn("newMacro instReady not taken this_pc %lx %lx next_pc %lx %lx\n",
+                         this_pc.instAddr(), this_pc.microPC(),
+                         next_pc->instAddr(), next_pc->microPC());
+                }
+            }
 
             // Move to the next instruction, unless we have a branch.
             set(this_pc, *next_pc);

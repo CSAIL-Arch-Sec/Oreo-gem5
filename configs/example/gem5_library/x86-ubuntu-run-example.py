@@ -24,6 +24,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--protect-module-kaslr",
+    action="store_true",
+    help="Whether to protect KASLR.",
+)
+
+parser.add_argument(
     "--kaslr-offset",
     type=int,
     default=0xc000000,
@@ -59,6 +65,11 @@ if args.protect_kaslr:
     protect_kaslr = True
 else:
     protect_kaslr = False
+
+if args.protect_module_kaslr:
+    protect_module_kaslr = True
+else:
+    protect_module_kaslr = False
 
 kaslr_offset = args.kaslr_offset
 print("@@@ KASLR offset:", kaslr_offset)
@@ -105,6 +116,7 @@ processor = SimpleSwitchableProcessor(
     switch_core_type=switch_core,
     num_cores=2,
     protect_kaslr=protect_kaslr,
+    protect_module_kaslr=protect_module_kaslr,
     kaslr_offset=kaslr_offset,
 )
 
@@ -151,6 +163,8 @@ command = "m5 exit;" \
 # system.
 if protect_kaslr:
     kernel_local_path = "/root/linux/vmlinux_gem5_protect"
+elif protect_module_kaslr:
+    kernel_local_path = "/root/linux/vmlinux_gem5"
 else:
     kernel_local_path = "/root/linux/vmlinux_gem5"
 board.set_kernel_disk_workload(

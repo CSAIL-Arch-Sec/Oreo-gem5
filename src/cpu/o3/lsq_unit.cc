@@ -1409,8 +1409,7 @@ LSQUnit::read(LSQRequest *request, ssize_t load_idx)
             auto st_e = st_s + store_size;
 
             // [Shixin] These address must not contain delta!!!
-            if (cpu->protectKaslr &&
-                !(cpu->protectKaslrValid(req_s, 0) &&
+            if (!(cpu->protectKaslrValid(req_s, 0) &&
                   cpu->protectKaslrValid(req_e, 0) &&
                   cpu->protectKaslrValid(st_s, 0) &&
                   cpu->protectKaslrValid(st_e, 0))) {
@@ -1461,9 +1460,9 @@ LSQUnit::read(LSQRequest *request, ssize_t load_idx)
 
             if (coverage == AddrRangeCoverage::FullAddrRangeCoverage) {
                 // [Shixin] Check delta here through store's delta since we are not going to access page table/TLB
-                Addr stKaslrOffset = cpu->getKaslrOffsetFromPC(store_it->instruction()->realAddr);
-                Addr ldKaslrOffset = cpu->getKaslrOffsetFromPC(request->instruction()->realAddr);
-                if (stKaslrOffset != ldKaslrOffset) {
+                Addr stKaslrDelta = cpu->getKaslrDeltaFromPC(store_it->instruction()->realAddr);
+                Addr ldKaslrDelta = cpu->getKaslrDeltaFromPC(request->instruction()->realAddr);
+                if (stKaslrDelta != ldKaslrDelta) {
                     request->instruction()->kaslrDMemDelayError(true);
                     warn("@@@ stl forwarding delta mismatch st realAddr: %lx, ld realAddr: %lx, effAddr: %lx\n",
                          store_it->instruction()->realAddr,

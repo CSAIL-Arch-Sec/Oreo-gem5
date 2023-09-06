@@ -295,6 +295,11 @@ class PageFault : public X86Fault
     invoke(ThreadContext *tc, const StaticInstPtr &inst=
                 nullStaticInstPtr);
 
+    bool unmappedFault() {
+        PageFaultErrorCode code = errorCode;
+        return !code.present;
+    }
+
     virtual std::string describe() const;
 };
 

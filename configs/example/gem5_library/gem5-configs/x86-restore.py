@@ -22,13 +22,16 @@ from arguments import *
 from exit_handlers import *
 
 parser = argparse.ArgumentParser(
-    description = "configuration script for checkpoint restore",
+    description="configuration script for checkpoint restore",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
 )
 
-add_cpu_arguments(parser, default_type = CPUTypes.O3)
+add_cpu_arguments(parser, default_type=CPUTypes.O3)
 
 add_run_script_arguments(parser)
+
+add_kernel_phy_load_arguments(parser)
+add_protect_kaslr_arguments(parser)
 
 add_checkpoint_restore_arguments(parser)
 
@@ -37,10 +40,25 @@ add_debug_arguments(parser)
 
 args = parser.parse_args()
 
+if args.protect_kaslr:
+    protect_kaslr = True
+else:
+    protect_kaslr = False
+
+if args.protect_module_kaslr:
+    protect_module_kaslr = True
+else:
+    protect_module_kaslr = False
+
+kaslr_offset = args.kaslr_offset
+load_addr_offset = args.load_addr_offset
+print("@@@ KASLR offset:", hex(kaslr_offset))
+print("@@@ Physical load offset:", hex(load_addr_offset))
+
 pretty_print("Checking for required gem5 build...")
 requires(
-    isa_required = ISA.X86,
-    coherence_protocol_required = CoherenceProtocol.MESI_TWO_LEVEL,
+    isa_required=ISA.X86,
+    coherence_protocol_required=CoherenceProtocol.MESI_TWO_LEVEL,
 )
 
 # things for reading generated checkpoint config
@@ -56,22 +74,19 @@ if not (args.checkpoint_dir or args.checkpoint_id):
                      MessageType.CHECKPOINT)
         checkpoint_dir = os.path.join(m5outs_default_dir, "default-save", "m5out-gen-cpt")
 elif args.checkpoint_dir and args.checkpoint_id:
-    pretty_print('Only one of checkpoint-dir and checkpoint-id should be specified :(', 
+    pretty_print('Only one of checkpoint-dir and checkpoint-id should be specified :(',
                  MessageType.FAIL)
     parser.error('Please specify only one of --checkpoint-dir or --checkpoint-id, thanks :D')
 else:
     checkpoint_dir = args.checkpoint_dir or \
-        os.path.join(m5outs_default_dir, args.checkpoint_id, "m5out-gen-cpt")
-
+                     os.path.join(m5outs_default_dir, args.checkpoint_id, "m5out-gen-cpt")
 
 checkpoint_path = checkpoint_dir
 if args.checkpoint_tick is not None:
-    pretty_print(f'Checkpoint tick specified: cpt.tick-{args.checkpoint_tick} will be used instead of default...', 
+    pretty_print(f'Checkpoint tick specified: cpt.tick-{args.checkpoint_tick} will be used instead of default...',
                  MessageType.CHECKPOINT)
-    checkpoint_path = os.path.join(checkpoint_path, f'cpt.tick-{args.checkpoint_tick}')   
+    checkpoint_path = os.path.join(checkpoint_path, f'cpt.tick-{args.checkpoint_tick}')
 pretty_print(f'Using checkpoint at {checkpoint_path}/m5.cpt', MessageType.CHECKPOINT)
-
-
 
 config_dir = os.path.join(checkpoint_dir, "config.json")
 pretty_print(f'Reading configuration from: {config_dir}', MessageType.CONFIG)
@@ -85,7 +100,7 @@ load_addr_offset = config.get("board").get("workload").get("load_addr_offset")
 addr_check = config.get("board").get("workload").get("addr_check")
 
 disk_image_paths = [disk.get("image").get("child").get("image_file") for disk in \
-    config.get("board").get("pc").get("south_bridge").get("ide").get("disks")]
+                    config.get("board").get("pc").get("south_bridge").get("ide").get("disks")]
 if len(disk_image_paths) != 1:
     sys.exit("for now we are only dealing with single disk image ;-;")
 disk_image_path = disk_image_paths[0]
@@ -97,8 +112,6 @@ pretty_print(f'load_addr_offset: {hex(load_addr_offset)}', MessageType.CONFIG)
 pretty_print(f'      addr_check: {"enabled" if addr_check else "disabled"}', MessageType.CONFIG)
 pretty_print(f' disk_image_path: {disk_image_path}', MessageType.CONFIG)
 
-
-
 pretty_print("Setting up fixed system parameters...")
 
 pretty_print("Caches: MESI Two Level Cache Hierarchy")
@@ -106,6 +119,7 @@ pretty_print("Caches: MESI Two Level Cache Hierarchy")
 from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
     MESITwoLevelCacheHierarchy,
 )
+
 cache_hierarchy = MESITwoLevelCacheHierarchy(
     l1d_size="32kB",
     l1d_assoc=8,
@@ -116,38 +130,47 @@ cache_hierarchy = MESITwoLevelCacheHierarchy(
     num_l2_banks=2,
 )
 
-
 pretty_print("Memory: Dual Channel DDR4 2400 DRAM device")
 # The X86 board only supports 3 GB of main memory.
 from gem5.components.memory import DualChannelDDR4_2400
+
 memory = DualChannelDDR4_2400(size="3GB")
 
-
 processor = SimpleProcessor(
-    cpu_type = args.cpu_type,
-    isa = ISA.X86,
-    num_cores = cpu_cores,
+    cpu_type=args.cpu_type,
+    isa=ISA.X86,
+    num_cores=cpu_cores,
+    protect_kaslr=protect_kaslr,
+    protect_module_kaslr=protect_module_kaslr,
+    kaslr_offset=kaslr_offset
 )
 
 board = X86Board(
-    clk_freq = "3GHz",
-    processor = processor,
-    memory = memory,
-    cache_hierarchy = cache_hierarchy,
-    load_addr_mask = load_addr_mask,
-    load_addr_offset = load_addr_offset,
-    addr_check = addr_check
+    clk_freq="3GHz",
+    processor=processor,
+    memory=memory,
+    cache_hierarchy=cache_hierarchy,
+    load_addr_mask=load_addr_mask,
+    load_addr_offset=load_addr_offset,
+    addr_check=addr_check
 )
 
+if protect_kaslr:
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect"
+elif protect_module_kaslr:
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module"
+else:
+    kernel_local_path = "/root/linux/vmlinux_gem5"
 board.set_kernel_disk_workload(
-    kernel = CustomResource(
-        local_path = kernel_path
+    kernel=CustomResource(
+        local_path=kernel_local_path
     ),
-    disk_image = CustomDiskImageResource(
-        local_path = disk_image_path,
-        disk_root_partition = "1"
-    ),
-    readfile = args.script,
+    disk_image=Resource("x86-ubuntu-18.04-img"),
+    # disk_image=CustomDiskImageResource(
+    #     local_path=disk_image_path,
+    #     disk_root_partition="1"
+    # ),
+    readfile=args.script,
 )
 pretty_print(f"Script: {args.script}")
 
@@ -161,7 +184,6 @@ set_outdir(output_dir)
 handle_std_redirects(args, output_dir)
 set_debug_file(args, output_dir)
 
-
 simulator = Simulator(
     board=board,
     on_exit_event={
@@ -169,7 +191,7 @@ simulator = Simulator(
         ExitEvent.WORKBEGIN: handle_workbegin(),
         ExitEvent.WORKEND: handle_workend(),
     },
-    checkpoint_path = checkpoint_path,
+    checkpoint_path=checkpoint_path,
 )
 
 pretty_print("Starting simulation...", MessageType.MAGENTA)
@@ -177,4 +199,3 @@ pretty_print("Starting simulation...", MessageType.MAGENTA)
 simulator.run()
 
 pretty_print("Done with the simulation", MessageType.MAGENTA)
-

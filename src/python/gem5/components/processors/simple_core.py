@@ -44,7 +44,9 @@ class SimpleCore(BaseCPUCore):
     # [Shixin] Add kaslr config
     def __init__(
         self, cpu_type: CPUTypes, core_id: int, isa: Optional[ISA] = None,
-            protect_kaslr: bool = False, kaslr_offset: int = 0,
+            protect_kaslr: bool = False,
+            protect_module_kaslr: bool = False,
+            kaslr_offset: int = 0,
     ):
 
         # If the ISA is not specified, we infer it via the `get_runtime_isa`
@@ -59,6 +61,7 @@ class SimpleCore(BaseCPUCore):
             core=SimpleCore.cpu_simobject_factory(
                 isa=isa, cpu_type=cpu_type, core_id=core_id,
                 protect_kaslr=protect_kaslr,
+                protect_module_kaslr=protect_module_kaslr,
                 kaslr_offset=kaslr_offset,
             ),
             isa=isa,
@@ -72,6 +75,7 @@ class SimpleCore(BaseCPUCore):
     @classmethod
     def cpu_simobject_factory(cls, cpu_type: CPUTypes, isa: ISA, core_id: int,
                               protect_kaslr: bool = False,
+                              protect_module_kaslr: bool = False,
                               kaslr_offset: int = 0):
         """
         A factory used to return the SimObject core object given the cpu type,
@@ -161,10 +165,17 @@ class SimpleCore(BaseCPUCore):
         else:
             print("@@@ In cpu core disable protect_kaslr")
 
+        if protect_module_kaslr:
+            print("@@@ In cpu core enable protect_module_kaslr")
+        else:
+            print("@@@ In cpu core disable protect_module_kaslr")
+
+
         if issubclass(to_return_cls, BaseCPU):
             return to_return_cls(
                 cpu_id=core_id,
                 protectKaslr=protect_kaslr,
+                protectModuleKaslr=protect_module_kaslr,
                 kaslrOffset=kaslr_offset,
             )
 

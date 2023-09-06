@@ -104,26 +104,64 @@ class CPUProgressEvent : public Event
 class BaseCPU : public ClockedObject
 {
     // [Shixin] Protect KASLR
+    Addr getMaxMask(Addr max) {
+        // size should be larger than 0
+        Addr x = -1;
+        for (size_t i = 0; i < 64; i++) {
+            if (x >> 1 >= max) {
+                x = x >> 1;
+            } else {
+                return x;
+            }
+        }
+        return x;
+    }
+
 public:
-    bool protectKaslr;
-    const Addr addrMask = 0xffffffffc1ffffff;
-    const Addr textMin = 0xffffffff80000000;
-    const Addr textEnd = 0xffffffff82000000;
-    const Addr textMax = 0xffffffffc0000000;
+    enum KaslrRegionType : size_t
+    {
+        KaslrKernelRegion = 0,
+        KaslrModuleRegion = 1,
+        NumKaslrRegionType = 2
+    };
+
+    bool protectKaslr[NumKaslrRegionType];
+    Addr regionStart[NumKaslrRegionType] = {0xffffffff80000000, 0xffffffffc0000000};
+    Addr regionSize[NumKaslrRegionType] = {0x40000000, 0x3f000000};
+    Addr regionAlignBits[NumKaslrRegionType] = {25, 25};
+    Addr regionMask[NumKaslrRegionType] = {0, 0};
+
     // TODO: In the final design, we should not set kaslrOffset here.
     //  It should be read from page table / TLB during address translation.
     // TODO: In the final design, we should also consider different region
     //  when apply mask and offset
     Addr kaslrOffset;
 
-    Addr getKaslrOffsetFromPC(const PCStateBase &corrPC) {
-        return getKaslrOffsetFromPC(corrPC.instAddr());
+    bool isKaslrMaskedAddr(Addr addr, size_t region) const {
+        return protectKaslr[region] &&
+               addr >= regionStart[region] &&
+               addr < regionStart[region] + (1 << regionAlignBits[region]);
     }
 
-    Addr getKaslrOffsetFromPC(Addr corrAddr) {
-        if (corrAddr >= textMin && corrAddr < textMax) {
-            return corrAddr & (~addrMask);
+    bool isKaslrRegionAddr(Addr addr, size_t region) const {
+        return protectKaslr[region] &&
+               addr >= regionStart[region] &&
+               addr < regionStart[region] + regionSize[region];
+    }
+
+    Addr getKaslrDeltaFromPC(const PCStateBase &corrPC) const {
+        return getKaslrDeltaFromPC(corrPC.instAddr());
+    }
+
+    Addr getKaslrDeltaFromPC(Addr corrAddr) const {
+        for (size_t i = 0; i < NumKaslrRegionType; i++) {
+            if (isKaslrRegionAddr(corrAddr, i)) {
+                return (corrAddr & (~regionMask[i])) >> regionAlignBits[i];
+            }
         }
+//        if (corrAddr >= textMin && corrAddr < textMax) {
+//            return corrAddr & (~addrMask);
+//        }
         return 0;
     }
 
@@ -155,9 +193,14 @@ public:
     Addr protectKaslrMask(Addr addr) {
         // This function only apply mask to address in KASLR randomization
         //   region when protect KASLR is enabled.
-        if (protectKaslr && addr >= textMin && addr < textMax) {
-            return addr & addrMask;
+        for (size_t i = 0; i < NumKaslrRegionType; i++) {
+            if (isKaslrRegionAddr(addr, i)) {
+                return addr & regionMask[i];
+            }
         }
+//        if (protectKaslr && addr >= textMin && addr < textMax) {
+//            return addr & addrMask;
+//        }
         return addr;
     }
 
@@ -177,14 +220,26 @@ public:
     }
 
     Addr protectKaslrApplyOffset(Addr addr, Addr offset) {
-        if (protectKaslr && addr >= textMin && addr < textMax) {
-            return (addr & addrMask) | offset;
+        for (size_t i = 0; i < NumKaslrRegionType; i++) {
+            if (isKaslrRegionAddr(addr, i)) {
+                if (offset >= regionSize[i] >> regionAlignBits[i]) {
+                    panic("Too large offset %lx\n", offset);
+                }
+                return (addr & regionMask[i]) | (offset << regionAlignBits[i]);
+            }
         }
+//        if (protectKaslr && addr >= textMin && addr < textMax) {
+//            return (addr & addrMask) | offset;
+//        }
         return addr;
     }
 
-    bool protectKaslrValid(Addr addr) {
-        if (!protectKaslr) {
+    bool protectKaslrValidDirty(Addr addr) {
+        const Addr addrMask = 0xffffffffc1ffffff;
+        const Addr textMin = 0xffffffff80000000;
+        const Addr textEnd = 0xffffffff82000000;
+        const Addr textMax = 0xffffffffc0000000;
+        if (!protectKaslr[0]) {
             return true;
         }
         // This function is only used to check when protect KASLR is enabled,

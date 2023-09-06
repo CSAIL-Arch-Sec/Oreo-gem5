@@ -72,8 +72,10 @@ namespace X86ISA
         // The size of the page this represents, in address bits.
         unsigned logBytes;
 
-        // [Shixin] kaslr offset (delta << logAlignBytes) of the virtual page
-        Addr kaslrOffset;
+        // [Shixin] delta << logAlignBytes = kaslrOffset of the virtual page
+        //          logAlignBytes can be configurable
+        // Addr kaslrOffset;
+        Addr kaslrDelta;
 
         // Read permission is always available, assuming it isn't blocked by
         // other mechanisms.
@@ -141,7 +143,10 @@ namespace X86ISA
     // point in the future.
     BitUnion64(PageTableEntry)
         Bitfield<63> nx;
-        Bitfield<56, 52> delta; // [Shixin] Store 5-bit delta in page table entry
+        // [Shixin] Store delta in page table entry
+        //          If delta is 5-bit, then only the lower 5-bit is used
+        //          TODO: We should ensure that in this case, bit 57 58 must be zero in Linux
+        Bitfield<58, 52> delta;
         Bitfield<51, 12> base;
         Bitfield<11, 9> avl;
         Bitfield<8> g;

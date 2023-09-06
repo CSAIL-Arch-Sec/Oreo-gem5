@@ -1225,6 +1225,9 @@ IEW::executeInsts()
 
                 if (inst->isDataPrefetch() || inst->isInstPrefetch()) {
                     inst->fault = NoFault;
+                    // [Shixin] NOTE: I should ignore invalid load address offset here,
+                    //              but for experiment purpose, I'll check this at
+                    //              commit stage to print useful information.
                 }
             } else if (inst->isStore()) {
                 fault = ldstQueue.executeStore(inst);

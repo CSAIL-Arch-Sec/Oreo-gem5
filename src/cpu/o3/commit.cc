@@ -1016,14 +1016,25 @@ Commit::commitInsts()
             // Record that the number of ROB entries has changed.
             changedROBNumEntries[tid] = true;
         } else {
+            auto last_pc = std::unique_ptr<PCStateBase>(pc[tid]->clone());
             set(pc[tid], head_inst->pcState());
 
             // Try to commit the head instruction.
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
-                if (cpu->totalInsts() % 0x100000 == 0 && cpu->totalInsts() < 0x100000000) {
-                    printf("Total: %lx Commit %lx %x\n", cpu->totalInsts(), head_inst->pcState().instAddr(), head_inst->pcState().microPC());
+                if (isRomMicroPC(head_inst->pcState().microPC()) &&
+                    last_pc->instAddr() != head_inst->pcState().instAddr()) {
+                    // [Shixin] inRom inst can be fetched without going through address translation
+                    //          and normal icache access by macroPC. As a result, if prev inst does
+                    //          not share the same macroPC with the inRom inst, the inRom inst may
+                    //          not get corr delta/corr macroPC -> panic unexpectedly.
+                    //          This panic is to test whether this would happen.
+                    warn("last pc %lx %lx this pc inRom %s %lx %lx may not get corr delta\n",
+                           last_pc->instAddr(), last_pc->microPC(),
+                           head_inst->staticInst->getName().c_str(),
+                           head_inst->pcState().instAddr(),
+                           head_inst->pcState().microPC());
                 }
                 // [Shixin] Protect KASLR: check whether the real inst addr is correct
                 auto curStaticInst = head_inst->staticInst;
@@ -1043,7 +1054,7 @@ Commit::commitInsts()
                 }
 
                 if (nextInstAddrAvail[tid]) {
-                    if (cpu->protectKaslr && pc[tid]->instAddr() != nextInstAddr[tid]) {
+                    if (pc[tid]->instAddr() != nextInstAddr[tid]) {
                         // [Shixin] TODO: Add raising fault here!
                         panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, wrong pc: %lx, corr pc: %lx\n",
                              curTick(), cpu->cpuId(), tid,
@@ -1056,45 +1067,22 @@ Commit::commitInsts()
                 auto next_pc = std::unique_ptr<PCStateBase>(head_inst->pcState().clone());
                 head_inst->staticInst->advancePC(*next_pc);
 
-//                static bool has_violation = false;
-//                static size_t counter = 0;
-//                if (cpu->totalInsts() >= 0x395 && cpu->totalInsts() < 0x5cc
-////                    (head_inst->staticInst->getName() == "wrdh" || head_inst->staticInst->getName() == "eret") &&
-////                    counter++ < 0x300
-//                    ) {
-//                    warn("Total: %lx, pc: %lx, upc: %lx, npc: %lx, inst: %s, t0: %lx, t3: %lx, t4: %lx, t7, %lx, t9: %lx\n",
-//                           cpu->totalInsts(),
-//                           head_inst->pcState().instAddr(), head_inst->pcState().microPC(),
-//                           head_inst->pcState().as<X86ISA::PCState>().npc(),
-//                           head_inst->staticInst->getName().c_str(),
-//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(0)),
-//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(3)),
-//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(4)),
-//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(7)),
-//                           thread[tid]->tc->getReg(X86ISA::intRegMicro(9)));
-//                }
-
                 nextInstAddr[tid] = next_pc->instAddr();
                 nextInstAddrAvail[tid] = true;
                 static size_t i = 0;
-                if (nextInstAddr[tid] >= 0xffffffff90000000) {
-//                    has_violation = true;
-                    if (nextInstAddrAvail[tid]) {
-                        warn("tick %lx cpu (%d) total inst %s (%lx) pc (%lx) set next corr pc %lx avail\n",
-                             curTick(), cpu->cpuId(), head_inst->staticInst->getName().c_str(), cpu->totalInsts(),
-                             head_inst->pcState().instAddr(), nextInstAddr[tid]);
-                    } else {
-                        warn("tick %lx cpu (%d) total inst %s (%lx) pc (%lx) set corr pc %lx not avail\n",
-                             curTick(), cpu->cpuId(), head_inst->staticInst->getName().c_str(), cpu->totalInsts(),
-                             head_inst->pcState().instAddr(), nextInstAddr[tid]);
-                    }
-                }
 
                 if (head_inst->kaslrDMemDelayError()) {
-                    // [Shixin] TODO: Add raising fault here!
-                    panic("### KASLR ld/st violation at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
-                          num_committed,
-                          pc[tid]->instAddr(), head_inst->realAddr);
+                    if (head_inst->isDataPrefetch() || head_inst->isInstPrefetch()) {
+                        warn("### KASLR prefetch from address with incorrect KASLR offset"
+                             "at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
+                             num_committed,
+                             pc[tid]->instAddr(), head_inst->realAddr);
+                    } else {
+                        // [Shixin] TODO: Add raising fault here!
+                        panic("### KASLR ld/st violation at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
+                              num_committed,
+                              pc[tid]->instAddr(), head_inst->realAddr);
+                    }
                 }
                 // [Shixin]
 

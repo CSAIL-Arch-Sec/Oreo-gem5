@@ -154,7 +154,7 @@ class BaseSimpleCPU : public BaseCPU
 //        if (t == TextStore || t == TextAmo) {
 //            printf("@@@ Warning: store/amo access in kernel text region with address %lx\n", addr);
 //        }
-        textMemAccessError[t] |= !protectKaslrValid(addr);
+        textMemAccessError[t] |= !protectKaslrValidDirty(addr);
         if (textMemAccessError[t]) {
             textMemAccessErrorAddr[t] = addr;
         }

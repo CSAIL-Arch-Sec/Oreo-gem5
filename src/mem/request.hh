@@ -372,7 +372,7 @@ class Request
         VALID_INST_COUNT      = 0x00000800,
         // [Shixin] other flags for KASLR defense
         /** Whether or not the kaslr offset is valid */
-        VALID_CORR_KASLR_OFFSET    = 0x00001000,
+        VALID_CORR_KASLR_DELTA    = 0x00001000,
         /**
          * These flags are *not* cleared when a Request object is reused
          * (assigned a new address).
@@ -450,7 +450,7 @@ class Request
 
     /** [Shixin] The correct KASLR delta mask of the request vaddr. */
     // TODO: Get this value from page table / TLB in the final impl.
-    Addr _corrKaslrOffset = 0;
+    Addr _corrKaslrDelta = 0;
 
     /**
      * Extra data for the request, such as the return value of
@@ -843,34 +843,34 @@ class Request
         return _vaddr;
     }
 
-    /** [Shixin] Accessor function for corrKaslrOffset. */
+    /** [Shixin] Accessor function for corrKaslrDelta. */
     bool
-    hasCorrKaslrOffset() const
+    hasCorrKaslrDelta() const
     {
-        return privateFlags.isSet(VALID_CORR_KASLR_OFFSET);
+        return privateFlags.isSet(VALID_CORR_KASLR_DELTA);
     }
 
     void
-    setCorrKaslrOffset(Addr offset)
+    setCorrKaslrDelta(Addr delta)
     {
 //        printf("@@@ kaslr offset from translation %lx\n", offset);
-        _corrKaslrOffset = offset;
-        privateFlags.set(VALID_CORR_KASLR_OFFSET);
+        _corrKaslrDelta = delta;
+        privateFlags.set(VALID_CORR_KASLR_DELTA);
     }
 
     Addr
-    getCorrKaslrOffset() const
+    getCorrKaslrDelta() const
     {
-        if (!privateFlags.isSet(VALID_CORR_KASLR_OFFSET)) {
-            printf("@@@ Try to get corr kaslr offset (%lx) while VALID_CORR_KASLR_OFFSET is not set\n",
-                   _corrKaslrOffset);
+        if (!hasCorrKaslrDelta()) {
+            printf("@@@ Try to get corr kaslr delta (%lx) while VALID_CORR_KASLR_DELTA is not set\n",
+                   _corrKaslrDelta);
             if (hasPaddr()) {
                 printf("vaddr: %lx, paddr: %lx\n", getVaddr(), getPaddr());
             } else {
                 printf("vaddr: %lx, no paddr\n", getVaddr());
             }
         }
-        return _corrKaslrOffset;
+        return _corrKaslrDelta;
     }
 
     /** Accesssor for the requestor id. */

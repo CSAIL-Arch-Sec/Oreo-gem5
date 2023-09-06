@@ -130,9 +130,6 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
       _dataRequestorId(p.system->getRequestorId(this, "data")),
       _taskId(context_switch_task_id::Unknown), _pid(invldPid),
       _switchedOut(p.switched_out), _cacheLineSize(p.system->cacheLineSize()),
-      // [Shixin] Config whether to protect kaslr
-      protectKaslr(p.protectKaslr),
-      kaslrOffset(p.kaslrOffset),
       interrupts(p.interrupts), numThreads(p.numThreads), system(p.system),
       previousCycle(0), previousState(CPU_STATE_SLEEP),
       functionTraceStream(nullptr), currentFunctionStart(0),
@@ -180,6 +177,21 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
     if (params().isa.size() != numThreads) {
         fatal("Number of ISAs (%i) assigned to the CPU does not equal number "
               "of threads (%i).\n", params().isa.size(), numThreads);
+    }
+
+    // [Shixin] Init parameters
+    // [Shixin] Config whether to protect kaslr
+    protectKaslr[0] = p.protectKaslr;
+    protectKaslr[1] = p.protectModuleKaslr;
+    kaslrOffset = p.kaslrOffset;
+
+    // [Shixin] Calculate addr mask based on KASLR randomization region
+    for (size_t i = 0; i < NumKaslrRegionType; i++) {
+        if (regionSize[i] >> regionAlignBits[i] == 0) {
+            panic("KASLR randomization region for kernel image is 0\n");
+        }
+        regionMask[i] = ~(getMaxMask((regionSize[i] >> regionAlignBits[i]) - 1) << regionAlignBits[i]);
+        printf("@@@ kernelAddrMask: %lx\n", regionMask[i]);
     }
 }
 

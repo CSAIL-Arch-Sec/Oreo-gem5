@@ -157,6 +157,7 @@ class BaseCPU(ClockedObject):
 
     # [Shixin] Protect KASLR
     protectKaslr = Param.Bool(False, "Protect KASLR or not")
+    protectModuleKaslr = Param.Bool(False, "Protect module KASLR or not")
     kaslrOffset = Param.UInt64(0, "KASLR offset")
     # [Shixin]
 

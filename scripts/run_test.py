@@ -69,7 +69,9 @@ def run(
         )
 
 
-def main():
+@click.command()
+@click.option("--save-checkpoint", is_flag=True)
+def main(save_checkpoint: bool):
     # run(
     #     gem5_bin=(proj_dir / "build/X86_MOESI_hammer/gem5.fast"),
     #     script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"),
@@ -81,19 +83,32 @@ def main():
     #     redirect_needed=True
     # )
 
-    checkpoint_dir = proj_dir / "result" / "protect_kaslr_o3_checkpoint" / "default-save/m5out-gen-cpt"
-    checkpoint_tick = 1900000000000
-    run(
-        gem5_bin=(proj_dir / "build/X86/gem5.fast"),
-        script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-restore.py"),
-        output_dir=(proj_dir / "result" / "protect_kaslr_o3_restore"),
-        other_args=[
-            f"--checkpoint-dir={checkpoint_dir}",
-            f"--checkpoint-tick={checkpoint_tick}"
-        ],
-        redirect_needed=True,
-        save_checkpoint=False,
-    )
+    if save_checkpoint:
+        run(
+            gem5_bin=(proj_dir / "build/X86_MOESI_hammer/gem5.fast"),
+            script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"),
+            output_dir=(proj_dir / "result" / "protect_kaslr_o3_checkpoint"),
+            other_args=[
+                "--checkpoint=100000000,10000000000,10",
+                "--classic-cache",
+            ],
+            redirect_needed=True
+        )
+    else:
+        checkpoint_dir = proj_dir / "result" / "protect_kaslr_o3_checkpoint" / "default-save/m5out-gen-cpt"
+        checkpoint_tick = 10100000000
+        run(
+            gem5_bin=(proj_dir / "build/X86/gem5.fast"),
+            # gem5_bin=(proj_dir / "build/X86_MOESI_hammer/gem5.fast"),
+            script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-restore.py"),
+            output_dir=(proj_dir / "result" / "protect_kaslr_o3_restore"),
+            other_args=[
+                f"--checkpoint-dir={checkpoint_dir}",
+                f"--checkpoint-tick={checkpoint_tick}"
+            ],
+            redirect_needed=True,
+            save_checkpoint=False,
+        )
 
 
 if __name__ == '__main__':
