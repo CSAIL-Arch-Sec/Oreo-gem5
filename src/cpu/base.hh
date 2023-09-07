@@ -204,28 +204,30 @@ public:
         return addr;
     }
 
-    std::unique_ptr<PCStateBase> protectKaslrApplyOffset(const PCStateBase &origPC, Addr offset) {
+    std::unique_ptr<PCStateBase> protectKaslrApplyDelta(const PCStateBase &origPC, Addr delta, bool applyNPC = false) {
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();
-//        auto npc = pcState.npc();
-        pcState.pc(protectKaslrApplyOffset(pc, offset));
-//        pcState.npc(protectKaslrApplyOffset(npc, offset)); // TODO: Check here!
+        pcState.pc(protectKaslrApplyDelta(pc, delta));
+        if (applyNPC) {
+            auto npc = pcState.npc();
+            pcState.npc(protectKaslrApplyDelta(npc, delta)); // TODO: Check here!
+        }
         return std::unique_ptr<PCStateBase>(pcBase);
 
 //        auto origAddr = origPC.instAddr();
 //        auto mask_this_pc = origPC.clone();
-//        mask_this_pc->protectKaslrUpdatePC(protectKaslrApplyOffset(origAddr, offset));
+//        mask_this_pc->protectKaslrUpdatePC(protectKaslrApplyDelta(origAddr, offset));
 //        return std::unique_ptr<PCStateBase>(mask_this_pc);
     }
 
-    Addr protectKaslrApplyOffset(Addr addr, Addr offset) {
+    Addr protectKaslrApplyDelta(Addr addr, Addr delta) {
         for (size_t i = 0; i < NumKaslrRegionType; i++) {
             if (isKaslrRegionAddr(addr, i)) {
-                if (offset >= regionSize[i] >> regionAlignBits[i]) {
-                    panic("Too large offset %lx\n", offset);
+                if (delta >= regionSize[i] >> regionAlignBits[i]) {
+                    panic("Too large delta %lx\n", delta);
                 }
-                return (addr & regionMask[i]) | (offset << regionAlignBits[i]);
+                return (addr & regionMask[i]) | (delta << regionAlignBits[i]);
             }
         }
 //        if (protectKaslr && addr >= textMin && addr < textMax) {
@@ -250,10 +252,10 @@ public:
         return true;
     }
 
-    bool protectKaslrValid(Addr addr, Addr offset) {
+    bool protectKaslrValid(Addr addr, Addr delta) {
         // This function is only used to check when protect KASLR is enabled,
         //   whether address in the KASLR randomization region is valid
-        return protectKaslrApplyOffset(addr, offset) == addr;
+        return protectKaslrApplyDelta(addr, delta) == addr;
     }
 
     enum TextMemAccessType {
