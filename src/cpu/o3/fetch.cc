@@ -543,6 +543,7 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
         set(next_pc, *cpu->protectKaslrMask(*next_pc_helper));
 
         // old code
+        // TODO: Change back to old code again
         // inst->staticInst->advancePC(next_pc);
         inst->setPredTarg(next_pc);
         inst->setPredTaken(false);
@@ -562,6 +563,7 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
     //      by prev insts.
     //   2. Is there any other non-control inst generate
     //      not masked next_pc with masked pc?
+    // TODO: We may remove the mask later since it is already masked
     set(next_pc, *cpu->protectKaslrMask(next_pc));
 
     if (predict_taken) {
@@ -804,7 +806,7 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst,
 //    }
 
     // [Shixin] Recover corrKaslrDelta when squash
-    corrKaslrDelta[tid] = cpu->getKaslrDeltaFromPC(new_pc);
+    corrKaslrDelta[tid] = new_pc.as<X86ISA::PCState>().kaslrCorrDelta();
 
     fetchOffset[tid] = 0;
     if (squashInst &&
@@ -1380,40 +1382,41 @@ Fetch::fetch(bool &status_change)
         do_loop_counter++;
         do {
             // [Shixin] TODO: Should assert corr offset is available here!
-            auto corr_pc = cpu->protectKaslrApplyOffset(this_pc, corrKaslrDelta[tid]);
+            auto corr_pc = cpu->protectKaslrApplyDelta(this_pc, corrKaslrDelta[tid]);
+            this_pc.as<X86ISA::PCState>().kaslrCorrDelta(corrKaslrDelta[tid]);
 
             // TODO: Remove debug output here
-            if (!cpu->protectKaslrValidDirty(corr_pc->instAddr()) && cpu->protectKaslr[0]) {
-                warn("@@@ cpu: %d thread %lx while %lx do %lx before decode (%lx) %lx %lx is not corrpc with delta %lx\n",
-                     cpu->cpuId(), tid,
-                     while_loop_counter, do_loop_counter,
-                     addr1[tid],
-                     corr_pc->instAddr(), corr_pc->microPC(),
-                     corrKaslrDelta[tid]);
-                if (inRom) {
-                    warn("inRom\n");
-                } else {
-                    warn("not inRom\n");
-                }
-            }
+//            if (!cpu->protectKaslrValidDirty(corr_pc->instAddr()) && cpu->protectKaslr[0]) {
+//                warn("@@@ cpu: %d thread %lx while %lx do %lx before decode (%lx) %lx %lx is not corrpc with delta %lx\n",
+//                     cpu->cpuId(), tid,
+//                     while_loop_counter, do_loop_counter,
+//                     addr1[tid],
+//                     corr_pc->instAddr(), corr_pc->microPC(),
+//                     corrKaslrDelta[tid]);
+//                if (inRom) {
+//                    warn("inRom\n");
+//                } else {
+//                    warn("not inRom\n");
+//                }
+//            }
 
             if (!(curMacroop || inRom)) {
                 if (dec_ptr->instReady()) {
                     // New macroop & not inRom -> need to decode the new macroop
                     // [Shixin] Decoder update npc to pc + inst_size, which could be final npc,
                     //          so we should use corr_pc instead of this_pc to do this.
-                    staticInst = dec_ptr->decode(*corr_pc);
-
-                    // TODO: Remove debug output here
-                    if (dec_ptr->instReady()) {
-                        warn("instReady after call decode with %lx %lx\n",
-                             corr_pc->instAddr(), corr_pc->microPC());
-                    }
-
-                    // Also adapt possible npc changes to this_pc
-                    set(this_pc, *cpu->protectKaslrMask(*corr_pc));
+//                    staticInst = dec_ptr->decode(*corr_pc);
+//
+//                    // TODO: Remove debug output here
+//                    if (dec_ptr->instReady()) {
+//                        warn("instReady after call decode with %lx %lx\n",
+//                             corr_pc->instAddr(), corr_pc->microPC());
+//                    }
+//
+//                    // Also adapt possible npc changes to this_pc
+//                    set(this_pc, *cpu->protectKaslrMask(*corr_pc));
                     // old code
-                    // staticInst = dec_ptr->decode(this_pc);
+                    staticInst = dec_ptr->decode(this_pc);
 
                     // Increment stat of fetched instructions.
                     ++fetchStats.insts;
@@ -1459,9 +1462,11 @@ Fetch::fetch(bool &status_change)
             }
             // [Shixin] TODO: We might need to remove or modify this assert later
             // [Shixin] NOTE: Actually this can happen when bp predict to jump to an
-            //              inRom microInst with a different microPC. Then delta can
-            //              be mismatched. But according to my debug test in commit
-            //              stage, whenever jumping to inRom micro inst, macro PC would
+            //              inRom microInst with a different microPC (or should be
+            //              macroPC?). Then delta can be mismatched. But as long as
+            //              it is squashed, it would be fine.
+            //              But according to my debug test in commit stage,
+            //              whenever jumping to inRom micro inst, macro PC would
             //              not be changed. Thus, even though inRom inst skip fetch,
             //              it can still reuse delta gained by previous delta directly
             //              gained from addr translation or recovered from squash (delta
@@ -1478,23 +1483,12 @@ Fetch::fetch(bool &status_change)
                      corr_pc->instAddr(), corr_pc->microPC(),
                      corrKaslrDelta[tid]);
             }
-//            if (corr_pc->instAddr() == 0x7fdbb4313891 && corr_pc->microPC() == 0x15) {
-//                warn("Build dyn inst: %s, pc: %x, micro pc: %lx, next_pc: %lx\n",
-//                       staticInst->getName().c_str(),
-//                       corr_pc->instAddr(), corr_pc->microPC(),
-//                       corr_pc->as<X86ISA::PCState>().npc());
-//            }
 
-//            std::unique_ptr<PCStateBase> corr_next_pc(corr_pc->clone());
-//            staticInst->advancePC(*corr_next_pc);
-//            if (corr_pc->instAddr() >= 0xffffffff80000000 || corr_pc->instAddr() == 0x100005b) {
-//                printf("@@@ corr_pc: %lx, corr_next_pc: %lx\n", corr_pc->instAddr(), corr_next_pc->instAddr());
-//            }
             // [Shixin] When construct dyn inst, pred_pc = this_pc. After doing prediction, pred_pc is updated.
             DynInstPtr instruction = buildInst(
                     tid, staticInst, curMacroop,
                     // [Shixin] Use correct pc to construct dyn inst
-                    *corr_pc,
+                    this_pc,
                     *next_pc, true);
 
             ppFetch->notify(instruction);

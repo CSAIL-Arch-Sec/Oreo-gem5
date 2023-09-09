@@ -43,6 +43,7 @@
 
 #include <queue>
 
+#include "arch/x86/pcstate.hh"
 #include "base/statistics.hh"
 #include "cpu/exetrace.hh"
 #include "cpu/inst_seq.hh"
@@ -311,6 +312,8 @@ class Commit
     /** Sets the PC of a specific thread. */
     void pcState(const PCStateBase &val, ThreadID tid) { set(pc[tid], val); }
 
+    const PCStateBase &corrPcState(ThreadID tid);
+
   private:
     /** Time buffer interface. */
     TimeBuffer<TimeStruct> *timeBuffer;
@@ -432,6 +435,7 @@ class Commit
      * is currently being processed/committed.
      */
     std::unique_ptr<PCStateBase> pc[MaxThreads];
+    std::unique_ptr<PCStateBase> corrPC[MaxThreads];
 
     /** The sequence number of the youngest valid instruction in the ROB. */
     InstSeqNum youngestSeqNum[MaxThreads];

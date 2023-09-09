@@ -185,6 +185,10 @@ class ThreadContext : public gem5::ThreadContext
     /** Sets this thread's PC state. */
     void pcState(const PCStateBase &val) override;
 
+    const PCStateBase &corrPcState() const override {
+        return cpu->corrPcState(thread->threadId());
+    }
+
     void pcStateNoRecord(const PCStateBase &val) override;
 
     /** Reads a miscellaneous register. */

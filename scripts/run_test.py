@@ -89,7 +89,7 @@ def main(save_checkpoint: bool):
             script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"),
             output_dir=(proj_dir / "result" / "protect_kaslr_o3_checkpoint"),
             other_args=[
-                "--checkpoint=100000000,10000000000,10",
+                "--checkpoint=1000000000,1000000000,5",
                 "--classic-cache",
             ],
             redirect_needed=True

@@ -244,6 +244,13 @@ Commit::CommitStats::CommitStats(CPU *cpu, Commit *commit)
     committedInstType.ysubnames(enums::OpClassStrings);
 }
 
+const PCStateBase &
+Commit::corrPcState(ThreadID tid)
+{
+    set(corrPC[tid], cpu->protectKaslrApplyDelta(*pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(), true));
+    return *corrPC[tid];
+}
+
 void
 Commit::setThreads(std::vector<ThreadState *> &threads)
 {
@@ -1023,8 +1030,21 @@ Commit::commitInsts()
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
+                if (isRomMicroPC(head_inst->pcState().microPC()) ||
+                    (cpu->totalInsts() >= 0x1840 && cpu->totalInsts() < 0x1850)) {
+                    std::cout << "Total inst " << std::hex << cpu->totalInsts();
+                    if (isRomMicroPC(head_inst->pcState().microPC())) {
+                        std::cout << " InRom PC ";
+                    } else {
+                        std::cout << " not InRom PC ";
+                    }
+                    head_inst->pcState().output(std::cout);
+                    std::cout << head_inst->staticInst->getName() << std::endl;
+                }
                 if (isRomMicroPC(head_inst->pcState().microPC()) &&
-                    last_pc->instAddr() != head_inst->pcState().instAddr()) {
+                    cpu->protectKaslrMask(last_pc->instAddr()) != cpu->protectKaslrMask((head_inst->pcState().instAddr()))) {
+                    // TODO: We don't need mask here right? They should be both masked.
+                    //      orzzz they may not masked. Why?
                     // [Shixin] inRom inst can be fetched without going through address translation
                     //          and normal icache access by macroPC. As a result, if prev inst does
                     //          not share the same macroPC with the inRom inst, the inRom inst may
@@ -1053,24 +1073,43 @@ Commit::commitInsts()
                     }
                 }
 
+                if (pc[tid]->as<X86ISA::PCState>().size() == 0) {
+                    printf("!!! tick %lx cpu %d total %lx pc state %lx %lx %d %d\n",
+                           curTick(), cpu->cpuId(), cpu->totalInsts(),
+                           pc[tid]->as<X86ISA::PCState>().pc(), pc[tid]->as<X86ISA::PCState>().npc(),
+                           pc[tid]->as<X86ISA::PCState>().upc(), pc[tid]->as<X86ISA::PCState>().nupc());
+                    warn("!!! PC size is zero at commit stage.\n");
+                }
+
+                if (head_inst->isIndirectCtrl() && head_inst->isCondCtrl()) {
+                    panic("An indirect conditional branch appears, our next line code is inccorect!!!\n");
+                }
+
+                /// Mask2Virt
+                auto corr_pc = cpu->protectKaslrApplyDelta(
+                        *pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(),
+                        !head_inst->isIndirectCtrl());
+
+                /// KASLR security check for fetch
                 if (nextInstAddrAvail[tid]) {
-                    if (pc[tid]->instAddr() != nextInstAddr[tid]) {
+                    if (corr_pc->instAddr() != nextInstAddr[tid]) {
                         // [Shixin] TODO: Add raising fault here!
                         panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, wrong pc: %lx, corr pc: %lx\n",
                              curTick(), cpu->cpuId(), tid,
                              cpu->totalInsts(),
-                             pc[tid]->instAddr(), nextInstAddr[tid]);
+                             corr_pc->instAddr(), nextInstAddr[tid]);
                     }
                 } else {
                     printf("### First commited inst pc: %lx (not checked)\n", pc[tid]->instAddr());
                 }
-                auto next_pc = std::unique_ptr<PCStateBase>(head_inst->pcState().clone());
-                head_inst->staticInst->advancePC(*next_pc);
 
-                nextInstAddr[tid] = next_pc->instAddr();
+                /// Set arch PC of the next instruction
+                head_inst->staticInst->advancePC(*corr_pc);
+                nextInstAddr[tid] = corr_pc->instAddr();
                 nextInstAddrAvail[tid] = true;
                 static size_t i = 0;
 
+                /// KASLR security check for ld/st
                 if (head_inst->kaslrDMemDelayError()) {
                     if (head_inst->isDataPrefetch() || head_inst->isInstPrefetch()) {
                         warn("### KASLR prefetch from address with incorrect KASLR offset"
@@ -1078,6 +1117,11 @@ Commit::commitInsts()
                              num_committed,
                              pc[tid]->instAddr(), head_inst->realAddr);
                     } else {
+                        // Debug output
+                        printf("@@@ %s %lx %d\n",
+                               head_inst->macroop->getName().c_str(),
+                               pc[tid]->instAddr(), pc[tid]->microPC()
+                        );
                         // [Shixin] TODO: Add raising fault here!
                         panic("### KASLR ld/st violation at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
                               num_committed,

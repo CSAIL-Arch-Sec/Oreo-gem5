@@ -354,14 +354,26 @@ DynInst::execute()
     bool no_squash_from_TC = thread->noSquashFromTC;
     thread->noSquashFromTC = true;
 
-    fault = staticInst->execute(this, traceData);
+    // TODO: This may change indirect branch target!!!
+    set(corrPC, cpu->protectKaslrApplyDelta(*pc, pc->as<X86ISA::PCState>().kaslrCorrDelta(), true));
 
-//    if (pc->instAddr() == 0x7fdbb4313891 && pc->microPC() == 0x15) {
-//        warn("Execute dyn inst: %s, pc: %x, micro pc: %lx, next_pc: %lx\n",
-//             staticInst->getName().c_str(),
-//             pc->instAddr(), pc->microPC(),
-//             pc->as<X86ISA::PCState>().npc());
+//    if (staticInst->getName() == "wrip" || staticInst->getName() == "wripi" || staticInst->getName() == "rdip") {
+//        auto fullPC = pc->as<X86ISA::PCState>();
+//        if (fullPC.npc() != fullPC.pc() + fullPC.size() || fullPC.size() != 0) {
+//            warn("NPC is modified before, which is unsafe to apply delta to it!!!\n");
+////            printf("!!! %s %lx %lx %d %d %d\n", staticInst->getName().c_str(), fullPC.pc(), fullPC.npc(), fullPC.size(), fullPC.upc(), fullPC.nupc());
+////            if (fullPC.size() == 0 && fullPC.npc() == fullPC.pc() + 8) {
+////                warn("HH\n");
+////            } else {
+////                panic("NPC is modified before, which is unsafe to apply delta to it!!!\n");
+////            }
+//        } else {
+//            set(corrPC, cpu->protectKaslrApplyDelta(*pc, pc->as<X86ISA::PCState>().kaslrCorrDelta(), true));
+//        }
+//        printf("HH\n");
 //    }
+
+    fault = staticInst->execute(this, traceData);
 
     thread->noSquashFromTC = no_squash_from_TC;
 

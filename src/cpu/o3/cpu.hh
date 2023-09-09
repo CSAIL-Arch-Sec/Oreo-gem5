@@ -336,6 +336,8 @@ class CPU : public BaseCPU
     /** Reads the commit PC state of a specific thread. */
     const PCStateBase &pcState(ThreadID tid);
 
+    const PCStateBase &corrPcState(ThreadID tid);
+
     /** Initiates a squash of all in-flight instructions for a given
      * thread.  The source of the squash is an external update of
      * state through the TC.

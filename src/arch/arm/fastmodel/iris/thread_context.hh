@@ -350,6 +350,11 @@ class ThreadContext : public gem5::ThreadContext
     const PCStateBase &pcState() const override;
     void pcState(const PCStateBase &val) override;
 
+    const PCStateBase &corrPcState() const override {
+        panic("Not implemented yet\n");
+        return pcState();
+    }
+
     iris::ResourceId getMiscRegRscId(RegIndex misc_reg) const;
     RegVal readMiscRegNoEffect(RegIndex misc_reg) const override;
     RegVal

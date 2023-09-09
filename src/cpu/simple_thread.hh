@@ -255,6 +255,11 @@ class SimpleThread : public ThreadState, public ThreadContext
     const PCStateBase &pcState() const override { return *_pcState; }
     void pcState(const PCStateBase &val) override { set(_pcState, val); }
 
+    const PCStateBase &corrPcState() const override {
+        panic("Not implemented yet\n");
+        return pcState();
+    }
+
     void
     pcStateNoRecord(const PCStateBase &val) override
     {

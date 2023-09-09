@@ -156,7 +156,7 @@ class Template(object):
             myDict["op_rd"] = operands.concatAttrStrings("op_rd")
             if operands.readPC:
                 myDict["op_rd"] = (
-                    "set(__parserAutoPCState, xc->pcState());\n"
+                    "set(__parserAutoPCState, xc->corrPcState());\n"
                     + myDict["op_rd"]
                 )
 

@@ -266,6 +266,11 @@ class CheckerThreadContext : public ThreadContext
         return actualTC->pcState(val);
     }
 
+    const PCStateBase &corrPcState() const override {
+        panic("Not implemented correctly\n");
+        return pcState();
+    }
+
     void
     pcStateNoRecord(const PCStateBase &val) override
     {

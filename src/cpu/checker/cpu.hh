@@ -282,6 +282,11 @@ class CheckerCPU : public BaseCPU, public ExecContext
                          val, thread->pcState());
         thread->pcState(val);
     }
+
+    const PCStateBase &corrPcState() const override {
+        panic("Not implemented yet\n");
+        return pcState();
+    }
     //////////////////////////////////////////
 
     RegVal

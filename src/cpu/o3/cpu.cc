@@ -1224,6 +1224,12 @@ CPU::pcState(ThreadID tid)
     return commit.pcState(tid);
 }
 
+const PCStateBase &
+CPU::corrPcState(ThreadID tid)
+{
+    return commit.corrPcState(tid);
+}
+
 void
 CPU::pcState(const PCStateBase &val, ThreadID tid)
 {

@@ -53,6 +53,9 @@ class PCState : public GenericISA::UPCState<8>
     using Base = GenericISA::UPCState<8>;
 
     uint8_t _size;
+//    bool _dirtyNPC = false;
+
+    Addr _kaslrCorrDelta = 0;
 
   public:
     PCStateBase *clone() const override { return new PCState(*this); }
@@ -63,6 +66,7 @@ class PCState : public GenericISA::UPCState<8>
         Base::update(other);
         auto &pcstate = other.as<PCState>();
         _size = pcstate._size;
+        _kaslrCorrDelta = pcstate._kaslrCorrDelta;
     }
 
     void
@@ -70,18 +74,31 @@ class PCState : public GenericISA::UPCState<8>
     {
         Base::set(val);
         _size = 0;
+        _kaslrCorrDelta = 0;
     }
 
-    PCState(const PCState &other) : Base(other), _size(other._size) {}
+    PCState(const PCState &other) : Base(other), _size(other._size), _kaslrCorrDelta(other._kaslrCorrDelta) {}
     PCState &operator=(const PCState &other) = default;
     PCState() {}
     explicit PCState(Addr val) { set(val); }
+
+//    void npc(Addr val) override {
+//        _npc = val;
+//        dirtyNPC(true);
+//    }
+//    bool dirtyNPC() const { return _dirtyNPC; }
+//    void dirtyNPC(bool b) { _dirtyNPC = b; }
+
+    void kaslrCorrDelta(Addr val) { _kaslrCorrDelta = val; }
+    Addr kaslrCorrDelta() const { return _kaslrCorrDelta; }
 
     void
     setNPC(Addr val)
     {
         Base::setNPC(val);
         _size = 0;
+        _kaslrCorrDelta = 0;
+//        dirtyNPC(true);
     }
 
     uint8_t size() const { return _size; }
@@ -113,6 +130,7 @@ class PCState : public GenericISA::UPCState<8>
     {
         Base::serialize(cp);
         SERIALIZE_SCALAR(_size);
+        SERIALIZE_SCALAR(_kaslrCorrDelta);
     }
 
     void
@@ -120,6 +138,7 @@ class PCState : public GenericISA::UPCState<8>
     {
         Base::unserialize(cp);
         UNSERIALIZE_SCALAR(_size);
+        UNSERIALIZE_SCALAR(_kaslrCorrDelta);
     }
 };
 

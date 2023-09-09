@@ -67,6 +67,11 @@ X86FaultBase::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     }
 
     PCState pc = tc->pcState().as<PCState>();
+    PCState corrPC = tc->corrPcState().as<PCState>();
+    printf("!!!Faults RIP %lx %lx %lx %lx %d %d vector %d: %s name: %s\n",
+           tc->pcState().instAddr(), tc->pcState().as<PCState>().kaslrCorrDelta(),
+           pc.pc(), corrPC.pc(), pc.upc(), pc.nupc(),
+           vector, describe().c_str(), name());
     DPRINTF(Faults, "RIP %#x: vector %d: %s\n", pc.pc(), vector, describe());
     using namespace X86ISAInst::rom_labels;
     HandyM5Reg m5reg = tc->readMiscRegNoEffect(misc_reg::M5Reg);
@@ -81,7 +86,7 @@ X86FaultBase::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     }
     tc->setReg(intRegMicro(1), vector);
     Addr cs_base = tc->readMiscRegNoEffect(misc_reg::CsEffBase);
-    tc->setReg(intRegMicro(7), pc.pc() - cs_base);
+    tc->setReg(intRegMicro(7), corrPC.pc() - cs_base);
     if (errorCode != (uint64_t)(-1)) {
         if (m5reg.mode == LongMode) {
             entry = extern_label_longModeInterruptWithError;

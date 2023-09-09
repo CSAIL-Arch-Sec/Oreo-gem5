@@ -204,6 +204,8 @@ class ThreadContext : public PCEventScope
         pcState(*new_pc);
     }
 
+    virtual const PCStateBase &corrPcState() const = 0;
+
     virtual void pcStateNoRecord(const PCStateBase &val) = 0;
 
     virtual RegVal readMiscRegNoEffect(RegIndex misc_reg) const = 0;
