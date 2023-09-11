@@ -247,7 +247,8 @@ Commit::CommitStats::CommitStats(CPU *cpu, Commit *commit)
 const PCStateBase &
 Commit::corrPcState(ThreadID tid)
 {
-    set(corrPC[tid], cpu->protectKaslrApplyDelta(*pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(), true));
+    // The delta applied here is always arch delta!!!
+    set(corrPC[tid], cpu->protectKaslrApplyDelta(*pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(), false));
     return *corrPC[tid];
 }
 
@@ -1024,25 +1025,43 @@ Commit::commitInsts()
             changedROBNumEntries[tid] = true;
         } else {
             auto last_pc = std::unique_ptr<PCStateBase>(pc[tid]->clone());
+            // NOTE: Here pc[tid] is the pc state of the current to-be-committed inst's PC set by the
+            //      last inst's advancePC, so its size is zero.
+            //      pc[tid]->kaslrCorrDelta = delta of arch PC
+
+            // origPC is a copy, its delta is arch delta
+            auto origPC = pc[tid]->as<X86ISA::PCState>();
+            auto origPCDelta = origPC.kaslrCorrDelta();
+            auto archPCAddr = cpu->protectKaslrApplyDelta(origPC.pc(), origPCDelta);
+            auto origNPCDelta = origPC.kaslrNpcDelta();
+            cpu->protectKaslrTestMask(*pc[tid]);
+
             set(pc[tid], head_inst->pcState());
+
+            // updatePC is not a copy, its delta is expected to be corr delta if fetch finished
+            auto &updatePC = pc[tid]->as<X86ISA::PCState>();
+            auto updatePCDelta = updatePC.kaslrCorrDelta();
+            auto updatePCAddr = cpu->protectKaslrApplyDelta(updatePC.pc(), updatePCDelta);
+            auto updateNPCDelta = updatePC.kaslrNpcDelta();
+            cpu->protectKaslrTestMask(*pc[tid]);
+            
+            // NOTE: pc[tid] pcDelta and npcDelta should be arch delta, 
+            //      while head_inst's may be not. So we can only update
+            //      them with arch value. For here we are not sure, so we
+            //      recover to the original delta. For other fields,
+            //      head_inst has arch values, so we can directly update pc
+            //      with them.
+            updatePC.kaslrCorrDelta(origPCDelta);
+            updatePC.kaslrNpcDelta(origNPCDelta);
 
             // Try to commit the head instruction.
             bool commit_success = commitHead(head_inst, num_committed);
 
             if (commit_success) {
-                if (isRomMicroPC(head_inst->pcState().microPC()) ||
-                    (cpu->totalInsts() >= 0x1840 && cpu->totalInsts() < 0x1850)) {
-                    std::cout << "Total inst " << std::hex << cpu->totalInsts();
-                    if (isRomMicroPC(head_inst->pcState().microPC())) {
-                        std::cout << " InRom PC ";
-                    } else {
-                        std::cout << " not InRom PC ";
-                    }
-                    head_inst->pcState().output(std::cout);
-                    std::cout << head_inst->staticInst->getName() << std::endl;
-                }
+                /*
                 if (isRomMicroPC(head_inst->pcState().microPC()) &&
-                    cpu->protectKaslrMask(last_pc->instAddr()) != cpu->protectKaslrMask((head_inst->pcState().instAddr()))) {
+                    last_pc->instAddr() != head_inst->pcState().instAddr()) {
+                    // NOTE: orzzz the last pc is not last pc!!! It's the pc set by last instruction's advancePC
                     // TODO: We don't need mask here right? They should be both masked.
                     //      orzzz they may not masked. Why?
                     // [Shixin] inRom inst can be fetched without going through address translation
@@ -1050,13 +1069,15 @@ Commit::commitInsts()
                     //          not share the same macroPC with the inRom inst, the inRom inst may
                     //          not get corr delta/corr macroPC -> panic unexpectedly.
                     //          This panic is to test whether this would happen.
-                    warn("last pc %lx %lx this pc inRom %s %lx %lx may not get corr delta\n",
+                    panic("last pc %lx %lx this pc inRom %s %lx %lx may not get corr delta\n",
                            last_pc->instAddr(), last_pc->microPC(),
                            head_inst->staticInst->getName().c_str(),
                            head_inst->pcState().instAddr(),
                            head_inst->pcState().microPC());
                 }
+                */
                 // [Shixin] Protect KASLR: check whether the real inst addr is correct
+                /*
                 auto curStaticInst = head_inst->staticInst;
                 if (curStaticInst->isMacroop() || curStaticInst->isLastMicroop()) {
                     if (
@@ -1072,41 +1093,152 @@ Commit::commitInsts()
 //                               head_inst->pcState().instAddr(), curStaticInst->getName().c_str());
                     }
                 }
+                 */
 
-                if (pc[tid]->as<X86ISA::PCState>().size() == 0) {
-                    printf("!!! tick %lx cpu %d total %lx pc state %lx %lx %d %d\n",
-                           curTick(), cpu->cpuId(), cpu->totalInsts(),
-                           pc[tid]->as<X86ISA::PCState>().pc(), pc[tid]->as<X86ISA::PCState>().npc(),
-                           pc[tid]->as<X86ISA::PCState>().upc(), pc[tid]->as<X86ISA::PCState>().nupc());
-                    warn("!!! PC size is zero at commit stage.\n");
-                }
-
+                // TODO: Maybe we can remove this later
                 if (head_inst->isIndirectCtrl() && head_inst->isCondCtrl()) {
                     panic("An indirect conditional branch appears, our next line code is inccorect!!!\n");
                 }
 
-                /// Mask2Virt
-                auto corr_pc = cpu->protectKaslrApplyDelta(
-                        *pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(),
-                        !head_inst->isIndirectCtrl());
+                // Assert that pc should be masked
+                // TODO: Tested before, maybe remove it!
+                cpu->protectKaslrTestMask(*pc[tid]);
 
-                /// KASLR security check for fetch
-                if (nextInstAddrAvail[tid]) {
-                    if (corr_pc->instAddr() != nextInstAddr[tid]) {
-                        // [Shixin] TODO: Add raising fault here!
-                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, wrong pc: %lx, corr pc: %lx\n",
-                             curTick(), cpu->cpuId(), tid,
-                             cpu->totalInsts(),
-                             corr_pc->instAddr(), nextInstAddr[tid]);
+                /// New implementation
+
+                // New KASLR security check for fetch
+                if (archPCAddr != updatePCAddr && !isRomMicroPC(pc[tid]->microPC())) {
+                    // For non ROM inst, at commit time it should get its corr PC
+                    // We check whether arch PC matches corr PC, and raise fault if not
+                    std::clog << "Tick " << std::hex << curTick() << " ArchPC ";
+                    origPC.output(std::clog);
+                    std::clog << " CorrPC ";
+                    updatePC.output(std::clog);
+                    std::clog << std::endl;
+                    panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
+                          curTick(), cpu->cpuId(), tid,
+                          cpu->totalInsts(),
+                          archPCAddr, updatePCAddr);
+                }
+                if (isRomMicroPC(pc[tid]->microPC())) {
+                    if (cpu->protectKaslrMask(archPCAddr) != cpu->protectKaslrMask(updatePCAddr)) {
+                        std::clog << "ArchPC ";
+                        origPC.output(std::clog);
+                        std::clog << " CorrPC ";
+                        updatePC.output(std::clog);
+                        std::clog << std::endl;
+                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst origPC != corrPC\n",
+                              curTick(), cpu->cpuId(), tid,
+                              cpu->totalInsts());
                     }
-                } else {
-                    printf("### First commited inst pc: %lx (not checked)\n", pc[tid]->instAddr());
                 }
 
+                // Only control inst (branch) and the first micro op can update NPC Delta!
+                if (head_inst->isControl()) {
+                    updatePC.kaslrNpcDelta(updateNPCDelta);
+                } else if (updatePC.upc() == 0) {
+                    updatePC.kaslrNpcDelta(updatePCDelta);
+                }
+
+                /// New Implementation
+
+
+                /// Mask2Virt
+                /*
+                auto &fullPC = pc[tid]->as<X86ISA::PCState>();
+                Addr corrAddr = cpu->protectKaslrApplyDelta(fullPC.pc(), fullPC.kaslrCorrDelta());
+
+                bool test = false;
+                */
+
+                /// KASLR security check for fetch
+//                if (nextInstAddrAvail[tid]) {
+//                    /*
+//                    if (fullPC.pc() != cpu->protectKaslrMask(lastInstAddr[tid]) ||
+//                        fullPC.pc() != cpu->protectKaslrMask(nextInstAddr[tid])) {
+//                        std::clog << "PC ";
+//                        fullPC.output(std::clog);
+//                        std::clog << " lastInstAddr " << std::hex << lastInstAddr[tid]
+//                            << " nextInstAddr " << nextInstAddr[tid] << std::endl;
+//                        panic("pc is not masked or does not equal to either last or next pc\n");
+//                    }
+//                    */
+//                    // TODO: Should assert masked instruction match either masked lastInstAddr or masked nextInstAddr
+//                    if (corrAddr != lastInstAddr[tid] && corrAddr != nextInstAddr[tid]) {
+//                        if (isRomMicroPC(fullPC.upc())) {
+//                            test = true;
+//                            // TODO: Remove this special case later
+//                            fullPC.output(std::clog);
+//                            std::clog << std::endl;
+//                            warn("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, last pc: %lx arch next pc: %lx, corr pc: %lx\n",
+//                                  curTick(), cpu->cpuId(), tid,
+//                                  cpu->totalInsts(), lastInstAddr[tid],
+//                                  nextInstAddr[tid], corrAddr);
+//                            if (cpu->protectKaslrMask(nextInstAddr[tid]) != cpu->protectKaslrMask(corrAddr) &&
+//                                cpu->protectKaslrMask(lastInstAddr[tid]) != cpu->protectKaslrMask(corrAddr)) {
+//                                std::clog << "lastInstAddr " << lastInstAddr[tid] << " nextInstAddr " << nextInstAddr[tid] << " ";
+//                                fullPC.output(std::clog);
+//                                std::clog << std::endl;
+//                                panic("InRom PC mask doesn't match!!!\n");
+//                            }
+//                        } else {
+//                            // [Shixin] TODO: Add raising fault here!
+//                            fullPC.output(std::clog);
+//                            std::clog << std::endl;
+//                            panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, last pc: %lx arch next pc: %lx, corr pc: %lx\n",
+//                                  curTick(), cpu->cpuId(), tid,
+//                                  cpu->totalInsts(), lastInstAddr[tid],
+//                                  nextInstAddr[tid], corrAddr);
+//                        }
+//                    }
+////                    if (corr_pc->instAddr() != nextInstAddr[tid]) {
+////                        // [Shixin] TODO: Add raising fault here!
+////                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, wrong pc: %lx, corr pc: %lx\n",
+////                             curTick(), cpu->cpuId(), tid,
+////                             cpu->totalInsts(),
+////                             corr_pc->instAddr(), nextInstAddr[tid]);
+////                    }
+//                } else {
+//                    printf("### First commited inst pc: %lx (not checked)\n", pc[tid]->instAddr());
+//                }
+
                 /// Set arch PC of the next instruction
-                head_inst->staticInst->advancePC(*corr_pc);
-                nextInstAddr[tid] = corr_pc->instAddr();
+                /*
+                if (head_inst->isControl() &&  fullPC.macroBranching() ) {
+                    // Wrip/wripi updated PC with taken target (branch taken)
+                    if (curTick() > 0x198994f000 && curTick() < 0x109671989895) {
+                        fullPC.output(std::clog);
+                        std::clog << "Tick " << curTick() << " 1 Change nextInst from " << std::hex << nextInstAddr[tid];
+                    }
+
+                    nextInstAddr[tid] = cpu->protectKaslrApplyDelta(fullPC.npc(), fullPC.kaslrNpcDelta());
+
+                    if (curTick() > 0x198994f000 && curTick() < 0x109671989895)
+                        std::clog << " 1to " << nextInstAddr[tid] << std::endl;
+                } else if (fullPC.upc() == 0) { // or isFirstMicroop
+                    if (curTick() > 0x198994f000 && curTick() < 0x109671989895)
+                        std::clog << "Tick " << curTick() << " 2 Change nextInst from " << nextInstAddr[tid];
+
+                    nextInstAddr[tid] = cpu->protectKaslrApplyDelta(fullPC.npc(), fullPC.kaslrCorrDelta());
+
+                    if (curTick() > 0x198994f000 && curTick() < 0x109671989895)
+                        std::clog << " 2to " << std::hex << nextInstAddr[tid] << std::endl;
+                } else {
+
+                }
+
+                if (!isRomMicroPC(fullPC.upc())) {
+                    lastInstAddr[tid] = cpu->protectKaslrApplyDelta(fullPC.pc(), fullPC.kaslrCorrDelta());
+                } else {
+                    // TODO: Clean up this special case for ROM inst. Some judgement should be moved to the sec check part!
+                    if (cpu->protectKaslrMask(nextInstAddr[tid]) == cpu->protectKaslrMask(corrAddr)) {
+                        lastInstAddr[tid] = nextInstAddr[tid];
+                    }
+                }
+                lastInstAddr[tid] = cpu->protectKaslrApplyDelta(fullPC.pc(), fullPC.kaslrCorrDelta());
+
                 nextInstAddrAvail[tid] = true;
+                */
                 static size_t i = 0;
 
                 /// KASLR security check for ld/st

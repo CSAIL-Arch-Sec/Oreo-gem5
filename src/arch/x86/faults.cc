@@ -67,11 +67,20 @@ X86FaultBase::invoke(ThreadContext *tc, const StaticInstPtr &inst)
     }
 
     PCState pc = tc->pcState().as<PCState>();
-    PCState corrPC = tc->corrPcState().as<PCState>();
-    printf("!!!Faults RIP %lx %lx %lx %lx %d %d vector %d: %s name: %s\n",
-           tc->pcState().instAddr(), tc->pcState().as<PCState>().kaslrCorrDelta(),
-           pc.pc(), corrPC.pc(), pc.upc(), pc.nupc(),
-           vector, describe().c_str(), name());
+    // TODO: Change corrPC to Addr type by changing all corrPcState functions
+    const auto &corrPC = tc->corrPcState().as<PCState>();
+//    std::clog << "!!! Faults Tick " << std::hex << curTick() << " PC: ";
+//    pc.output(std::clog);
+//    std::clog << "Corr PC: ";
+//    corrPC.output(std::clog);
+//    std::clog << std::endl;
+//    ccprintf(std::clog, "!!! Faults RIP %lx %lx %lx %lx %d %d vector %d: %s name: %s\n",
+//           tc->pcState().instAddr(), tc->pcState().as<PCState>().kaslrCorrDelta(),
+//           pc.pc(), corrPC.pc(), pc.upc(), pc.nupc(),
+//           vector, describe().c_str(), name());
+    // NOTE: Possible bug: we may not have corrDelta here, so cannot predict a corrPC,
+    //       which would make restoring from the interrupt buggy since the ROM exception
+    //       handler would store the PC we passed to them.
     DPRINTF(Faults, "RIP %#x: vector %d: %s\n", pc.pc(), vector, describe());
     using namespace X86ISAInst::rom_labels;
     HandyM5Reg m5reg = tc->readMiscRegNoEffect(misc_reg::M5Reg);

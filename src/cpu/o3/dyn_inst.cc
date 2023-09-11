@@ -355,7 +355,33 @@ DynInst::execute()
     thread->noSquashFromTC = true;
 
     // TODO: This may change indirect branch target!!!
-    set(corrPC, cpu->protectKaslrApplyDelta(*pc, pc->as<X86ISA::PCState>().kaslrCorrDelta(), true));
+//    set(corrPC, cpu->protectKaslrApplyDelta(*pc, pc->as<X86ISA::PCState>().kaslrCorrDelta(), false));
+
+    static size_t i = 0;
+
+    /// Only apply corrDelta to NPC (expected to be PC+size) for rdip
+    bool needNpc = staticInst->isControl() || staticInst->getName() == "rdip";
+    if (needNpc) {
+//        if (pc->microPC() != 0 ||
+//            pc->as<X86ISA::PCState>().npc() != pc->as<X86ISA::PCState>().pc() + pc->as<X86ISA::PCState>().size()) {
+//            std::cerr << "Rdip is not the first micro op or unexpected npc value ";
+//            pc->output(std::cerr);
+//            panic("My assumption is wrong!!!\n");
+//        }
+        // TODO: Add a appropriate assert here! Ensure no target delta is overwritten
+
+//        if (curTick() >= 0x4b0000) {
+//            std::cout << "Before execute Before change pc: ";
+//            pc->output(std::cout);
+//            std::cout << std::endl;
+//        }
+        cpu->protectKaslrApplyNPCCorrDelta(*pc);
+//        if (curTick() >= 0x4b0000) {
+//            std::cout << "Before execute After change pc: ";
+//            pc->output(std::cout);
+//            std::cout << std::endl;
+//        }
+    }
 
 //    if (staticInst->getName() == "wrip" || staticInst->getName() == "wripi" || staticInst->getName() == "rdip") {
 //        auto fullPC = pc->as<X86ISA::PCState>();
@@ -374,6 +400,21 @@ DynInst::execute()
 //    }
 
     fault = staticInst->execute(this, traceData);
+
+    /// For rdip, wrip, wripi, change NPC back to masked version
+    if (needNpc) {
+//        if (curTick() >= 0x4b0000) {
+//            std::cout << "After execute Before change pc: ";
+//            pc->output(std::cout);
+//            std::cout << std::endl;
+//        }
+        cpu->protectKaslrExtractDeltaMask(*pc);
+//        if (curTick() >= 0x4b0000) {
+//            std::cout << "After execute After change pc: ";
+//            pc->output(std::cout);
+//            std::cout << std::endl;
+//        }
+    }
 
     thread->noSquashFromTC = no_squash_from_TC;
 

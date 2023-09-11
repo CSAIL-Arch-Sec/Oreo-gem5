@@ -159,36 +159,56 @@ public:
                 return (corrAddr & (~regionMask[i])) >> regionAlignBits[i];
             }
         }
-//        if (corrAddr >= textMin && corrAddr < textMax) {
-//            return corrAddr & (~addrMask);
-//        }
         return 0;
     }
 
-    std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC) {
+    void protectKaslrTestMask(const PCStateBase &origPC) {
+        auto &pc = origPC.as<X86ISA::PCState>();
+        if (!protectKaslrValid(pc.pc(), 0) || !protectKaslrValid(pc.npc(), 0)) {
+            std::cout << "PC State ";
+            pc.output(std::cout);
+            std::cout << std::endl;
+            warn("PC/NPC should be masked but not\n");
+        }
+    }
+
+    void protectKaslrExtractDeltaMask(PCStateBase &origPC) {
+        // This function would change origPC
+        auto &pc = origPC.as<X86ISA::PCState>();
+//        auto pcAddr = pc.pc();
+        auto npcAddr = pc.npc();
+//        auto newPCDelta = getKaslrDeltaFromPC(pcAddr);
+        auto newNPCDelta = getKaslrDeltaFromPC(npcAddr);
+//        if (newPCDelta != pc.kaslrCorrDelta()) {
+//            panic("Corr delta doesn't match %lx %lx %lx %lx %d %d\n",
+//                  pcAddr, newPCDelta,
+//                  npcAddr, newNPCDelta,
+//                  pc.upc(), pc.nupc());
+//        }
+        // Record NPC delta (which might be freshly set by Wrip)
+        pc.kaslrNpcDelta(newNPCDelta);
+        // Apply mask to PC and NPC
+//        pc.pc(protectKaslrMask(pcAddr));
+        pc.npc(protectKaslrMask(npcAddr));
+    }
+
+    void protectKaslrApplyNPCCorrDelta(PCStateBase &origPC) {
+        // This function would change origPC
+        auto &pc = origPC.as<X86ISA::PCState>();
+        pc.npc(protectKaslrApplyDelta(pc.npc(), pc.kaslrCorrDelta()));
+    }
+
+    std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC, bool applyNPC = false) {
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();
-//        auto npc = pcState.npc();
         pcState.pc(protectKaslrMask(pc));
-//        pcState.npc(protectKaslrMask(npc)); // TODO: Check here!
+        if (applyNPC) {
+            auto npc = pcState.npc();
+            pcState.npc(protectKaslrMask(npc)); // TODO: Check here!
+        }
         return std::unique_ptr<PCStateBase>(pcBase);
-
-//        auto origAddr = origPC.instAddr();
-//        auto mask_this_pc = origPC.clone();
-//        mask_this_pc->protectKaslrUpdatePC(protectKaslrMask(origAddr));
-//        return std::unique_ptr<PCStateBase>(mask_this_pc);
     }
-
-//    std::unique_ptr<PCStateBase> protectKaslrMaskNPC(const PCStateBase &origPC) {
-//        auto pcBase = origPC.as<X86ISA::PCState>().clone();
-//        auto &pcState = pcBase->as<X86ISA::PCState>();
-//        auto pc = pcState.instAddr();
-//        auto npc = pcState.npc();
-//        pcState.pc(protectKaslrMask(pc));
-//        pcState.npc(protectKaslrMask(npc));
-//        return std::unique_ptr<PCStateBase>(pcBase);
-//    }
 
     Addr protectKaslrMask(Addr addr) {
         // This function only apply mask to address in KASLR randomization
@@ -198,9 +218,6 @@ public:
                 return addr & regionMask[i];
             }
         }
-//        if (protectKaslr && addr >= textMin && addr < textMax) {
-//            return addr & addrMask;
-//        }
         return addr;
     }
 
@@ -214,11 +231,6 @@ public:
             pcState.npc(protectKaslrApplyDelta(npc, delta)); // TODO: Check here!
         }
         return std::unique_ptr<PCStateBase>(pcBase);
-
-//        auto origAddr = origPC.instAddr();
-//        auto mask_this_pc = origPC.clone();
-//        mask_this_pc->protectKaslrUpdatePC(protectKaslrApplyDelta(origAddr, offset));
-//        return std::unique_ptr<PCStateBase>(mask_this_pc);
     }
 
     Addr protectKaslrApplyDelta(Addr addr, Addr delta) {
@@ -230,9 +242,6 @@ public:
                 return (addr & regionMask[i]) | (delta << regionAlignBits[i]);
             }
         }
-//        if (protectKaslr && addr >= textMin && addr < textMax) {
-//            return (addr & addrMask) | offset;
-//        }
         return addr;
     }
 

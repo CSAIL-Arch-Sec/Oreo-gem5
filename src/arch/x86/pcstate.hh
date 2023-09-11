@@ -55,9 +55,17 @@ class PCState : public GenericISA::UPCState<8>
     uint8_t _size;
 //    bool _dirtyNPC = false;
 
-    Addr _kaslrCorrDelta = 0;
+    Addr _kaslrCorrDelta = 0; // NOTE: This can be archDelta for pc!!!
+    Addr _kaslrNpcDelta = 0;
 
   public:
+    void
+    output(std::ostream &os) const override
+    {
+        Base::output(os);
+        ccprintf(os, ".%d.(%lx=>%lx)", this->size(), this->kaslrCorrDelta(), this->kaslrNpcDelta());
+    }
+
     PCStateBase *clone() const override { return new PCState(*this); }
 
     void
@@ -67,6 +75,7 @@ class PCState : public GenericISA::UPCState<8>
         auto &pcstate = other.as<PCState>();
         _size = pcstate._size;
         _kaslrCorrDelta = pcstate._kaslrCorrDelta;
+        _kaslrNpcDelta = pcstate._kaslrNpcDelta;
     }
 
     void
@@ -75,9 +84,15 @@ class PCState : public GenericISA::UPCState<8>
         Base::set(val);
         _size = 0;
         _kaslrCorrDelta = 0;
+        _kaslrNpcDelta = 0;
     }
 
-    PCState(const PCState &other) : Base(other), _size(other._size), _kaslrCorrDelta(other._kaslrCorrDelta) {}
+    PCState(const PCState &other) :
+        Base(other),
+        _size(other._size),
+        _kaslrCorrDelta(other._kaslrCorrDelta),
+        _kaslrNpcDelta(other._kaslrNpcDelta) {}
+
     PCState &operator=(const PCState &other) = default;
     PCState() {}
     explicit PCState(Addr val) { set(val); }
@@ -92,12 +107,21 @@ class PCState : public GenericISA::UPCState<8>
     void kaslrCorrDelta(Addr val) { _kaslrCorrDelta = val; }
     Addr kaslrCorrDelta() const { return _kaslrCorrDelta; }
 
+    void kaslrNpcDelta(Addr val) { _kaslrNpcDelta = val; }
+    Addr kaslrNpcDelta() const { return _kaslrNpcDelta; }
+
+    void kaslrClearDelta() {
+        _kaslrCorrDelta = 0;
+        _kaslrNpcDelta = 0;
+    }
+
     void
     setNPC(Addr val)
     {
         Base::setNPC(val);
         _size = 0;
         _kaslrCorrDelta = 0;
+        _kaslrNpcDelta = 0;
 //        dirtyNPC(true);
     }
 
@@ -111,11 +135,22 @@ class PCState : public GenericISA::UPCState<8>
                (this->nupc() != this->upc() + 1);
     }
 
+    bool
+    macroBranching() const
+    {
+        return !(this->npc() == this->pc() + size() ||
+                (size() == 0 && this->npc() == this->pc() + 8));
+    }
+
     void
     advance() override
     {
         Base::advance();
         _size = 0;
+//        std::clog << "Advance" << std::endl;
+        // TODO: Think about how advance should be like.
+//        _kaslrCorrDelta = 0;
+//        _kaslrNpcDelta = 0;
     }
 
     void
@@ -123,6 +158,10 @@ class PCState : public GenericISA::UPCState<8>
     {
         Base::uEnd();
         _size = 0;
+        // TODO: Think about how advance should be like.
+//        std::clog << "uEnd " << _kaslrCorrDelta << " " << _kaslrNpcDelta << std::endl;
+        _kaslrCorrDelta = _kaslrNpcDelta;
+        _kaslrNpcDelta = 0;
     }
 
     void
@@ -131,6 +170,7 @@ class PCState : public GenericISA::UPCState<8>
         Base::serialize(cp);
         SERIALIZE_SCALAR(_size);
         SERIALIZE_SCALAR(_kaslrCorrDelta);
+        SERIALIZE_SCALAR(_kaslrNpcDelta);
     }
 
     void
@@ -139,6 +179,7 @@ class PCState : public GenericISA::UPCState<8>
         Base::unserialize(cp);
         UNSERIALIZE_SCALAR(_size);
         UNSERIALIZE_SCALAR(_kaslrCorrDelta);
+        UNSERIALIZE_SCALAR(_kaslrNpcDelta);
     }
 };
 

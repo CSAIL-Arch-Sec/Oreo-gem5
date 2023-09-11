@@ -351,6 +351,7 @@ class Commit
      * still hasn't completed commit, it stores the PC (inst addr) of the
      * current inst.
      */
+    Addr lastInstAddr[MaxThreads];
     Addr nextInstAddr[MaxThreads];
     bool nextInstAddrAvail[MaxThreads] = { false };
 

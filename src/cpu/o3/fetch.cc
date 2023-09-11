@@ -1471,18 +1471,18 @@ Fetch::fetch(bool &status_change)
             //              it can still reuse delta gained by previous delta directly
             //              gained from addr translation or recovered from squash (delta
             //              of last micro inst with the same macroPC.
-            if (!cpu->protectKaslrValidDirty(corr_pc->instAddr()) && cpu->protectKaslr[0]) {
-                printf("fetchBufferPC[tid]: %lx pc[tid]: %lx\n",
-                       fetchBufferPC[tid], pc[tid]->instAddr());
-                printf("kaslrOffset: %lx\n", corrKaslrDelta[tid]);
-                warn("@@@ cpu: %d thread: %lx while %lx do %lx decoder %lx DynInst %s pc: %lx %lx is not corrpc with delta %lx\n",
-                     cpu->cpuId(), tid,
-                     while_loop_counter, do_loop_counter,
-                     addr1[tid],
-                     staticInst->getName().c_str(),
-                     corr_pc->instAddr(), corr_pc->microPC(),
-                     corrKaslrDelta[tid]);
-            }
+//            if (!cpu->protectKaslrValidDirty(corr_pc->instAddr()) && cpu->protectKaslr[0]) {
+//                printf("fetchBufferPC[tid]: %lx pc[tid]: %lx\n",
+//                       fetchBufferPC[tid], pc[tid]->instAddr());
+//                printf("kaslrOffset: %lx\n", corrKaslrDelta[tid]);
+//                warn("@@@ cpu: %d thread: %lx while %lx do %lx decoder %lx DynInst %s pc: %lx %lx is not corrpc with delta %lx\n",
+//                     cpu->cpuId(), tid,
+//                     while_loop_counter, do_loop_counter,
+//                     addr1[tid],
+//                     staticInst->getName().c_str(),
+//                     corr_pc->instAddr(), corr_pc->microPC(),
+//                     corrKaslrDelta[tid]);
+//            }
 
             // [Shixin] When construct dyn inst, pred_pc = this_pc. After doing prediction, pred_pc is updated.
             DynInstPtr instruction = buildInst(
