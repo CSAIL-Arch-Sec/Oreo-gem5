@@ -60,6 +60,7 @@ def run(
     cmd_str = " ".join(cmd)
     print(cmd_str)
 
+    output_log = output_dir / "output2.log"
     with output_log.open(mode="w") as output_file:
         subprocess.run(
             cmd_str,
@@ -89,7 +90,7 @@ def main(save_checkpoint: bool):
             script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"),
             output_dir=(proj_dir / "result" / "protect_kaslr_o3_checkpoint2"),
             other_args=[
-                "--checkpoint=1000000000000,100000000000,10",
+                "--checkpoint=10000000000000,100000000000,20",
                 "--classic-cache",
             ],
             redirect_needed=True

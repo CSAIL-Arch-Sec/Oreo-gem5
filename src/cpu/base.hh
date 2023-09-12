@@ -198,7 +198,7 @@ public:
         pc.npc(protectKaslrApplyDelta(pc.npc(), pc.kaslrCorrDelta()));
     }
 
-    std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC, bool applyNPC = false) {
+    std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC, bool applyNPC) {
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();
@@ -221,7 +221,7 @@ public:
         return addr;
     }
 
-    std::unique_ptr<PCStateBase> protectKaslrApplyDelta(const PCStateBase &origPC, Addr delta, bool applyNPC = false) {
+    std::unique_ptr<PCStateBase> protectKaslrApplyDelta(const PCStateBase &origPC, Addr delta, bool applyNPC) {
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();

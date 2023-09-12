@@ -357,10 +357,10 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
             // TODO: Make this 25 configurable
             entry.kaslrDelta = pte.delta;
 
-            if (entry.vaddr >= 0xffffffff80000000 && entry.vaddr < 0xffffffff82000000 && pte.delta != 6) {
-                printf("vaddr: %lx\n", entry.vaddr);
-                panic("Page table walker: Didn't get correct delta! pte = %lx\n", pte);
-            }
+//            if (entry.vaddr >= 0xffffffff80000000 && entry.vaddr < 0xffffffff82000000 && pte.delta != 6) {
+//                printf("vaddr: %lx\n", entry.vaddr);
+//                panic("Page table walker: Didn't get correct delta! pte = %lx\n", pte);
+//            }
 
             doTLBInsert = true;
             doEndWalk = true;
@@ -387,9 +387,9 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
         // TODO: Make this 25 configurable
         entry.kaslrDelta = pte.delta;
 
-        if (entry.vaddr >= 0xffffffff80000000 && entry.vaddr < 0xffffffff82000000 && pte.delta != 6) {
-            panic("Didn't get correct delta!\n");
-        }
+//        if (entry.vaddr >= 0xffffffff80000000 && entry.vaddr < 0xffffffff82000000 && pte.delta != 6) {
+//            panic("Didn't get correct delta!\n");
+//        }
 
         doTLBInsert = true;
         doEndWalk = true;

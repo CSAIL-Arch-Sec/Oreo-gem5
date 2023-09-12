@@ -58,6 +58,18 @@ parser.add_argument(
     help="Switch core type.",
 )
 
+parser.add_argument(
+    "--disk-image-path",
+    type=str,
+    default="/root/experiments/disk-image/experiments/experiments-image/experiments",
+    help="disk image path to use for run"
+)
+parser.add_argument(
+    "--disk-root-partition",
+    type=str,
+    default="1",
+    help="root partiton of disk image"
+)
 
 args = parser.parse_args()
 
@@ -135,11 +147,16 @@ board = X86Board(
 # then, again, call `m5 exit` to terminate the simulation. After simulation
 # has ended you may inspect `m5out/system.pc.com_1.device` to see the echo
 # output.
-command = "m5 exit;" \
-          + "echo 'This is running on O3 CPU cores.';" \
-          + "head /proc/kallsyms;" \
-          + "sleep 1; ls;" \
-          + "m5 exit;"
+# command = "m5 exit;" \
+#           + "echo 'This is running on O3 CPU cores.';" \
+#           + "head /proc/kallsyms;" \
+#           + "sleep 1; ls;" \
+#           + "m5 exit;"
+
+command = "ls /home/gem5/experiments/modules; " \
+          "sleep 1; " \
+          "m5 exit; " \
+          "m5 exit;"
 
 # command = "m5 checkpoint;" \
 #           + "m5 exit;" \
@@ -174,8 +191,11 @@ board.set_kernel_disk_workload(
         local_path=kernel_local_path,
     ),
     disk_image=Resource("x86-ubuntu-18.04-img"),
+    # disk_image=CustomDiskImageResource(
+    #     local_path=args.disk_image_path,
+    #     disk_root_partition=args.disk_root_partition
+    # ),
     readfile_contents=command,
-    # TODO: Set checkpoint here
 )
 
 simulator = Simulator(

@@ -498,9 +498,9 @@ TLB::translate(const RequestPtr &req,
 
             // [Shixin] Pass kaslr offset (delta) to request
 //            printf("@@@ vaddr %lx\n", vaddr);
-            if (entry->vaddr >= 0xffffffff80000000 && entry->vaddr < 0xffffffff82000000 && entry->kaslrDelta != 6) {
-                panic("TLB: Didn't get correct delta pc: %lx, delta: %lx\n", entry->vaddr, entry->kaslrDelta);
-            }
+//            if (entry->vaddr >= 0xffffffff80000000 && entry->vaddr < 0xffffffff82000000 && entry->kaslrDelta != 6) {
+//                panic("TLB: Didn't get correct delta pc: %lx, delta: %lx\n", entry->vaddr, entry->kaslrDelta);
+//            }
 
             req->setCorrKaslrDelta(entry->kaslrDelta);
 

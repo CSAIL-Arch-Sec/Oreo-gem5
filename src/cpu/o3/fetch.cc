@@ -299,7 +299,7 @@ Fetch::clearStates(ThreadID tid)
 {
     fetchStatus[tid] = Running;
     // [Shixin] Apply mask when gain pc from cpu state
-    auto maskPCState = cpu->protectKaslrMask(cpu->pcState(tid));
+    auto maskPCState = cpu->protectKaslrMask(cpu->pcState(tid), true);
 //    if (maskPCState->instAddr() >= 0xffffffff8d000000) {
 //        panic("maskPCState->instAddr() >= 0xffffffff8d000000");
 //    }
@@ -333,7 +333,7 @@ Fetch::resetStage()
     for (ThreadID tid = 0; tid < numThreads; ++tid) {
         fetchStatus[tid] = Running;
         // [Shixin] Apply mask when gain pc from cpu state
-        auto maskPCState = cpu->protectKaslrMask(cpu->pcState(tid));
+        auto maskPCState = cpu->protectKaslrMask(cpu->pcState(tid), true);
 //        if (maskPCState->instAddr() >= 0xffffffff8d000000 && cpu->protectKaslr) {
 //            panic("maskPCState->instAddr() >= 0xffffffff8d000000");
 //        }
@@ -540,7 +540,7 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
 //            printf("Fetch non control predict inst pc: %lx, next_pc: %lx\n",
 //                   this_addr, next_addr);
 //        }
-        set(next_pc, *cpu->protectKaslrMask(*next_pc_helper));
+        set(next_pc, *cpu->protectKaslrMask(*next_pc_helper, true));
 
         // old code
         // TODO: Change back to old code again
@@ -564,7 +564,7 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
     //   2. Is there any other non-control inst generate
     //      not masked next_pc with masked pc?
     // TODO: We may remove the mask later since it is already masked
-    set(next_pc, *cpu->protectKaslrMask(next_pc));
+    set(next_pc, *cpu->protectKaslrMask(next_pc, true));
 
     if (predict_taken) {
         DPRINTF(Fetch, "[tid:%i] [sn:%llu] Branch at PC %#x "
@@ -795,7 +795,7 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst,
             tid, new_pc);
 //    printf("Squashing, setting PC to %lx\n", new_pc.instAddr());
     // [Shixin] TODO: Check here!
-    auto mask_new_pc = cpu->protectKaslrMask(new_pc);
+    auto mask_new_pc = cpu->protectKaslrMask(new_pc, true);
     set(pc[tid], *mask_new_pc);
 
 //    if (new_pc.instAddr() == 0x7fdbb4313891 && new_pc.microPC() == 0x15) {
@@ -1065,7 +1065,7 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
             fromCommit->commitInfo[tid].mispredictInst->isControl()) {
             branchPred->squash(fromCommit->commitInfo[tid].doneSeqNum,
                     // [Shixin] Use masked pc to update branchPred
-                    *cpu->protectKaslrMask(*fromCommit->commitInfo[tid].pc),
+                    *cpu->protectKaslrMask(*fromCommit->commitInfo[tid].pc, true),
                     fromCommit->commitInfo[tid].branchTaken, tid);
         } else {
             branchPred->squash(fromCommit->commitInfo[tid].doneSeqNum,
@@ -1088,7 +1088,7 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
         if (fromDecode->decodeInfo[tid].branchMispredict) {
             branchPred->squash(fromDecode->decodeInfo[tid].doneSeqNum,
                     // [Shixin] Use masked pc to update branch predictor
-                    *cpu->protectKaslrMask(*fromDecode->decodeInfo[tid].nextPC),
+                    *cpu->protectKaslrMask(*fromDecode->decodeInfo[tid].nextPC, true),
                     fromDecode->decodeInfo[tid].branchTaken, tid);
         } else {
             branchPred->squash(fromDecode->decodeInfo[tid].doneSeqNum,
@@ -1382,7 +1382,7 @@ Fetch::fetch(bool &status_change)
         do_loop_counter++;
         do {
             // [Shixin] TODO: Should assert corr offset is available here!
-            auto corr_pc = cpu->protectKaslrApplyDelta(this_pc, corrKaslrDelta[tid]);
+//            auto corr_pc = cpu->protectKaslrApplyDelta(this_pc, corrKaslrDelta[tid], false);
             this_pc.as<X86ISA::PCState>().kaslrCorrDelta(corrKaslrDelta[tid]);
 
             // TODO: Remove debug output here

@@ -580,8 +580,8 @@ class DynInst : public ExecContext, public RefCounted
 //                   pc->instAddr(), predPC->instAddr(), next_pc->instAddr());
 //        }
         // [Shixin] Don't squash when offset is the same while only delta is different
-        auto mask_next_pc = cpu->protectKaslrMask(*next_pc);
-        auto mask_pred_pc = cpu->protectKaslrMask(*predPC);
+        auto mask_next_pc = cpu->protectKaslrMask(*next_pc, true);
+        auto mask_pred_pc = cpu->protectKaslrMask(*predPC, true);
         return *mask_next_pc != *mask_pred_pc;
     }
 

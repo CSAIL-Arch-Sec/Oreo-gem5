@@ -718,8 +718,8 @@ Decode::decodeInsts(ThreadID tid)
             // [Shixin] The PC-relative target should be corr PC.
             // TODO: DOULE CHECK!!!
             auto origTarget = inst->branchTarget();
-            auto target = cpu->protectKaslrMask(*origTarget);
-            if (*target != *cpu->protectKaslrMask(inst->readPredTarg())) {
+            auto target = cpu->protectKaslrMask(*origTarget, true);
+            if (*target != *cpu->protectKaslrMask(inst->readPredTarg(), true)) {
                 ++stats.branchMispred;
 
                 // Might want to set some sort of boolean and just do
