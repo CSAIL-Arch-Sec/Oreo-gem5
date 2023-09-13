@@ -71,6 +71,13 @@ parser.add_argument(
     help="root partiton of disk image"
 )
 
+parser.add_argument(
+    "--script",
+    type=str,
+    default="/root/experiments/command-scripts/exit_immediate.rcS",
+    help="path to script to run"
+)
+
 args = parser.parse_args()
 
 if args.protect_kaslr:
@@ -147,41 +154,23 @@ board = X86Board(
 # then, again, call `m5 exit` to terminate the simulation. After simulation
 # has ended you may inspect `m5out/system.pc.com_1.device` to see the echo
 # output.
-# command = "m5 exit;" \
-#           + "echo 'This is running on O3 CPU cores.';" \
-#           + "head /proc/kallsyms;" \
-#           + "sleep 1; ls;" \
-#           + "m5 exit;"
-
-command = "ls /home/gem5/experiments/modules; " \
-          "sleep 1; " \
-          "m5 exit; " \
-          "m5 exit;"
-
-# command = "m5 checkpoint;" \
-#           + "m5 exit;" \
-#           + "echo 'This is running on O3 CPU cores.';" \
-#           + "head /proc/kallsyms;" \
-#           + "sleep 1;" \
-#           + "m5 exit;"
-
-# command = "m5 exit;" \
-#           + "echo 'This is running on NonCaching CPU cores.';" \
-#           + "ls;" \
-#           + "m5 checkpoint;" \
-#           + "ls;" \
-#           + "sleep 1;" \
-#           + "m5 exit;"
+command = "m5 exit;" \
+          + "echo 'This is running on O3 CPU cores.';" \
+          + "head /proc/kallsyms;" \
+          + "sleep 1; ls;" \
+          + "m5 exit;"
 
 # Here we set the Full System workload.
 # The `set_workload` function for the X86Board takes a kernel, a disk image,
 # and, optionally, a the contents of the "readfile". In the case of the
 # "x86-ubuntu-18.04-img", a file to be executed as a script after booting the
 # system.
-if protect_kaslr:
+if protect_kaslr and protect_module_kaslr:
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both"
+elif protect_kaslr:
     kernel_local_path = "/root/linux/vmlinux_gem5_protect"
 elif protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module"
 else:
     kernel_local_path = "/root/linux/vmlinux_gem5"
 board.set_kernel_disk_workload(
@@ -190,13 +179,17 @@ board.set_kernel_disk_workload(
     CustomResource(
         local_path=kernel_local_path,
     ),
-    disk_image=Resource("x86-ubuntu-18.04-img"),
-    # disk_image=CustomDiskImageResource(
-    #     local_path=args.disk_image_path,
-    #     disk_root_partition=args.disk_root_partition
-    # ),
-    readfile_contents=command,
+    # disk_image=Resource("x86-ubuntu-18.04-img"),
+    disk_image=CustomDiskImageResource(
+        local_path=args.disk_image_path,
+        disk_root_partition=args.disk_root_partition
+    ),
+    # readfile_contents=command,
+    readfile=args.script,
 )
+
+def dirty_fix():
+    yield False
 
 simulator = Simulator(
     board=board,
@@ -205,7 +198,8 @@ simulator = Simulator(
         # exit event. Instead of exiting the simulator, we just want to
         # switch the processor. The 2nd 'm5 exit' after will revert to using
         # default behavior where the simulator run will exit.
-        ExitEvent.EXIT : (func() for func in [processor.switch]),
+        ExitEvent.EXIT: (func() for func in [processor.switch]),
+        ExitEvent.CHECKPOINT: dirty_fix()
     },
 )
 
