@@ -806,17 +806,6 @@ CPU::trap(const Fault &fault, ThreadID tid, const StaticInstPtr &inst)
     fault->invoke(threadContexts[tid], inst);
 
     Addr updated_addr = threadContexts[tid]->pcState().instAddr();
-
-    // [Shixin] Notify commit stage that pc is changed by interrupt handler.
-    if (this_addr != updated_addr) {
-        printf("Interrupt handler change pc from %lx to %lx\n",
-               this_addr, updated_addr);
-        // [Shixin] TODO: change the following line to
-        //            commit.nextInstAddr[tid] = updated_addr
-        //            and see whether the cpu would panic.
-        // commit.nextInstAddrAvail[tid] = false;
-        commit.nextInstAddr[tid] = updated_addr;
-    }
 }
 
 void

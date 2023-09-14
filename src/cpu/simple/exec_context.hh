@@ -409,11 +409,6 @@ class SimpleExecContext : public ExecContext
         thread->pcState(val);
     }
 
-    const PCStateBase &corrPcState() const override {
-        panic("Not implemented yet\n");
-        return pcState();
-    }
-
     Fault
     readMem(Addr addr, uint8_t *data, unsigned int size,
             Request::Flags flags,

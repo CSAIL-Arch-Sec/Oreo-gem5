@@ -249,11 +249,6 @@ class ExecContext : public gem5::ExecContext
         thread.pcState(val);
     }
 
-    const PCStateBase &corrPcState() const override {
-        panic("Not implemented yet\n");
-        return pcState();
-    }
-
     RegVal
     readMiscRegNoEffect(int misc_reg) const
     {

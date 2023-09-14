@@ -344,17 +344,6 @@ class Commit
     /** ROB interface. */
     ROB *rob;
 
-    /** [Shixin] The next commit PC state (inst addr) of each thread. Refers
-     * to the next instruction that would be committed or current instruction
-     * is processed. Updated when the current instruction is successfully
-     * committed. Therefore, if the current instruction starts commit but
-     * still hasn't completed commit, it stores the PC (inst addr) of the
-     * current inst.
-     */
-    Addr lastInstAddr[MaxThreads];
-    Addr nextInstAddr[MaxThreads];
-    bool nextInstAddrAvail[MaxThreads] = { false };
-
   private:
     /** Pointer to O3CPU. */
     CPU *cpu;

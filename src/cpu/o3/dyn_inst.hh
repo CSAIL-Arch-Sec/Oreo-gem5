@@ -207,7 +207,6 @@ class DynInst : public ExecContext, public RefCounted
 
     /** PC state for this instruction. */
     std::unique_ptr<PCStateBase> pc;
-    std::unique_ptr<PCStateBase> corrPC;
 
     /** Values to be written to the destination misc. registers. */
     std::vector<RegVal> _destMiscRegVal;
@@ -941,14 +940,6 @@ class DynInst : public ExecContext, public RefCounted
 
     /** Set the PC state of this instruction. */
     void pcState(const PCStateBase &val) override { set(pc, val); }
-
-    /** [Shixin] Read the corrPC state of this instruction for calculation on NPC. */
-    const PCStateBase &
-    corrPcState() const override
-    {
-//        printf("corrPcState: %lx %d\n", corrPC->instAddr(), corrPC->microPC());
-        return *corrPC;
-    }
 
     bool readPredicate() const override { return instFlags[Predicate]; }
 

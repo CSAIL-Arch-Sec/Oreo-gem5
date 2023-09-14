@@ -42,7 +42,6 @@
 #ifndef __CPU_EXEC_CONTEXT_HH__
 #define __CPU_EXEC_CONTEXT_HH__
 
-#include "arch/x86/pcstate.hh"
 #include "base/types.hh"
 #include "cpu/base.hh"
 #include "cpu/reg_class.hh"
@@ -108,8 +107,6 @@ class ExecContext
      */
     virtual const PCStateBase &pcState() const = 0;
     virtual void pcState(const PCStateBase &val) = 0;
-    // [Shixin]
-    virtual const PCStateBase &corrPcState() const = 0;
     /** @} */
 
     /**
