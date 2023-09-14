@@ -1024,6 +1024,9 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
 
         DPRINTF(Fetch, "[tid:%i] Squashing instructions due to squash "
                 "from commit.\n",tid);
+
+        // [Shixin] Clear delta and assert the pc used to update branchPred is masked!
+        cpu->protectKaslrClearDelta(*fromCommit->commitInfo[tid].pc, true, true);
         // In any case, squash.
         squash(*fromCommit->commitInfo[tid].pc,
                fromCommit->commitInfo[tid].doneSeqNum,
@@ -1034,10 +1037,7 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
         // invalid state we generated in after sequence number
         if (fromCommit->commitInfo[tid].mispredictInst &&
             fromCommit->commitInfo[tid].mispredictInst->isControl()) {
-            // [Shixin] Assert the pc used to update branchPred is masked!
-            cpu->protectKaslrClearDelta(*fromCommit->commitInfo[tid].pc, true, true);
             branchPred->squash(fromCommit->commitInfo[tid].doneSeqNum,
-                    // [Shixin] Use masked pc to update branchPred
                     *fromCommit->commitInfo[tid].pc,
                     fromCommit->commitInfo[tid].branchTaken, tid);
         } else {
@@ -1057,12 +1057,11 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
         DPRINTF(Fetch, "[tid:%i] Squashing instructions due to squash "
                 "from decode.\n",tid);
 
+        // [Shixin] Clear delta and assert the pc used to update branchPred is masked!
+        cpu->protectKaslrClearDelta(*fromDecode->decodeInfo[tid].nextPC, true, true);
         // Update the branch predictor.
         if (fromDecode->decodeInfo[tid].branchMispredict) {
-            // [Shixin] Assert the pc used to update branchPred is masked!
-            cpu->protectKaslrClearDelta(*fromDecode->decodeInfo[tid].nextPC, true, true);
             branchPred->squash(fromDecode->decodeInfo[tid].doneSeqNum,
-                    // [Shixin] Use masked pc to update branch predictor
                     *fromDecode->decodeInfo[tid].nextPC,
                     fromDecode->decodeInfo[tid].branchTaken, tid);
         } else {
@@ -1127,10 +1126,6 @@ Fetch::buildInst(ThreadID tid, StaticInstPtr staticInst,
     arrays.numDests = staticInst->numDestRegs();
 
     // Create a new DynInst from the instruction fetched.
-    // [Shixin] TODO: We may need to remove or update this assert later
-//    if (!cpu->protectKaslrValid(this_pc.instAddr()) && staticInst != nopStaticInstPtr && cpu->protectKaslr) {
-//        warn("@@@ DynInst pc: %lx is not corrpc\n", this_pc.instAddr());
-//    }
     DynInstPtr instruction = new (arrays) DynInst(
             arrays, staticInst, curMacroop, this_pc, next_pc, seq, cpu);
     instruction->setTid(tid);
@@ -1754,9 +1749,7 @@ Fetch::pipelineIcacheAccesses(ThreadID tid)
     // [Shixin] thid_pc is masked pc
     const PCStateBase &this_pc = *pc[tid];
     // [Shixin] Debug output
-    if (this_pc.instAddr() != cpu->protectKaslrMask(this_pc.instAddr())) {
-        warn("@@@ pipelineIcacheAccesses wrong this_pc.instAddr() = %lx\n", this_pc.instAddr());
-    }
+    cpu->protectKaslrTestMask(this_pc, true);
 
     if (isRomMicroPC(this_pc.microPC())) {
         return;

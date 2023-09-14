@@ -149,10 +149,6 @@ public:
                addr < regionStart[region] + regionSize[region];
     }
 
-    Addr getKaslrDeltaFromPC(const PCStateBase &corrPC) const {
-        return getKaslrDeltaFromPC(corrPC.instAddr());
-    }
-
     Addr getKaslrDeltaFromPC(Addr corrAddr) const {
         for (size_t i = 0; i < NumKaslrRegionType; i++) {
             if (isKaslrRegionAddr(corrAddr, i)) {
@@ -203,16 +199,10 @@ public:
         pc.npc(protectKaslrApplyDelta(pc.npc(), pc.kaslrCorrDelta()));
     }
 
-    std::unique_ptr<PCStateBase> protectKaslrMask(const PCStateBase &origPC, bool applyNPC) {
-        auto pcBase = origPC.as<X86ISA::PCState>().clone();
-        auto &pcState = pcBase->as<X86ISA::PCState>();
-        auto pc = pcState.instAddr();
-        pcState.pc(protectKaslrMask(pc));
-        if (applyNPC) {
-            auto npc = pcState.npc();
-            pcState.npc(protectKaslrMask(npc)); // TODO: Check here!
-        }
-        return std::unique_ptr<PCStateBase>(pcBase);
+    void protectKaslrApplyPCCorrDelta(PCStateBase &origPC) {
+        // This function would change origPC
+        auto &pc = origPC.as<X86ISA::PCState>();
+        pc.pc(protectKaslrApplyDelta(pc.pc(), pc.kaslrCorrDelta()));
     }
 
     Addr protectKaslrMask(Addr addr) {
@@ -224,18 +214,6 @@ public:
             }
         }
         return addr;
-    }
-
-    std::unique_ptr<PCStateBase> protectKaslrStateApplyDelta(const PCStateBase &origPC, Addr delta, bool applyNPC) {
-        auto pcBase = origPC.as<X86ISA::PCState>().clone();
-        auto &pcState = pcBase->as<X86ISA::PCState>();
-        auto pc = pcState.instAddr();
-        pcState.pc(protectKaslrApplyDelta(pc, delta));
-        if (applyNPC) {
-            auto npc = pcState.npc();
-            pcState.npc(protectKaslrApplyDelta(npc, delta)); // TODO: Check here!
-        }
-        return std::unique_ptr<PCStateBase>(pcBase);
     }
 
     Addr protectKaslrApplyDelta(Addr addr, Addr delta) {

@@ -248,7 +248,8 @@ const PCStateBase &
 Commit::corrPcState(ThreadID tid)
 {
     // The delta applied here is always arch delta!!!
-    set(corrPC[tid], cpu->protectKaslrStateApplyDelta(*pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(), false));
+    set(corrPC[tid], *pc[tid]);
+    cpu->protectKaslrApplyPCCorrDelta(*corrPC[tid]);
     return *corrPC[tid];
 }
 
@@ -1090,10 +1091,6 @@ Commit::commitInsts()
                 if (head_inst->isIndirectCtrl() && head_inst->isCondCtrl()) {
                     panic("An indirect conditional branch appears, our next line code is inccorect!!!\n");
                 }
-
-                // Assert that pc should be masked
-                // TODO: Tested before, maybe remove it!
-                cpu->protectKaslrTestMask(*pc[tid]);
 
                 /// New implementation
 
