@@ -248,7 +248,7 @@ const PCStateBase &
 Commit::corrPcState(ThreadID tid)
 {
     // The delta applied here is always arch delta!!!
-    set(corrPC[tid], cpu->protectKaslrApplyDelta(*pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(), false));
+    set(corrPC[tid], cpu->protectKaslrStateApplyDelta(*pc[tid], pc[tid]->as<X86ISA::PCState>().kaslrCorrDelta(), false));
     return *corrPC[tid];
 }
 
@@ -570,6 +570,7 @@ Commit::squashAll(ThreadID tid)
     toIEW->commitInfo[tid].squashInst = NULL;
 
     set(toIEW->commitInfo[tid].pc, pc[tid]);
+    cpu->protectKaslrClearDelta(*toIEW->commitInfo[tid].pc, true, true);
 }
 
 void
@@ -892,6 +893,7 @@ Commit::commit()
             }
 
             set(toIEW->commitInfo[tid].pc, fromIEW->pc[tid]);
+            cpu->protectKaslrClearDelta(*toIEW->commitInfo[tid].pc, true, true);
         }
 
         if (commitStatus[tid] == ROBSquashing) {
@@ -1024,11 +1026,31 @@ Commit::commitInsts()
             // Record that the number of ROB entries has changed.
             changedROBNumEntries[tid] = true;
         } else {
-            size_t i = 0;
+            static size_t i = 0;
+//            if (pc[tid]->instAddr() >= 0xffffffff80000000 && i++ == 0) {
+//                // Test whether delta affect comparison
+//                auto pc1 = pc[tid]->as<X86ISA::PCState>();
+//                auto pc2 = pc[tid]->as<X86ISA::PCState>();
+//                std::clog << "Init " << pc1 << " " << pc2 << std::endl;
+//                pc1.kaslrCorrDelta(3);
+//                pc2.kaslrCorrDelta(7);
+//                std::clog << "Test delta 3, 7 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
+//                pc1.kaslrCorrDelta(7);
+//                std::clog << "Test delta 7, 7 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
+//                pc1.kaslrNpcDelta(6);
+//                pc2.kaslrNpcDelta(8);
+//                std::clog << "Test npc delta 6, 8 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
+//                pc2.kaslrNpcDelta(6);
+//                std::clog << "Test npc delta 6, 6 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
+//                cpu->protectKaslrApplyNPCCorrDelta(pc2);
+//                std::clog << "Test npc delta 6, 6 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
+//                cpu->protectKaslrApplyNPCCorrDelta(pc1);
+//                pc1.pc(cpu->protectKaslrApplyDelta(pc1.pc(), pc1.kaslrCorrDelta()));
+//                std::clog << "Test npc delta 6, 6 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
+//            }
+
             if (pc[tid]->instAddr() >= 0xffffffffc0000000 && i++ < 100) {
-                std::clog << "Try to commit PC ";
-                pc[tid]->output(std::clog);
-                std::clog << std::endl;
+                std::clog << "Try to commit PC " << *pc[tid] << std::endl;
             }
 
             // NOTE: Here pc[tid] is the pc state of the current to-be-committed inst's PC set by the

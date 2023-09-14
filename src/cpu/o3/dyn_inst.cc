@@ -99,15 +99,6 @@ DynInst::DynInst(const Arrays &arrays, const StaticInstPtr &static_inst,
 {
     set(pc, _pc);
     set(predPC, pred_pc);
-
-    // [Shixin] Only used for temporarily testing corr_pc passed to dyn inst.
-    // TODO: Remove this before adding different delta!!!
-//    static size_t i = 0;
-//    if (!cpu->protectKaslrValid(pc->instAddr()) && cpu->protectKaslr && i++ < 10) {
-//        warn("@@@ DynInst pc: %lx is not corrpc\n", pc->instAddr());
-//        kaslrIMemDelayError(true);
-//    }
-
 }
 
 DynInst::DynInst(const Arrays &arrays, const StaticInstPtr &_staticInst,
@@ -357,6 +348,7 @@ DynInst::execute()
     static size_t i = 0;
 
     /// Only apply corrDelta to NPC (expected to be PC+size) for rdip
+    cpu->protectKaslrTestMask(*pc);
     bool needNpc = staticInst->isControl() || staticInst->getName() == "rdip";
     if (needNpc) {
         // TODO: Add a appropriate assert here! Ensure no target delta is overwritten
@@ -428,11 +420,6 @@ DynInst::initiateMemRead(Addr addr, unsigned size, Request::Flags flags,
     assert(byte_enable.size() == size);
 
     // [Shixin] Apply mask to load address
-    // TODO: Maybe we should not apply mask here
-    // TODO: Move this to place where translation is finished!!!
-//    if (!cpu->protectKaslrValid(addr)) {
-//        kaslrDMemDelayError(true);
-//    }
     // Record the real addr (might be invalid before applying mask)
     realAddr = addr;
     addr = cpu->protectKaslrMask(addr);
@@ -461,11 +448,6 @@ DynInst::writeMem(uint8_t *data, unsigned size, Addr addr,
     assert(byte_enable.size() == size);
 
     // [Shixin] Apply mask to store address
-    // TODO: Maybe we should not apply mask here
-    // TODO: Move this to place where translation is finished!!!
-//    if (!cpu->protectKaslrValid(addr)) {
-//        kaslrDMemDelayError(true);
-//    }
     realAddr = addr;
     addr = cpu->protectKaslrMask(addr);
 
@@ -480,11 +462,6 @@ DynInst::initiateMemAMO(Addr addr, unsigned size, Request::Flags flags,
                               AtomicOpFunctorPtr amo_op)
 {
     // [Shixin] Apply mask to amo address
-    // TODO: Maybe we should not apply mask here
-    // TODO: Move this to place where translation is finished!!!
-//    if (!cpu->protectKaslrValid(addr)) {
-//        kaslrDMemDelayError(true);
-//    }
     realAddr = addr;
     addr = cpu->protectKaslrMask(addr);
 

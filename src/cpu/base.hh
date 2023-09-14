@@ -162,33 +162,38 @@ public:
         return 0;
     }
 
-    void protectKaslrTestMask(const PCStateBase &origPC) {
+    void protectKaslrTestMask(const PCStateBase &origPC, bool testDelta = false) {
         auto &pc = origPC.as<X86ISA::PCState>();
         if (!protectKaslrValid(pc.pc(), 0) || !protectKaslrValid(pc.npc(), 0)) {
-            std::cout << "PC State ";
-            pc.output(std::cout);
-            std::cout << std::endl;
-            warn("PC/NPC should be masked but not\n");
+            std::clog << "@@@ Tick " << curTick() << " warn pc/npc protectKaslrTestMask PC State " << pc << std::endl;
+            warn("@@@ PC/NPC should be masked but not\n");
         }
+        if (testDelta && (pc.kaslrCorrDelta() || pc.kaslrNpcDelta())) {
+            std::clog << "@@@ Tick " << curTick() << " warn delta protectKaslrTestMask PC State " << pc << std::endl;
+            warn("@@@ PC/NPC delta should be 0 but not\n");
+        }
+    }
+
+    void protectKaslrClearDelta(PCStateBase &origPC, bool clearPCDelta, bool clearNPCDelta) {
+        // This function would change origPC
+        auto &pc = origPC.as<X86ISA::PCState>();
+        if (clearPCDelta) {
+            pc.kaslrCorrDelta(0);
+        }
+        if (clearNPCDelta) {
+            pc.kaslrNpcDelta(0);
+        }
+        protectKaslrTestMask(origPC, false);
     }
 
     void protectKaslrExtractDeltaMask(PCStateBase &origPC) {
         // This function would change origPC
         auto &pc = origPC.as<X86ISA::PCState>();
-//        auto pcAddr = pc.pc();
         auto npcAddr = pc.npc();
-//        auto newPCDelta = getKaslrDeltaFromPC(pcAddr);
         auto newNPCDelta = getKaslrDeltaFromPC(npcAddr);
-//        if (newPCDelta != pc.kaslrCorrDelta()) {
-//            panic("Corr delta doesn't match %lx %lx %lx %lx %d %d\n",
-//                  pcAddr, newPCDelta,
-//                  npcAddr, newNPCDelta,
-//                  pc.upc(), pc.nupc());
-//        }
         // Record NPC delta (which might be freshly set by Wrip)
         pc.kaslrNpcDelta(newNPCDelta);
-        // Apply mask to PC and NPC
-//        pc.pc(protectKaslrMask(pcAddr));
+        // Apply mask to NPC
         pc.npc(protectKaslrMask(npcAddr));
     }
 
@@ -221,7 +226,7 @@ public:
         return addr;
     }
 
-    std::unique_ptr<PCStateBase> protectKaslrApplyDelta(const PCStateBase &origPC, Addr delta, bool applyNPC) {
+    std::unique_ptr<PCStateBase> protectKaslrStateApplyDelta(const PCStateBase &origPC, Addr delta, bool applyNPC) {
         auto pcBase = origPC.as<X86ISA::PCState>().clone();
         auto &pcState = pcBase->as<X86ISA::PCState>();
         auto pc = pcState.instAddr();
