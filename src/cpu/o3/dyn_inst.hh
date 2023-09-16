@@ -541,8 +541,8 @@ class DynInst : public ExecContext, public RefCounted
         staticInst->advancePC(*next_pc);
         // [Shixin] Don't squash when offset is the same while only delta is different
         // TODO: Assert mask here!
-        cpu->protectKaslrTestMask(*next_pc, false);
-        cpu->protectKaslrTestMask(*predPC, false);
+        cpu->protectKaslrTestMask(*next_pc, false, "mispredicted next_pc");
+        cpu->protectKaslrTestMask(*predPC, false, "mispredicted predPC");
         return *next_pc != *predPC;
     }
 

@@ -348,7 +348,7 @@ DynInst::execute()
     static size_t i = 0;
 
     /// Only apply corrDelta to NPC (expected to be PC+size) for rdip
-    cpu->protectKaslrTestMask(*pc);
+    cpu->protectKaslrTestMask(*pc, false, "execute");
     bool needNpc = staticInst->isControl() || staticInst->getName() == "rdip";
     if (needNpc) {
         // TODO: Add a appropriate assert here! Ensure no target delta is overwritten

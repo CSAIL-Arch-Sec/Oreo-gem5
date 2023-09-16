@@ -294,7 +294,7 @@ Decode::squash(const DynInstPtr &inst, ThreadID tid)
     // [Shixin] Should not apply mask since this is used to recover corrPC when squash!!!
     set(toFetch->decodeInfo[tid].nextPC, *inst->branchTarget());
     // TODO
-    cpu->protectKaslrClearDelta(*toFetch->decodeInfo[tid].nextPC, true, true);
+    cpu->protectKaslrClearDelta(*toFetch->decodeInfo[tid].nextPC, true, true, "set(toFetch->decodeInfo[tid].nextPC, *inst->branchTarget())");
 
     // Looking at inst->pcState().branching()
     // may yield unexpected results if the branch
@@ -719,8 +719,8 @@ Decode::decodeInsts(ThreadID tid)
 
             std::unique_ptr<PCStateBase> target = inst->branchTarget();
             // [Shixin] They should be masked
-            cpu->protectKaslrTestMask(*target);
-            cpu->protectKaslrTestMask(inst->readPredTarg());
+            cpu->protectKaslrTestMask(*target, false, "decodeInsts branchTarget");
+            cpu->protectKaslrTestMask(inst->readPredTarg(), false, "decodeInsts readPredTarg");
             if (*target != inst->readPredTarg()) {
                 ++stats.branchMispred;
 

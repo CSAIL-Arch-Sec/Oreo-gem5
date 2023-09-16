@@ -571,7 +571,7 @@ Commit::squashAll(ThreadID tid)
     toIEW->commitInfo[tid].squashInst = NULL;
 
     set(toIEW->commitInfo[tid].pc, pc[tid]);
-    cpu->protectKaslrClearDelta(*toIEW->commitInfo[tid].pc, true, true);
+    cpu->protectKaslrClearDelta(*toIEW->commitInfo[tid].pc, true, true, "set(toIEW->commitInfo[tid].pc, pc[tid])");
 }
 
 void
@@ -894,7 +894,7 @@ Commit::commit()
             }
 
             set(toIEW->commitInfo[tid].pc, fromIEW->pc[tid]);
-            cpu->protectKaslrClearDelta(*toIEW->commitInfo[tid].pc, true, true);
+            cpu->protectKaslrClearDelta(*toIEW->commitInfo[tid].pc, true, true, "set(toIEW->commitInfo[tid].pc, fromIEW->pc[tid])");
         }
 
         if (commitStatus[tid] == ROBSquashing) {
@@ -1063,7 +1063,7 @@ Commit::commitInsts()
             auto origPCDelta = origPC.kaslrCorrDelta();
             auto archPCAddr = cpu->protectKaslrApplyDelta(origPC.pc(), origPCDelta);
             auto origNPCDelta = origPC.kaslrNpcDelta();
-            cpu->protectKaslrTestMask(*pc[tid]);
+            cpu->protectKaslrTestMask(*pc[tid], false, "commit origPC");
 
             set(pc[tid], head_inst->pcState());
 
@@ -1072,7 +1072,7 @@ Commit::commitInsts()
             auto updatePCDelta = updatePC.kaslrCorrDelta();
             auto updatePCAddr = cpu->protectKaslrApplyDelta(updatePC.pc(), updatePCDelta);
             auto updateNPCDelta = updatePC.kaslrNpcDelta();
-            cpu->protectKaslrTestMask(*pc[tid]);
+            cpu->protectKaslrTestMask(*pc[tid], false, "commit updatePC");
             
             // NOTE: pc[tid] pcDelta and npcDelta should be arch delta, 
             //      while head_inst's may be not. So we can only update

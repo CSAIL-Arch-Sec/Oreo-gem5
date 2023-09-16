@@ -300,7 +300,7 @@ Fetch::clearStates(ThreadID tid)
     fetchStatus[tid] = Running;
     // [Shixin] Clear delta when gain pc from cpu state
     set(pc[tid], cpu->pcState(tid));
-    cpu->protectKaslrClearDelta(*pc[tid], true, true);
+    cpu->protectKaslrClearDelta(*pc[tid], true, true, "fetch::clearStates");
 
     fetchOffset[tid] = 0;
     macroop[tid] = NULL;
@@ -330,7 +330,7 @@ Fetch::resetStage()
         fetchStatus[tid] = Running;
         // [Shixin] Clear delta when gain pc from cpu state
         set(pc[tid], cpu->pcState(tid));
-        cpu->protectKaslrClearDelta(*pc[tid], true, true);
+        cpu->protectKaslrClearDelta(*pc[tid], true, true, "fetch resetStage");
 
         fetchOffset[tid] = 0;
         macroop[tid] = NULL;
@@ -516,7 +516,7 @@ bool
 Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
 {
     // [Shixin] Check: PC should be masked and delta should be 0
-    cpu->protectKaslrTestMask(next_pc, true);
+    cpu->protectKaslrTestMask(next_pc, true, "lookupAndUpdateNextPC");
 
     // Do branch prediction check here.
     // A bit of a misnomer...next_PC is actually the current PC until
@@ -767,10 +767,10 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst,
 
     set(pc[tid], new_pc);
     // [Shixin]
-    cpu->protectKaslrClearDelta(*pc[tid], true, true);
+    cpu->protectKaslrClearDelta(*pc[tid], true, true, "doSquash new_pc");
 
     if (squashInst) {
-        cpu->protectKaslrTestMask(squashInst->pcState());
+        cpu->protectKaslrTestMask(squashInst->pcState(), false, "doSquash squashInst");
     }
 
     // [Shixin] Recover corrKaslrDelta when squash
@@ -1026,7 +1026,7 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
                 "from commit.\n",tid);
 
         // [Shixin] Clear delta and assert the pc used to update branchPred is masked!
-        cpu->protectKaslrClearDelta(*fromCommit->commitInfo[tid].pc, true, true);
+        cpu->protectKaslrClearDelta(*fromCommit->commitInfo[tid].pc, true, true, "fetch checkSignalsAndUpdate fromCommit");
         // In any case, squash.
         squash(*fromCommit->commitInfo[tid].pc,
                fromCommit->commitInfo[tid].doneSeqNum,
@@ -1058,7 +1058,7 @@ Fetch::checkSignalsAndUpdate(ThreadID tid)
                 "from decode.\n",tid);
 
         // [Shixin] Clear delta and assert the pc used to update branchPred is masked!
-        cpu->protectKaslrClearDelta(*fromDecode->decodeInfo[tid].nextPC, true, true);
+        cpu->protectKaslrClearDelta(*fromDecode->decodeInfo[tid].nextPC, true, true, "fetch checkSignalsAndUpdate fromDecode");
         // Update the branch predictor.
         if (fromDecode->decodeInfo[tid].branchMispredict) {
             branchPred->squash(fromDecode->decodeInfo[tid].doneSeqNum,
@@ -1466,7 +1466,7 @@ Fetch::fetch(bool &status_change)
 
             set(next_pc, this_pc);
             // [Shixin] Remove delta
-            cpu->protectKaslrClearDelta(*next_pc, true, true);
+            cpu->protectKaslrClearDelta(*next_pc, true, true, "fetch set(next_pc, this_pc)");
 
             // If we're branching after this instruction, quit fetching
             // from the same block.
@@ -1478,8 +1478,8 @@ Fetch::fetch(bool &status_change)
             }
 
             // [Shixin]
-            cpu->protectKaslrTestMask(this_pc, false);
-            cpu->protectKaslrTestMask(*next_pc, true);
+            cpu->protectKaslrTestMask(this_pc, false, "after dynInst this_pc");
+            cpu->protectKaslrTestMask(*next_pc, true, "after dynInst next_pc");
 
             newMacro |= this_pc.instAddr() != next_pc->instAddr();
 
@@ -1746,10 +1746,10 @@ Fetch::pipelineIcacheAccesses(ThreadID tid)
     }
 
     // The next PC to access.
-    // [Shixin] thid_pc is masked pc
+    // [Shixin] this_pc is masked pc
     const PCStateBase &this_pc = *pc[tid];
     // [Shixin] Debug output
-    cpu->protectKaslrTestMask(this_pc, true);
+    cpu->protectKaslrTestMask(this_pc, false, "pipelineIcacheAccesses");
 
     if (isRomMicroPC(this_pc.microPC())) {
         return;

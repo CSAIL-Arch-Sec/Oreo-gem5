@@ -158,19 +158,19 @@ public:
         return 0;
     }
 
-    void protectKaslrTestMask(const PCStateBase &origPC, bool testDelta = false) {
+    void protectKaslrTestMask(const PCStateBase &origPC, bool testDelta, char *note) {
         auto &pc = origPC.as<X86ISA::PCState>();
         if (!protectKaslrValid(pc.pc(), 0) || !protectKaslrValid(pc.npc(), 0)) {
-            std::clog << "@@@ Tick " << curTick() << " warn pc/npc protectKaslrTestMask PC State " << pc << std::endl;
+            std::clog << "@@@ Tick " << curTick() << " warn pc/npc protectKaslrTestMask PC State " << pc << " " << note << std::endl;
             warn("@@@ PC/NPC should be masked but not\n");
         }
         if (testDelta && (pc.kaslrCorrDelta() || pc.kaslrNpcDelta())) {
-            std::clog << "@@@ Tick " << curTick() << " warn delta protectKaslrTestMask PC State " << pc << std::endl;
+            std::clog << "@@@ Tick " << curTick() << " warn delta protectKaslrTestMask PC State " << pc << " " << note << std::endl;
             warn("@@@ PC/NPC delta should be 0 but not\n");
         }
     }
 
-    void protectKaslrClearDelta(PCStateBase &origPC, bool clearPCDelta, bool clearNPCDelta) {
+    void protectKaslrClearDelta(PCStateBase &origPC, bool clearPCDelta, bool clearNPCDelta, char *note) {
         // This function would change origPC
         auto &pc = origPC.as<X86ISA::PCState>();
         if (clearPCDelta) {
@@ -179,7 +179,7 @@ public:
         if (clearNPCDelta) {
             pc.kaslrNpcDelta(0);
         }
-        protectKaslrTestMask(origPC, false);
+        protectKaslrTestMask(origPC, false, note);
     }
 
     void protectKaslrExtractDeltaMask(PCStateBase &origPC) {
