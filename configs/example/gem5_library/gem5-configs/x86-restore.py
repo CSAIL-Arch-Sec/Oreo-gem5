@@ -121,11 +121,11 @@ from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import
 )
 
 cache_hierarchy = MESITwoLevelCacheHierarchy(
-    l1d_size="32kB",
+    l1d_size="64kB",
     l1d_assoc=8,
     l1i_size="32kB",
     l1i_assoc=4,
-    l2_size="256kB",
+    l2_size="2048kB",
     l2_assoc=16,
     num_l2_banks=1,
 )

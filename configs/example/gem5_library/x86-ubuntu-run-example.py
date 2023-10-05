@@ -108,11 +108,11 @@ requires(
 
 # Here we setup a MESI Two Level Cache Hierarchy.
 cache_hierarchy = MESITwoLevelCacheHierarchy(
-    l1d_size="32KiB",
+    l1d_size="64KiB",
     l1d_assoc=8,
     l1i_size="32KiB",
     l1i_assoc=4,
-    l2_size="256kB",
+    l2_size="2048kB",
     l2_assoc=16,
     num_l2_banks=1,
 )
@@ -133,7 +133,7 @@ processor = SimpleSwitchableProcessor(
     # starting_core_type=CPUTypes.NONCACHING,
     starting_core_type=starting_core,
     switch_core_type=switch_core,
-    num_cores=2,
+    num_cores=1,
     protect_kaslr=protect_kaslr,
     protect_module_kaslr=protect_module_kaslr,
     kaslr_offset=kaslr_offset,
