@@ -141,7 +141,7 @@ processor = SimpleSwitchableProcessor(
 
 # Here we setup the board. The X86Board allows for Full-System X86 simulations.
 board = X86Board(
-    clk_freq="3GHz",
+    clk_freq="2GHz",
     processor=processor,
     memory=memory,
     cache_hierarchy=cache_hierarchy,

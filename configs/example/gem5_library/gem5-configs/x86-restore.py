@@ -146,7 +146,7 @@ processor = SimpleProcessor(
 )
 
 board = X86Board(
-    clk_freq="3GHz",
+    clk_freq="2GHz",
     processor=processor,
     memory=memory,
     cache_hierarchy=cache_hierarchy,
