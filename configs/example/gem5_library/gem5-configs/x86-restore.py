@@ -124,10 +124,10 @@ cache_hierarchy = MESITwoLevelCacheHierarchy(
     l1d_size="32kB",
     l1d_assoc=8,
     l1i_size="32kB",
-    l1i_assoc=8,
+    l1i_assoc=4,
     l2_size="256kB",
     l2_assoc=16,
-    num_l2_banks=2,
+    num_l2_banks=1,
 )
 
 pretty_print("Memory: Dual Channel DDR4 2400 DRAM device")
