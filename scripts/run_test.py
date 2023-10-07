@@ -79,7 +79,7 @@ def run(
         )
 
 
-def gen_checkpoint_args(protect_text: bool, protect_module: bool, kaslr_offset: int = 0xc000000):
+def gen_checkpoint_args(protect_text: bool, protect_module: bool, output_suffix: str, kaslr_offset: int = 0xc000000):
     if protect_text:
         if protect_module:
             dir_name = "protect_both_checkpoint"
@@ -93,7 +93,7 @@ def gen_checkpoint_args(protect_text: bool, protect_module: bool, kaslr_offset: 
 
     gem5_bin = proj_dir / "build/X86_MOESI_hammer/gem5.fast"
     script_path = proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"
-    output_dir = proj_dir / "result" / dir_name
+    output_dir = proj_dir / "result" / f"{dir_name}_{output_suffix}"
     other_args=[
         "--checkpoint=100000000000,100000000000,25",
         "--classic-cache",
@@ -124,10 +124,10 @@ def main(
 ):
     if save_checkpoint:
         args_list = [
-            gen_checkpoint_args(False, False),
-            gen_checkpoint_args(False, True),
-            gen_checkpoint_args(True, False),
-            gen_checkpoint_args(True, True)
+            gen_checkpoint_args(False, False, output_suffix),
+            gen_checkpoint_args(False, True, output_suffix),
+            gen_checkpoint_args(True, False, output_suffix),
+            gen_checkpoint_args(True, True, output_suffix)
         ]
         print(args_list)
 
