@@ -155,7 +155,9 @@ board = X86Board(
     addr_check=addr_check
 )
 
-if protect_kaslr:
+if protect_kaslr and protect_module_kaslr:
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both"
+elif protect_kaslr:
     kernel_local_path = "/root/linux/vmlinux_gem5_protect"
 elif protect_module_kaslr:
     kernel_local_path = "/root/linux/vmlinux_gem5_protect_module"

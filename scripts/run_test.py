@@ -1,4 +1,5 @@
 import click
+import multiprocessing
 import subprocess
 import numpy as np
 from pathlib import Path
@@ -9,18 +10,19 @@ proj_dir = script_dir.parent
 
 
 def run(
-        gem5_bin: Path, script_path: Path, output_dir: Path,
+        gem5_bin: Path,
+        script_path: Path,
+        output_dir: Path,
+        other_args = None,
         protect_kaslr: bool = True,
+        protect_module_kaslr: bool = True,
         kaslr_offset: int = 0xc000000,
         cpu_type: str = "O3",
         switch_cpu: bool = False,
         switch_cpu_type: str = None,
-        other_args: list = [],
         redirect_needed: bool = False,
         save_checkpoint: bool = True,
 ):
-    output_dir.mkdir(exist_ok=True, parents=True)
-
     load_addr_offset = ~np.uint64(kaslr_offset) + np.uint64(1) + np.uint64(0x1000000)
 
     cmd = [
@@ -32,6 +34,9 @@ def run(
     ]
     if protect_kaslr:
         cmd.append("--protect-kaslr")
+
+    if protect_module_kaslr:
+        cmd.append("--protect-module-kaslr")
 
     if save_checkpoint:
         cmd.append(f"--outputs-dir={output_dir}")
@@ -46,7 +51,8 @@ def run(
     else:
         cmd.append(f"--cpu-type={cpu_type.upper()}")
 
-    cmd.extend(other_args)
+    if other_args:
+        cmd.extend(other_args)
 
     output_log = output_dir / "output.log"
     if redirect_needed:
@@ -59,8 +65,11 @@ def run(
 
     cmd_str = " ".join(cmd)
     print(cmd_str)
+    print("")
 
-    output_log = output_dir / "output2.log"
+    output_log = output_dir / "output.log"
+
+    output_dir.mkdir(exist_ok=True, parents=True)
     with output_log.open(mode="w") as output_file:
         subprocess.run(
             cmd_str,
@@ -70,9 +79,65 @@ def run(
         )
 
 
+def gen_checkpoint_args(protect_text: bool, protect_module: bool, kaslr_offset: int = 0xc000000):
+    if protect_text:
+        if protect_module:
+            dir_name = "protect_both_checkpoint"
+        else:
+            dir_name = "protect_text_checkpoint"
+    else:
+        if protect_module:
+            dir_name = "protect_module_checkpoint"
+        else:
+            dir_name = "protect_none_checkpoint"
+
+    gem5_bin = proj_dir / "build/X86_MOESI_hammer/gem5.fast"
+    script_path = proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"
+    output_dir = proj_dir / "result" / dir_name
+    other_args=[
+        "--checkpoint=100000000000,100000000000,25",
+        "--classic-cache",
+    ]
+    cpu_type = "O3"
+    switch_cpu = False
+    switch_cpu_type = None
+    redirect_needed = True
+    save_checkpoint = True
+
+    return [
+        gem5_bin, script_path, output_dir, other_args,
+        protect_text, protect_module, kaslr_offset,
+        cpu_type, switch_cpu, switch_cpu_type, redirect_needed, save_checkpoint,
+    ]
+
+
 @click.command()
 @click.option("--save-checkpoint", is_flag=True)
-def main(save_checkpoint: bool):
+@click.option(
+    "--output-suffix",
+    type=click.STRING,
+    default=""
+)
+def main(
+        save_checkpoint: bool,
+        output_suffix: str,
+):
+    if save_checkpoint:
+        args_list = [
+            gen_checkpoint_args(False, False),
+            gen_checkpoint_args(False, True),
+            gen_checkpoint_args(True, False),
+            gen_checkpoint_args(True, True)
+        ]
+        print(args_list)
+
+        with multiprocessing.Pool(16) as p:
+            p.starmap(run, args_list)
+
+        return
+
+
+
     # run(
     #     gem5_bin=(proj_dir / "build/X86_MOESI_hammer/gem5.fast"),
     #     script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"),
@@ -90,7 +155,7 @@ def main(save_checkpoint: bool):
             script_path=(proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"),
             output_dir=(proj_dir / "result" / "protect_kaslr_o3_checkpoint2"),
             other_args=[
-                "--checkpoint=10000000000000,100000000000,20",
+                "--checkpoint=1000000000000,100000000000,20",
                 "--classic-cache",
             ],
             redirect_needed=True
