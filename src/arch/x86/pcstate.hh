@@ -63,7 +63,7 @@ class PCState : public GenericISA::UPCState<8>
     output(std::ostream &os) const override
     {
         Base::output(os);
-        ccprintf(os, ".%d.(%lx=>%lx)", this->size(), this->kaslrCorrDelta(), this->kaslrNpcDelta());
+        ccprintf(os, ".%d.(``%lx''=>``%lx'')", this->size(), this->kaslrCorrDelta(), this->kaslrNpcDelta());
     }
 
     PCStateBase *clone() const override { return new PCState(*this); }

@@ -171,7 +171,7 @@ def add_cpu_arguments(parser, default_type: CPUTypes):
     parser.add_argument(
         "--cpu-cores",
         type=int,
-        default=2,
+        default=1,
         help="number of cpu cores for run"
     )
 

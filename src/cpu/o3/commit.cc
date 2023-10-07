@@ -1050,9 +1050,9 @@ Commit::commitInsts()
 //                std::clog << "Test npc delta 6, 6 " << pc1 << " " << pc2 << " " << (pc1 != pc2) << std::endl;
 //            }
 
-            if (pc[tid]->instAddr() >= 0xffffffffc0000000 && i++ < 100) {
-                std::clog << "Try to commit PC " << *pc[tid] << std::endl;
-            }
+//            if (pc[tid]->instAddr() >= 0xffffffffc0000000 && i++ < 100) {
+//                std::clog << "@@@ Commit pc (try) " << *pc[tid] << std::endl;
+//            }
 
             // NOTE: Here pc[tid] is the pc state of the current to-be-committed inst's PC set by the
             //      last inst's advancePC, so its size is zero.
@@ -1151,6 +1151,14 @@ Commit::commitInsts()
                     }
                 }
                 // [Shixin]
+
+//                if (pc[tid]->instAddr() >= 0xffffffffc0000000 && i++ < 100) {
+//                    std::clog << "@@@ Commit pc (success) " << *pc[tid] << std::endl;
+//                }
+
+//                if (pc[tid]->instAddr() < 0x600000000000 && pc[tid]->instAddr() % 0x1000 == 0x722) {
+//                    std::clog << "@@@ Tick " << curTick() << " thread " << tid << " commit PC " << *pc[tid] << std::endl;
+//                }
 
                 ++num_committed;
                 stats.committedInstType[tid][head_inst->opClass()]++;

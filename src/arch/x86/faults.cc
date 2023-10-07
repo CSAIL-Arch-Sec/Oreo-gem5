@@ -74,10 +74,10 @@ X86FaultBase::invoke(ThreadContext *tc, const StaticInstPtr &inst)
 //    std::clog << "Corr PC: ";
 //    corrPC.output(std::clog);
 //    std::clog << std::endl;
-    ccprintf(std::clog, "!!! Faults RIP %lx %lx %lx %lx %d %d vector %d: %s name: %s\n",
-           tc->pcState().instAddr(), tc->pcState().as<PCState>().kaslrCorrDelta(),
-           pc.pc(), corrPC.pc(), pc.upc(), pc.nupc(),
-           vector, describe().c_str(), name());
+//    ccprintf(std::clog, "!!! Faults RIP %lx %lx %lx %lx %d %d vector %d: %s name: %s\n",
+//           tc->pcState().instAddr(), tc->pcState().as<PCState>().kaslrCorrDelta(),
+//           pc.pc(), corrPC.pc(), pc.upc(), pc.nupc(),
+//           vector, describe().c_str(), name());
     // NOTE: Possible bug: we may not have corrDelta here, so cannot predict a corrPC,
     //       which would make restoring from the interrupt buggy since the ROM exception
     //       handler would store the PC we passed to them.
