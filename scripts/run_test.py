@@ -79,7 +79,12 @@ def run(
         )
 
 
-def gen_checkpoint_args(protect_text: bool, protect_module: bool, output_suffix: str, kaslr_offset: int = 0xc000000):
+def gen_checkpoint_args(
+        protect_text: bool, protect_module: bool,
+        output_suffix: str,
+        image_suffix: str = "",
+        kaslr_offset: int = 0xc000000
+):
     if protect_text:
         if protect_module:
             dir_name = "protect_both_checkpoint"
@@ -93,10 +98,11 @@ def gen_checkpoint_args(protect_text: bool, protect_module: bool, output_suffix:
 
     gem5_bin = proj_dir / "build/X86_MOESI_hammer/gem5.fast"
     script_path = proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"
-    output_dir = proj_dir / "result" / f"{dir_name}_{output_suffix}"
+    output_dir = proj_dir / "result" / f"{dir_name}{output_suffix}"
     other_args=[
         "--checkpoint=100000000000,100000000000,25",
         "--classic-cache",
+        f"--image-suffix={image_suffix}"
     ]
     cpu_type = "O3"
     switch_cpu = False
@@ -118,17 +124,61 @@ def gen_checkpoint_args(protect_text: bool, protect_module: bool, output_suffix:
     type=click.STRING,
     default=""
 )
+@click.option(
+    "--run-default-delta",
+    is_flag=True,
+)
+@click.option(
+    "--run-config-delta",
+    is_flag=True,
+)
 def main(
         save_checkpoint: bool,
         output_suffix: str,
+        run_default_delta: bool,
+        run_config_delta: bool,
 ):
     if save_checkpoint:
-        args_list = [
-            gen_checkpoint_args(False, False, output_suffix),
-            gen_checkpoint_args(False, True, output_suffix),
-            gen_checkpoint_args(True, False, output_suffix),
-            gen_checkpoint_args(True, True, output_suffix)
+        args_list = []
+
+        protect_options = [
+            [False, False],
+            [False, True],
+            [True, False],
+            [True, True],
         ]
+
+        if run_default_delta:
+            for protect_text, protect_module in protect_options:
+                args_list.append(
+                    gen_checkpoint_args(
+                        protect_text, protect_module,
+                        f"{output_suffix}"
+                    )
+                )
+
+        if run_config_delta:
+            delta_configs = [
+                [8, 9],
+                [16, 26]
+            ]
+            for delta_config in delta_configs:
+                assert len(delta_config) == 2
+                text_delta, module_delta = delta_config
+                image_suffix = f"_{text_delta}_{module_delta}"
+                for protect_text, protect_module in protect_options:
+                    args_list.append(
+                        gen_checkpoint_args(
+                            protect_text, protect_module,
+                            f"{image_suffix}{output_suffix}",
+                            image_suffix,
+                            text_delta * 0x2000000,
+                        )
+                    )
+
+
+            args_list.extend([])
+
         print(args_list)
 
         with multiprocessing.Pool(16) as p:

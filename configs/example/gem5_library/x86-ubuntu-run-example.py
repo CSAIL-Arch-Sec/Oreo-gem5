@@ -43,6 +43,13 @@ parser.add_argument(
     help="specify kernel physical load address offset"
 )
 
+parser.add_argument(
+    "--image-suffix",
+    type=str,
+    default="",
+    help="Kernel image suffix."
+)
+
 # Possible options:
 #   atomic, kvm, o3, timing, minor, noncaching
 parser.add_argument(
@@ -166,13 +173,13 @@ command = "m5 exit;" \
 # "x86-ubuntu-18.04-img", a file to be executed as a script after booting the
 # system.
 if protect_kaslr and protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + args.image_suffix
 elif protect_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect" + args.image_suffix
 elif protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + args.image_suffix
 else:
-    kernel_local_path = "/root/linux/vmlinux_gem5"
+    kernel_local_path = "/root/linux/vmlinux_gem5" + args.image_suffix
 board.set_kernel_disk_workload(
     kernel=
     # Resource("x86-linux-kernel-5.4.49",),

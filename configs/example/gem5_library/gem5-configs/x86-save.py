@@ -134,13 +134,13 @@ board = X86Board(
 )
 
 if protect_kaslr and protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + args.image_suffix
 elif protect_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect" + args.image_suffix
 elif protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module"
+    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + args.image_suffix
 else:
-    kernel_local_path = "/root/linux/vmlinux_gem5"
+    kernel_local_path = "/root/linux/vmlinux_gem5" + args.image_suffix
 print("Kernel path:", kernel_local_path)
 board.set_kernel_disk_workload(
     # The x86 linux kernel will be automatically downloaded to the

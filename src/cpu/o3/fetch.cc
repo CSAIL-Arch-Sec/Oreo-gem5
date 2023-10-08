@@ -642,8 +642,8 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
     // If translation was successful, attempt to read the icache block.
     if (fault == NoFault) {
 //        static size_t i = 0;
-//        if (mem_req->getVaddr() > 0xffffffff80000000 && i++ < 100) {
-//            printf("@@@ Fetch Phy addr %lx\n", mem_req->getPaddr());
+//        if (mem_req->getVaddr() > 0xffffffff80000000) {
+//            std::clog << "@@@ Tick " << curTick() << " success translate vaddr " << mem_req->getVaddr() << std::endl;
 //        }
         // Check that we're not going off into random memory
         // If we have, just wait around for commit to squash something and put
@@ -668,14 +668,14 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
         // [Shixin] Record CorrKaslrOffset
         fetchBufferCorrKaslrDelta[tid] = mem_req->getCorrKaslrDelta();
         // TODO: Remove this hardcoded debug output later
-        if (cpu->isKaslrMaskedAddr(fetchBufferPC[tid], BaseCPU::KaslrKernelRegion) &&
-            fetchBufferCorrKaslrDelta[tid] != 6) {
-            panic("cpu %d thread %lx wrong offset %lx for pc %lx\n",
-                 cpu->cpuId(),
-                 tid,
-                 fetchBufferCorrKaslrDelta[tid],
-                 fetchBufferPC[tid]);
-        }
+//        if (cpu->isKaslrMaskedAddr(fetchBufferPC[tid], BaseCPU::KaslrKernelRegion) &&
+//            fetchBufferCorrKaslrDelta[tid] != 6) {
+//            panic("cpu %d thread %lx wrong offset %lx for pc %lx\n",
+//                 cpu->cpuId(),
+//                 tid,
+//                 fetchBufferCorrKaslrDelta[tid],
+//                 fetchBufferPC[tid]);
+//        }
 //        printf("### fetchBufferPC[tid]: %lx, fetchBufferCorrKaslrDelta[tid]: %lx\n", fetchBufferPC[tid], fetchBufferCorrKaslrDelta[tid]);
 
         fetchBufferValid[tid] = false;
@@ -706,8 +706,8 @@ Fetch::finishTranslation(const Fault &fault, const RequestPtr &mem_req)
     } else {
 //        static size_t i = 0;
         // [Shixin] TODO: Check whether translation fault happens without our defense
-//        if (mem_req->getVaddr() >= 0xffffffff80000000 && i++ < 100) {
-//            printf("@@@ Vaddr %lx translation error\n", mem_req->getVaddr());
+//        if (mem_req->getVaddr() >= 0xffffffff80000000) {
+//            std::clog << "@@@ Tick " << curTick() << " fail translate vaddr " << mem_req->getVaddr() << std::endl;
 //        }
         // Don't send an instruction to decode if we can't handle it.
         if (!(numInst < fetchWidth) ||
@@ -1416,11 +1416,11 @@ Fetch::fetch(bool &status_change)
             }
 
             // [Shixin]
-            if (cpu->isKaslrMaskedAddr(fetchBufferPC[tid], BaseCPU::KaslrKernelRegion) &&
-                fetchBufferCorrKaslrDelta[tid] != 6) {
-                // TODO: Remove this later
-                panic("Wrong offset %lx\n", fetchBufferCorrKaslrDelta[tid]);
-            }
+//            if (cpu->isKaslrMaskedAddr(fetchBufferPC[tid], BaseCPU::KaslrKernelRegion) &&
+//                fetchBufferCorrKaslrDelta[tid] != 6) {
+//                // TODO: Remove this later
+//                panic("Wrong offset %lx\n", fetchBufferCorrKaslrDelta[tid]);
+//            }
             // [Shixin] TODO: We might need to remove or modify this assert later
             // [Shixin] NOTE: Actually this can happen when bp predict to jump to an
             //              inRom microInst with a different microPC (or should be
@@ -1446,6 +1446,10 @@ Fetch::fetch(bool &status_change)
 //            }
 //            if (this_pc.instAddr() >= 0xffffffff80000000 && this_pc.as<X86ISA::PCState>().kaslrCorrDelta() == 0) {
 //                std::clog << "Tick " << std::hex << curTick() << " " << this_pc << std::endl;
+//            }
+
+//            if (this_pc.instAddr() >= 0xffffffff80000000) {
+//                std::clog << "@@@ Tick " << std::hex << curTick() << " PC " << this_pc << " " << staticInst->getName() << std::endl;
 //            }
 
             // [Shixin] When construct dyn inst, pred_pc = this_pc. After doing prediction, pred_pc is updated.
