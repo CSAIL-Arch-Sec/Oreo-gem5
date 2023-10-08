@@ -149,11 +149,11 @@ board.set_kernel_disk_workload(
     kernel=CustomResource(
         local_path=kernel_local_path,
     ),
-    disk_image=Resource("x86-ubuntu-18.04-img"),
-    # disk_image=CustomDiskImageResource(
-    #     local_path=args.disk_image_path,
-    #     disk_root_partition=args.disk_root_partition
-    # ),
+    # disk_image=Resource("x86-ubuntu-18.04-img"),
+    disk_image=CustomDiskImageResource(
+        local_path=args.disk_image_path,
+        disk_root_partition=args.disk_root_partition
+    ),
 )
 
 if args.uuid_dir:

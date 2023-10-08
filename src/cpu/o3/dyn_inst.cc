@@ -345,7 +345,7 @@ DynInst::execute()
     bool no_squash_from_TC = thread->noSquashFromTC;
     thread->noSquashFromTC = true;
 
-    static size_t i = 0;
+    // [Shixin]
 
     /// Only apply corrDelta to NPC (expected to be PC+size) for rdip
     cpu->protectKaslrTestMask(*pc, false, "execute");

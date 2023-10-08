@@ -167,11 +167,11 @@ board.set_kernel_disk_workload(
     kernel=CustomResource(
         local_path=kernel_local_path
     ),
-    disk_image=Resource("x86-ubuntu-18.04-img"),
-    # disk_image=CustomDiskImageResource(
-    #     local_path=disk_image_path,
-    #     disk_root_partition="1"
-    # ),
+    # disk_image=Resource("x86-ubuntu-18.04-img"),
+    disk_image=CustomDiskImageResource(
+        local_path=disk_image_path,
+        disk_root_partition="1"
+    ),
     readfile=args.script,
 )
 pretty_print(f"Script: {args.script}")
