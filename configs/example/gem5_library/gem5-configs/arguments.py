@@ -227,6 +227,13 @@ def add_protect_kaslr_arguments(parser):
         help="KASLR offset.",
     )
 
+    parser.add_argument(
+        "--image-suffix",
+        type=str,
+        default="",
+        help="Kernel image suffix."
+    )
+
 
 def add_cache_arguments(parser):
     '''
