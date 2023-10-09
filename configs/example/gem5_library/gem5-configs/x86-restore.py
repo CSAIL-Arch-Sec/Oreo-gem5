@@ -178,18 +178,22 @@ pretty_print(f"Script: {args.script}")
 
 parent_dir, _ = os.path.split(checkpoint_dir)
 if args.uuid_dir:
-    output_dir = os.path.join(parent_dir, f'm5out-{uuid4()}')
+    output_dir = os.path.join(args.outputs_dir, f'm5out-{uuid4()}')
 else:
-    output_dir = os.path.join(parent_dir, "m5out-default-restore")
+    output_dir = os.path.join(args.outputs_dir, "m5out-default-restore")
 set_outdir(output_dir)
 
 handle_std_redirects(args, output_dir)
-set_debug_file(args, output_dir)
+# set_debug_file(args, output_dir)
+
+def dirty_fix():
+    yield False
+
 
 simulator = Simulator(
     board=board,
     on_exit_event={
-        ExitEvent.CHECKPOINT: handle_checkpoint(),
+        ExitEvent.CHECKPOINT: dirty_fix(),
         ExitEvent.WORKBEGIN: handle_workbegin(),
         ExitEvent.WORKEND: handle_workend(),
     },

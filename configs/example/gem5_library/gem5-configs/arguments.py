@@ -63,6 +63,13 @@ def add_checkpoint_restore_arguments(parser):
     add arguments for configuring restoring from checkpoint
     '''
     parser.add_argument(
+        "--outputs-dir",
+        type=str,
+        default=m5outs_default_dir,
+        help="specify output directory"
+    )
+
+    parser.add_argument(
         "--checkpoint-dir",
         type=str,
         default=None,
