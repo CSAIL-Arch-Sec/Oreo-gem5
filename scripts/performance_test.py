@@ -133,14 +133,14 @@ def main():
 
     protection_list = [
         [False, False],
-        # [True, True],
+        [True, True],
     ]
 
     for i in range(len(performance_test_list)):
         for protect_text, protect_module in protection_list:
-            # arg_list.append([i, protect_text, protect_module, "_1", after_boot_script_dir])
-            arg_list.append([i, protect_text, protect_module, "_0", after_boot_script_dir])
-        break
+            arg_list.append([i, protect_text, protect_module, "_1", after_boot_script_dir])
+            # arg_list.append([i, protect_text, protect_module, "_0", after_boot_script_dir])
+        # break
 
     print(arg_list)
 
