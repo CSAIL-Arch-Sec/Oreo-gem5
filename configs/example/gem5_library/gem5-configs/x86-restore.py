@@ -195,7 +195,7 @@ simulator = Simulator(
     on_exit_event={
         ExitEvent.CHECKPOINT: dirty_fix(),
         ExitEvent.WORKBEGIN: handle_workbegin(),
-        ExitEvent.WORKEND: handle_workend(),
+        # ExitEvent.WORKEND: handle_workend(),
     },
     checkpoint_path=checkpoint_path,
 )

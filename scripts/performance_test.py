@@ -20,9 +20,9 @@ def gen_performance_script(bench_id: int, after_boot_script_dir: Path):
     s = f"cd /home/gem5/LEBench-Sim\n" \
         f"rm -f lebench_stats.csv\n" \
         f"./bin/LEBench-hook {bench_id} 1\n" \
-        f"m5 writefile lebench_stats_{bench_id}.csv\n" \
-        f"echo 'writing lebench_stats_{bench_id}.csv back to host :D'\n" \
-        f"sleep 5\n" \
+        f"m5 writefile lebench_stats.csv\n" \
+        f"echo 'writing lebench_stats.csv back to host :D'\n" \
+        f"sleep 1\n" \
         f"m5 exit\n"
 
     output_path = after_boot_script_dir / get_script_name(bench_id)
@@ -131,9 +131,16 @@ def main():
 
     arg_list = []
 
+    protection_list = [
+        [False, False],
+        # [True, True],
+    ]
+
     for i in range(len(performance_test_list)):
-        for protect_text, protect_module in [[False, False], [True, True]]:
-            arg_list.append([i, protect_text, protect_module, "_1", after_boot_script_dir])
+        for protect_text, protect_module in protection_list:
+            # arg_list.append([i, protect_text, protect_module, "_1", after_boot_script_dir])
+            arg_list.append([i, protect_text, protect_module, "_0", after_boot_script_dir])
+        break
 
     print(arg_list)
 
