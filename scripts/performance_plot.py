@@ -30,17 +30,19 @@ def parse_all_files(mode_list: list, bench_list: list):
 
 
 def main():
+    plot_dir = proj_dir / "scripts" / "plot"
+    plot_dir.mkdir(exist_ok=True)
+
     mode_list = [
         [False, False],
         [True, True]
     ]
     bench_list = list(range(24))
     df = parse_all_files(mode_list, bench_list)
+    df.to_csv(plot_dir / "lebench.csv")
 
     ax = sns.barplot(x="name", y="mean (ns)", hue="Setup", data=df)
-    plot_dir = proj_dir / "scripts" / "plot"
-    plot_dir.mkdir(exist_ok=True)
-    plt.savefig(plot_dir / "performance.pdf")
+    plt.savefig(plot_dir / "lebench.pdf")
 
 
 if __name__ == '__main__':
