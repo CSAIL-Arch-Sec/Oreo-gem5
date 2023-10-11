@@ -82,6 +82,7 @@ def run(
 def gen_checkpoint_args(
         protect_text: bool, protect_module: bool,
         output_suffix: str,
+        cpu_type: str,
         image_suffix: str = "",
         kaslr_offset: int = 0xc000000
 ):
@@ -100,11 +101,11 @@ def gen_checkpoint_args(
     script_path = proj_dir / "configs/example/gem5_library/gem5-configs/x86-save.py"
     output_dir = proj_dir / "result" / f"{dir_name}{output_suffix}"
     other_args=[
-        "--checkpoint=100000000000,100000000000,25",
+        # "--checkpoint=100000000000,100000000000,25",
         "--classic-cache",
         f"--image-suffix={image_suffix}"
     ]
-    cpu_type = "O3"
+    cpu_type = cpu_type
     switch_cpu = False
     switch_cpu_type = None
     redirect_needed = True
@@ -132,11 +133,16 @@ def gen_checkpoint_args(
     "--run-config-delta",
     is_flag=True,
 )
+@click.option(
+    "--cpu-type",
+    type=click.STRING,
+)
 def main(
         save_checkpoint: bool,
         output_suffix: str,
         run_default_delta: bool,
         run_config_delta: bool,
+        cpu_type: str,
 ):
     if save_checkpoint:
         args_list = []
@@ -153,14 +159,15 @@ def main(
                 args_list.append(
                     gen_checkpoint_args(
                         protect_text, protect_module,
-                        f"{output_suffix}"
+                        f"{output_suffix}",
+                        cpu_type,
                     )
                 )
 
         if run_config_delta:
             delta_configs = [
-                [8, 9],
-                [16, 26]
+                [6, 16],
+                [8, 7]
             ]
             for delta_config in delta_configs:
                 assert len(delta_config) == 2
@@ -171,6 +178,7 @@ def main(
                         gen_checkpoint_args(
                             protect_text, protect_module,
                             f"{image_suffix}{output_suffix}",
+                            cpu_type,
                             image_suffix,
                             text_delta * 0x2000000,
                         )
