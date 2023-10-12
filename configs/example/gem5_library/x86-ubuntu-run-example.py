@@ -198,6 +198,16 @@ board.set_kernel_disk_workload(
 def dirty_fix():
     yield False
 
+def handle_workbegin():
+    print("Resetting stats at the start of ROI!")
+    m5.stats.reset()
+    yield False
+
+def handle_workend():
+    m5.stats.dump()
+    print("Dump stats at the end of the ROI!")
+    yield False
+
 simulator = Simulator(
     board=board,
     on_exit_event={
@@ -206,7 +216,9 @@ simulator = Simulator(
         # switch the processor. The 2nd 'm5 exit' after will revert to using
         # default behavior where the simulator run will exit.
         ExitEvent.EXIT: (func() for func in [processor.switch]),
-        ExitEvent.CHECKPOINT: dirty_fix()
+        ExitEvent.CHECKPOINT: dirty_fix(),
+        ExitEvent.WORKBEGIN: handle_workbegin(),
+        ExitEvent.WORKEND: handle_workend(),
     },
 )
 

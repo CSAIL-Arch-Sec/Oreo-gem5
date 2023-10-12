@@ -67,6 +67,7 @@
 #include "params/BaseO3CPU.hh"
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
+#include "debug/PTW.hh"
 
 namespace gem5
 {
@@ -1152,9 +1153,12 @@ Commit::commitInsts()
                 }
                 // [Shixin]
 
-//                if (pc[tid]->instAddr() >= 0xffffffffc0000000 && i++ < 100) {
-//                    std::clog << "@@@ Commit pc (success) " << *pc[tid] << std::endl;
-//                }
+                if (pc[tid]->instAddr() >= 0xffffffffc0000000) {
+                    DPRINTF(PTW, "Commit PC %s %s\n", *pc[tid], head_inst->staticInst->getName().c_str());
+                    DPRINTF(PTW, "[tid:%i] ROB has %d insts & %d free entries.\n",
+                            tid, rob->countInsts(tid), rob->numFreeEntries(tid));
+//                    std::clog << "@@@ Tick " << curTick() << " commit pc (success) " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
+                }
 
 //                if (pc[tid]->instAddr() < 0x600000000000 && pc[tid]->instAddr() % 0x1000 == 0x722) {
 //                    std::clog << "@@@ Tick " << curTick() << " thread " << tid << " commit PC " << *pc[tid] << std::endl;

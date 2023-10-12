@@ -58,6 +58,7 @@
 #include "debug/LSQ.hh"
 #include "debug/Writeback.hh"
 #include "params/BaseO3CPU.hh"
+#include "debug/PTW.hh"
 
 namespace gem5
 {

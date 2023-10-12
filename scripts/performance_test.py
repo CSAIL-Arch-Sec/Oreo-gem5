@@ -19,7 +19,7 @@ def get_script_name(suffix):
 def gen_performance_script(bench_id: int, after_boot_script_dir: Path):
     s = f"cd /home/gem5/LEBench-Sim\n" \
         f"rm -f lebench_stats.csv\n" \
-        f"./bin/LEBench-hook {bench_id} 1\n" \
+        f"./bin/LEBench-run {bench_id} 1\n" \
         f"m5 writefile lebench_stats.csv\n" \
         f"echo 'writing lebench_stats.csv back to host :D'\n" \
         f"sleep 1\n" \
@@ -92,9 +92,9 @@ def run_performance_one(
         )
 
     if p.returncode:
-        print(f"!!! Run {performance_test_list[bench_id]} fails")
+        print(f"!!! Run {bench_id} {performance_test_list[bench_id]} fails")
     else:
-        print(f"!!! Run {performance_test_list[bench_id]} success")
+        print(f"!!! Run {bench_id} {performance_test_list[bench_id]} success")
 
 
 def test_one_setup(
@@ -125,7 +125,17 @@ def test_one_setup(
 
 
 @click.command()
-def main():
+@click.option(
+    "--run-list",
+    type=click.STRING,
+    default=""
+)
+@click.option(
+    "--check-suffix",
+    type=click.STRING,
+    default="_0"
+)
+def main(run_list: str, check_suffix: str):
     after_boot_script_dir = script_dir / "after_boot"
     after_boot_script_dir.mkdir(exist_ok=True)
 
@@ -133,13 +143,20 @@ def main():
 
     protection_list = [
         [False, False],
+        [False, True],
+        [True, False],
         [True, True],
     ]
 
-    for i in range(len(performance_test_list)):
+    if run_list == "":
+        bench_list = list(range(len(performance_test_list)))
+    else:
+        bench_list = list(map(lambda x: int(x), run_list.split(",")))
+
+    # for i in [13, 22, 16]:
+    for i in bench_list:
         for protect_text, protect_module in protection_list:
-            arg_list.append([i, protect_text, protect_module, "_1", after_boot_script_dir])
-            # arg_list.append([i, protect_text, protect_module, "_0", after_boot_script_dir])
+            arg_list.append([i, protect_text, protect_module, check_suffix, after_boot_script_dir])
         # break
 
     print(arg_list)

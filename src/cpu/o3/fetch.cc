@@ -69,6 +69,8 @@
 #include "sim/eventq.hh"
 #include "sim/full_system.hh"
 #include "sim/system.hh"
+#include "debug/PTW.hh"
+
 
 namespace gem5
 {
@@ -1448,9 +1450,10 @@ Fetch::fetch(bool &status_change)
 //                std::clog << "Tick " << std::hex << curTick() << " " << this_pc << std::endl;
 //            }
 
-//            if (this_pc.instAddr() >= 0xffffffff80000000) {
+            if (this_pc.instAddr() >= 0xffffffffc0000000) {
+                DPRINTF(PTW, "Fetch PC %s %s\n", this_pc, staticInst->getName().c_str());
 //                std::clog << "@@@ Tick " << std::hex << curTick() << " PC " << this_pc << " " << staticInst->getName() << std::endl;
-//            }
+            }
 
             // [Shixin] When construct dyn inst, pred_pc = this_pc. After doing prediction, pred_pc is updated.
             DynInstPtr instruction = buildInst(

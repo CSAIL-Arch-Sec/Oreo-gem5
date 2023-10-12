@@ -19,9 +19,11 @@ def gen_blindside_script(offset: int, after_boot_script_dir: Path):
     s = f"cd /home/gem5/experiments/modules\n" \
         f"insmod blindside-kernel.ko\n" \
         f"cd /home/gem5/experiments/bin\n" \
-        f"./blindside {offset}\n" \
-        f"sleep 10\n" \
+        f"./blindside 1 {offset}\n" \
+        f"sleep 1\n" \
         f"m5 exit\n"
+
+    # s = f"m5 exit\n"
 
     output_path = after_boot_script_dir / get_script_name("blindside", offset)
     with output_path.open(mode="w") as output_file:
@@ -35,6 +37,8 @@ def run_blindside_one(
         protect_text: bool,
         protect_module: bool,
         debug_flags: str,
+        debug_tick,
+        debug_end_tick,
         checkpoint_dir: Path,
         after_boot_script_dir: Path,
         output_dir: Path,
@@ -52,6 +56,16 @@ def run_blindside_one(
     else:
         debug_option = ""
 
+    if debug_tick is not None:
+        debug_start = f"--debug-start={debug_tick}"
+    else:
+        debug_start = ""
+
+    if debug_end_tick is not None:
+        debug_end = f"--debug-end={debug_end_tick}"
+    else:
+        debug_end = ""
+
     gem5_str = "./build/X86/gem5.opt"
     gem5_script = "configs/example/gem5_library/gem5-configs/x86-restore.py"
 
@@ -61,6 +75,8 @@ def run_blindside_one(
         "M5_OVERRIDE_PY_SOURCE=true",
         gem5_str,
         debug_option,
+        debug_start,
+        debug_end,
         f"--debug-file={output_dir}/{trace_name}.out.gz",
         f"--outdir={output_dir}",
         gem5_script,
@@ -116,14 +132,17 @@ def test_one_setup(
         protect_module: bool,
         checkpoint_dir_suffix: str,
         debug_flags: str,
+        debug_tick: int,
+        debug_end_tick: int,
         after_boot_script_dir: Path,
+        image_suffix: str,
 
 ):
     mode_name = get_mode_name(protect_text, protect_module)
 
-    checkpoint_dir = proj_dir / "result" / f"{mode_name}_checkpoint{checkpoint_dir_suffix}" / "default-save" / "m5out-gen-cpt"
-    output_dir = proj_dir / "result" / f"{mode_name}_restore_{test_offset}"
-    trace_name = f"trace_{mode_name}_{re.sub(r',', r'_', debug_flags)}_{test_offset}"
+    checkpoint_dir = proj_dir / "result" / f"{mode_name}_checkpoint{image_suffix}{checkpoint_dir_suffix}" / "default-save" / "m5out-gen-cpt"
+    output_dir = proj_dir / "result" / f"{mode_name}_restore{image_suffix}_{test_offset}"
+    trace_name = f"trace_{mode_name}_{re.sub(r',', r'_', debug_flags)}{image_suffix}_{test_offset}"
 
     output_dir.mkdir(exist_ok=True)
 
@@ -132,29 +151,45 @@ def test_one_setup(
         protect_text=protect_text,
         protect_module=protect_module,
         debug_flags=debug_flags,
+        debug_tick=debug_tick,
+        debug_end_tick=debug_end_tick,
         checkpoint_dir=checkpoint_dir,
         after_boot_script_dir=after_boot_script_dir,
         output_dir=output_dir,
         trace_name=trace_name,
         kaslr_offset=0xc000000,
-        image_suffix="",
+        image_suffix=image_suffix,
     )
 
 
-def main():
+@click.command()
+@click.option(
+    "--debug-flags",
+    type=click.STRING
+)
+def main(debug_flags: str):
     # debug_flags = "Branch,RubyCache,TLB,PageTableWalker,DRAM"
-    debug_flags = "RubyCache"
+    # debug_flags = "RubyCache"
     after_boot_script_dir = script_dir / "after_boot"
     after_boot_script_dir.mkdir(exist_ok=True)
 
     args_list = [
-        # [0, False, True, "_0", debug_flags, after_boot_script_dir],
-        # [7, False, True, "_0", debug_flags, after_boot_script_dir],
-        [0, False, False, "_1", debug_flags, after_boot_script_dir],
-        [6, False, False, "_2", debug_flags, after_boot_script_dir],
-        [0, True, True, "_1", debug_flags, after_boot_script_dir],
-        [6, True, True, "_2", debug_flags, after_boot_script_dir],
+        # [0, False, False, "_0", debug_flags, None, None, after_boot_script_dir, ""],
+        # [0, False, False, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
+        # [7, False, False, "_0", debug_flags, None, None, after_boot_script_dir, ""],
+        # [7, False, False, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
+        [0, False, True, "_0", debug_flags, 11443947038500, 11443947083000, after_boot_script_dir, ""],
+        # [0, False, True, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
+        [7, False, True, "_0", debug_flags, 11443947038500, 11443947083000, after_boot_script_dir, ""], # 11443947038500
+        # [7, False, True, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
+        # [16, False, True, "_0", debug_flags, None, None, after_boot_script_dir, ""],
+        # [0, False, False, "_1", debug_flags, None, None, after_boot_script_dir, ""],
+        # [6, False, False, "_1", debug_flags, None, None, after_boot_script_dir, ""],
+        # [0, True, True, "_1", debug_flags, None, None, after_boot_script_dir, ""],
+        # [6, True, True, "_1", debug_flags, None, None, after_boot_script_dir, ""],
     ]
+
+    print(args_list)
 
     with multiprocessing.Pool(16) as p:
         p.starmap(test_one_setup, args_list)
