@@ -234,6 +234,11 @@ class EventBase
     static const Priority Sim_Exit_Pri =               100;
 
     /**
+     * [Shixin] Disable debug trace
+     */
+    static const Priority Debug_Disable_Pri =          101;
+
+    /**
      * Maximum priority
      *
      * @ingroup api_eventq

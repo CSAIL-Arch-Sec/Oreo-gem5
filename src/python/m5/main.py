@@ -549,7 +549,8 @@ def main():
     else:
         trace.enable()
 
-    if options.debug_end:
+    # [Shixin] Disable tracing
+    if options.debug_start and options.debug_end and options.debug_start < options.debug_end:
         _check_tracing()
         e = event.create(trace.disable, event.Event.Debug_Enable_Pri)
         event.mainq.schedule(e, options.debug_end)
