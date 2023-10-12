@@ -35,4 +35,4 @@ def handle_workbegin():
 def handle_workend():
     m5.stats.dump()
     print("Dump stats at the end of the ROI!")
-    yield True
+    yield False
