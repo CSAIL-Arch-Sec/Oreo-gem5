@@ -149,8 +149,8 @@ def main(
 
         protect_options = [
             [False, False],
-            [False, True],
-            [True, False],
+            # [False, True],
+            # [True, False],
             [True, True],
         ]
 
@@ -166,8 +166,10 @@ def main(
 
         if run_config_delta:
             delta_configs = [
-                [6, 16],
-                [8, 7]
+                # [6, 16],
+                [1, 7],
+                [25, 7],
+                # [8, 7]
             ]
             for delta_config in delta_configs:
                 assert len(delta_config) == 2
