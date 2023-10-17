@@ -4,6 +4,7 @@ import numpy as np
 import re
 import subprocess
 from pathlib import Path
+import random
 from utils import *
 
 
@@ -16,10 +17,31 @@ def get_script_name(suffix):
     return f"performance_test_{suffix}"
 
 
+def gen_random_performance_script(after_boot_script_dir: Path, random_id: int, bench_order: list):
+    # bench_list = list(range(len(performance_test_list)))
+    # random.shuffle(bench_list)
+    run_cmd_list = list(map(lambda x: f"./bin/LEBench-hook {x} 1\n", bench_order))
+    run_cmd = "".join(run_cmd_list)
+
+    s = f"cd /home/gem5/LEBench-Sim\n" \
+        f"rm -f lebench_stats.csv\n" \
+        f"{run_cmd}" \
+        f"m5 writefile lebench_stats.csv\n" \
+        f"echo 'writing lebench_stats.csv back to host :D'\n" \
+        f"sleep 1\n" \
+        f"m5 exit\n"
+
+    output_path = after_boot_script_dir / get_script_name(f"random_{random_id}")
+    with output_path.open(mode="w") as output_file:
+        output_file.write(s)
+
+    return output_path
+
+
 def gen_performance_script(bench_id: int, after_boot_script_dir: Path):
     s = f"cd /home/gem5/LEBench-Sim\n" \
         f"rm -f lebench_stats.csv\n" \
-        f"./bin/LEBench-run {bench_id} 1\n" \
+        f"./bin/LEBench-hook {bench_id} 1\n" \
         f"m5 writefile lebench_stats.csv\n" \
         f"echo 'writing lebench_stats.csv back to host :D'\n" \
         f"sleep 1\n" \
@@ -41,12 +63,16 @@ def run_performance_one(
         output_dir: Path,
         kaslr_offset: int = 0xc000000,
         image_suffix: str = "",
+        bench_order = None,
 ):
     load_addr_offset = ~np.uint64(kaslr_offset) + np.uint64(1) + np.uint64(0x1000000)
 
     perf_script_path = gen_performance_script(bench_id, after_boot_script_dir)
+    # NOTE: The bench_id here refers to the number of random runs.
+    # perf_script_path = gen_random_performance_script(after_boot_script_dir, bench_id, bench_order)
 
-    gem5_str = "./build/X86/gem5.opt"
+    # gem5_str = "./build/X86_MOESI_hammer/gem5.fast"
+    gem5_str = "./build/X86/gem5.fast"
     gem5_script = "configs/example/gem5_library/gem5-configs/x86-restore.py"
 
     output_log = output_dir / "output.log"
@@ -92,9 +118,9 @@ def run_performance_one(
         )
 
     if p.returncode:
-        print(f"!!! Run {bench_id} {performance_test_list[bench_id]} fails")
+        print(f"!!! Run {bench_id} fails")
     else:
-        print(f"!!! Run {bench_id} {performance_test_list[bench_id]} success")
+        print(f"!!! Run {bench_id} success")
 
 
 def test_one_setup(
@@ -103,11 +129,12 @@ def test_one_setup(
         protect_module: bool,
         checkpoint_dir_suffix: str,
         after_boot_script_dir: Path,
+        bench_order: list
 ):
     mode_name = get_mode_name(protect_text, protect_module)
 
     checkpoint_dir = proj_dir / "result" / f"{mode_name}_checkpoint{checkpoint_dir_suffix}" / "default-save" / "m5out-gen-cpt"
-    output_dir = proj_dir / "result" / f"{mode_name}_lebench_{bench_id}"
+    output_dir = proj_dir / "result" / f"{mode_name}_lebench_new_{bench_id}"
     # trace_name = f"trace_{mode_name}_{re.sub(r',', r'_', debug_flags)}_{test_offset}"
 
     output_dir.mkdir(exist_ok=True)
@@ -121,6 +148,7 @@ def test_one_setup(
         output_dir=output_dir,
         kaslr_offset=0xc000000,
         image_suffix="",
+        bench_order=bench_order,
     )
 
 
@@ -143,20 +171,26 @@ def main(run_list: str, check_suffix: str):
 
     protection_list = [
         [False, False],
-        [False, True],
-        [True, False],
+        # [False, True],
+        # [True, False],
         [True, True],
     ]
 
     if run_list == "":
-        bench_list = list(range(len(performance_test_list)))
+        # bench_list = list(range(len(performance_test_list)))
+        # NOTE: We run the random test 30 times.
+        idx_list = list(range(len(performance_test_list)))
     else:
-        bench_list = list(map(lambda x: int(x), run_list.split(",")))
+        idx_list = list(map(lambda x: int(x), run_list.split(",")))
 
     # for i in [13, 22, 16]:
-    for i in bench_list:
+    print(idx_list)
+    for i in idx_list:
+        bench_list = list(range(len(performance_test_list)))
+        random.shuffle(bench_list)
+        print(bench_list)
         for protect_text, protect_module in protection_list:
-            arg_list.append([i, protect_text, protect_module, check_suffix, after_boot_script_dir])
+            arg_list.append([i, protect_text, protect_module, check_suffix, after_boot_script_dir, bench_list])
         # break
 
     print(arg_list)
