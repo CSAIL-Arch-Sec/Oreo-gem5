@@ -59,6 +59,7 @@ pretty_print("Checking for required gem5 build...")
 requires(
     isa_required=ISA.X86,
     coherence_protocol_required=CoherenceProtocol.MESI_TWO_LEVEL,
+    # coherence_protocol_required=CoherenceProtocol.ARM_MOESI_HAMMER,
 )
 
 # things for reading generated checkpoint config
@@ -116,19 +117,32 @@ pretty_print("Setting up fixed system parameters...")
 
 pretty_print("Caches: MESI Two Level Cache Hierarchy")
 
-from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
-    MESITwoLevelCacheHierarchy,
-)
+# from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
+#     MESITwoLevelCacheHierarchy,
+# )
+#
+# cache_hierarchy = MESITwoLevelCacheHierarchy(
+#     l1d_size="64kB",
+#     l1d_assoc=8,
+#     l1i_size="32kB",
+#     l1i_assoc=4,
+#     l2_size="2048kB",
+#     l2_assoc=16,
+#     num_l2_banks=1,
+# )
+from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import \
+    PrivateL1PrivateL2CacheHierarchy
+from gem5.coherence_protocol import CoherenceProtocol
 
-cache_hierarchy = MESITwoLevelCacheHierarchy(
-    l1d_size="64kB",
-    l1d_assoc=8,
-    l1i_size="32kB",
-    l1i_assoc=4,
-    l2_size="2048kB",
-    l2_assoc=16,
-    num_l2_banks=1,
+requires(
+    coherence_protocol_required=CoherenceProtocol.ARM_MOESI_HAMMER
 )
+cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
+    l1d_size="128kB",
+    l1i_size="128kB",
+    l2_size="2048kB",
+)
+print("PrivateL1PrivateL2CacheHierarchy")
 
 pretty_print("Memory: Dual Channel DDR4 2400 DRAM device")
 # The X86 board only supports 3 GB of main memory.
