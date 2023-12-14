@@ -1300,6 +1300,10 @@ IEW::executeInsts()
             if (inst->mispredicted() && !loadNotExecuted) {
                 fetchRedirect[tid] = true;
 
+//                if (inst->pcState().instAddr() >= 0xffffffffc0000000 || inst->pcState().instAddr() == 0xffffffff8c800c03) {
+//                    std::clog << "@@@ Tick " << curTick() << " branch mispred detected pc " << inst->pcState() << " predPC " << *(inst->predPC) << std::endl;
+//                }
+
                 DPRINTF(IEW, "[tid:%i] [sn:%llu] Execute: "
                         "Branch mispredict detected.\n",
                         tid, inst->seqNum);

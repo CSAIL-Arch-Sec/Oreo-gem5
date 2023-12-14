@@ -443,6 +443,15 @@ TLB::translate(const RequestPtr &req,
 //                               vaddr, tc->pcState().instAddr());
 //                    }
                     Fault fault = walker->start(tc, translation, req, mode);
+
+//                    if (pageAlignedVaddr >= 0xffffffff80000000 && tc->pcState().instAddr() >= 0xffffffff80000000) {
+//                        if (mode == BaseMMU::Execute) {
+//                            std::clog << "@@@ Tick " << curTick() << " tid " << tc->threadId() << " PC " << tc->pcState() << std::hex
+//                                      << "tlb miss translate " << vaddr
+//                                      << " mode " << mode << std::endl;
+//                        }
+//                    }
+
                     if (timing || fault != NoFault) {
                         // This gets ignored in atomic mode.
                         delayedResponse = true;
@@ -470,6 +479,14 @@ TLB::translate(const RequestPtr &req,
                     DPRINTF(TLB, "Miss was serviced.\n");
                 }
             }
+
+//            if (pageAlignedVaddr >= 0xffffffff80000000 && tc->pcState().instAddr() < 0xffffffff80000000) {
+//                if (mode != BaseMMU::Execute && entry) {
+//                    std::clog << "@@@ Tick " << curTick() << " tid " << tc->threadId() << " PC " << tc->pcState() << std::hex
+//                              << "tlb hit translate " << vaddr
+//                              << " mode " << mode << std::endl;
+//                }
+//            }
 
             DPRINTF(TLB, "Entry found with paddr %#x, "
                     "doing protection checks.\n", entry->paddr);

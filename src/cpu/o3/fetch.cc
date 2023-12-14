@@ -1450,7 +1450,7 @@ Fetch::fetch(bool &status_change)
 //                std::clog << "Tick " << std::hex << curTick() << " " << this_pc << std::endl;
 //            }
 
-            if (this_pc.instAddr() >= 0xffffffffc0000000) {
+            if (this_pc.instAddr() >= 0xffffffffc0000000 || staticInst->getName() == "gem5Op") {
                 DPRINTF(PTW, "Fetch PC %s %s\n", this_pc, staticInst->getName().c_str());
 //                std::clog << "@@@ Tick " << std::hex << curTick() << " PC " << this_pc << " " << staticInst->getName() << std::endl;
             }

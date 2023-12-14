@@ -1153,7 +1153,7 @@ Commit::commitInsts()
                 }
                 // [Shixin]
 
-                if (pc[tid]->instAddr() >= 0xffffffffc0000000) {
+                if (pc[tid]->instAddr() >= 0xffffffffc0000000 || head_inst->staticInst->getName() == "gem5Op") {
                     DPRINTF(PTW, "Commit PC %s %s\n", *pc[tid], head_inst->staticInst->getName().c_str());
                     DPRINTF(PTW, "[tid:%i] ROB has %d insts & %d free entries.\n",
                             tid, rob->countInsts(tid), rob->numFreeEntries(tid));

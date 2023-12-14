@@ -530,12 +530,14 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
                 if (cr4.pcide){
                     CR3 cr3 = tc->readMiscRegNoEffect(misc_reg::Cr3);
                     walker->tlb->insert(entry.vaddr, entry, cr3.pcid);
+                    DPRINTF(PageTableWalker, "@@@ TLB Insert vaddr %lx, paddr %lx\n", entry.vaddr, entry.paddr);
                 }
                 else{
                     // The current PCID is always 000H if PCIDE
                     // is not set [sec 4.10.1 of Intel's Software
                     // Developer Manual]
                     walker->tlb->insert(entry.vaddr, entry, 0x000);
+                    DPRINTF(PageTableWalker, "@@@ TLB Insert vaddr %lx, paddr %lx\n", entry.vaddr, entry.paddr);
                 }
             }
 
@@ -547,6 +549,8 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
         flags.set(Request::UNCACHEABLE, uncacheable);
         RequestPtr request = std::make_shared<Request>(
             nextRead, oldRead->getSize(), flags, walker->requestorId);
+
+        DPRINTF(PageTableWalker, "@@@ New step paddr %lx\n", nextRead);
         read = new Packet(request, MemCmd::ReadReq);
         read->allocate();
         // If we need to write, adjust the read packet to write the modified
@@ -622,6 +626,8 @@ Walker::WalkerState::setupWalk(Addr vaddr)
 
     RequestPtr request = std::make_shared<Request>(
         topAddr, dataSize, flags, walker->requestorId);
+
+    DPRINTF(PageTableWalker, "@@@ Make request for vaddr %lx, paddr %lx\n", vaddr, topAddr);
 
     read = new Packet(request, MemCmd::ReadReq);
     read->allocate();
