@@ -32,6 +32,23 @@ def gen_blindside_script(offset: int, after_boot_script_dir: Path):
     return output_path
 
 
+def gen_anc_script(offset: int, after_boot_script_dir: Path):
+    s = f"cd /home/gem5/experiments/modules\n" \
+        f"insmod blindside-kernel.ko\n" \
+        f"cd /home/gem5/experiments/bin\n" \
+        f"./anc\n" \
+        f"sleep 1\n" \
+        f"m5 exit\n"
+
+    # s = f"m5 exit\n"
+
+    output_path = after_boot_script_dir / get_script_name("anc", offset)
+    with output_path.open(mode="w") as output_file:
+        output_file.write(s)
+
+    return output_path
+
+
 def run_blindside_one(
         offset: int,
         protect_text: bool,
@@ -49,7 +66,7 @@ def run_blindside_one(
 ):
     load_addr_offset = ~np.uint64(kaslr_offset) + np.uint64(1) + np.uint64(0x1000000)
 
-    blind_script_path = gen_blindside_script(offset, after_boot_script_dir)
+    blind_script_path = gen_anc_script(offset, after_boot_script_dir)
 
     if debug_flags != "None":
         debug_option = f"--debug-flags={debug_flags}"
@@ -141,7 +158,7 @@ def test_one_setup(
     mode_name = get_mode_name(protect_text, protect_module)
 
     checkpoint_dir = proj_dir / "result" / f"{mode_name}_checkpoint{image_suffix}{checkpoint_dir_suffix}" / "default-save" / "m5out-gen-cpt"
-    output_dir = proj_dir / "result" / f"{mode_name}_restore{image_suffix}_{test_offset}"
+    output_dir = proj_dir / "result" / f"{mode_name}_anc{image_suffix}_{test_offset}"
     trace_name = f"trace_{mode_name}_{re.sub(r',', r'_', debug_flags)}{image_suffix}_{test_offset}"
 
     output_dir.mkdir(exist_ok=True)
@@ -178,9 +195,10 @@ def main(debug_flags: str):
         # [0, False, False, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
         # [7, False, False, "_0", debug_flags, None, None, after_boot_script_dir, ""],
         # [7, False, False, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
-        [0, False, True, "_0", debug_flags, 11443947038500, 11443947083000, after_boot_script_dir, ""],
-        # [0, False, True, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
-        [7, False, True, "_0", debug_flags, 11443947038500, 11443947083000, after_boot_script_dir, ""], # 11443947038500
+        # [0, False, True, "_0", debug_flags, 11443947038500, 11443947083000, after_boot_script_dir, ""],
+        [0, False, True, "_1", debug_flags, None, None, after_boot_script_dir, ""],
+        [0, False, True, "_1", debug_flags, None, None, after_boot_script_dir, "_6_16"],
+        # [7, False, True, "_0", debug_flags, 11443947038500, 11443947083000, after_boot_script_dir, ""], # 11443947038500
         # [7, False, True, "_0", debug_flags, None, None, after_boot_script_dir, "_6_16"],
         # [16, False, True, "_0", debug_flags, None, None, after_boot_script_dir, ""],
         # [0, False, False, "_1", debug_flags, None, None, after_boot_script_dir, ""],
