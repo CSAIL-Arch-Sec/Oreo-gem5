@@ -94,7 +94,7 @@ MemoryImage::real_reloc(Addr delta, const PortProxy &proxy)
         Addr ptr = (*it) & addr_mask;
         uint64_t val;
         proxy.readBlob(ptr, (void *) (&val), sizeof(val));
-        std::cout << std::hex << "Addr " << (*it) << " " << ptr << ", val " << val << ", new val " << val + delta << std::endl;
+//        std::cout << std::hex << "Addr " << (*it) << " " << ptr << ", val " << val << ", new val " << val + delta << std::endl;
         val += delta;
         proxy.writeBlob(ptr, (void *) (&val), sizeof(val));
     }
