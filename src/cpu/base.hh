@@ -126,9 +126,9 @@ public:
     };
 
     bool protectKaslr[NumKaslrRegionType];
-    Addr regionStart[NumKaslrRegionType] = {0xffffffff80000000, 0xffffffffc0000000};
-    Addr regionSize[NumKaslrRegionType] = {0x40000000, 0x3f000000};
-    Addr regionAlignBits[NumKaslrRegionType] = {25, 25};
+    Addr regionStart[NumKaslrRegionType] = {0xffffff8000000000, 0xffffffffc0000000};
+    Addr regionSize[NumKaslrRegionType] = {0x6f00000000, 0x3f000000};
+    Addr regionAlignBits[NumKaslrRegionType] = {30, 25};
     Addr regionMask[NumKaslrRegionType] = {0, 0};
 
     // TODO: In the final design, we should not set kaslrOffset here.
