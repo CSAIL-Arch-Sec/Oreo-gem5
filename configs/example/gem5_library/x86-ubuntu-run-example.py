@@ -32,14 +32,17 @@ parser.add_argument(
 parser.add_argument(
     "--kaslr-offset",
     type=int,
-    default=0xc000000,
+    # default=0,
+    default=0xffffff8080000000,
     help="KASLR offset.",
 )
 
+# NOTE: We may keep load_addr_offset = 0 if we do not
+#   do kaslr at link time. DOUBLE CHECK!
 parser.add_argument(
     "--load-addr-offset",
     type=int,
-    default=0xfffffffff5000000,
+    default=0,
     help="specify kernel physical load address offset"
 )
 
@@ -153,6 +156,7 @@ board = X86Board(
     memory=memory,
     cache_hierarchy=cache_hierarchy,
     load_addr_offset=args.load_addr_offset,
+    kaslr_offset=args.kaslr_offset,
 )
 
 # This is the command to run after the system has booted. The first `m5 exit`

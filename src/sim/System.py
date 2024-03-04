@@ -159,3 +159,5 @@ class System(SimObject):
         "auto-calculated to be the most restrictive.",
     )
     load_addr_offset = Param.UInt64(0, "Address to offset the kernel with")
+
+    kaslr_offset = Param.UInt64(0, "Address to offset the kernel with")

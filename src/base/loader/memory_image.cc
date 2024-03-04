@@ -67,5 +67,38 @@ MemoryImage::move(std::function<Addr(Addr)> mapper)
     return *this;
 }
 
+void
+MemoryImage::real_reloc(Addr delta, const PortProxy &proxy)
+{
+    std::vector<uint32_t> reloc;
+    std::vector<uint32_t> reloc64;
+    std::vector<uint32_t> reloc_inverse32;
+    std::vector<uint32_t> reloc32;
+
+    std::ifstream reloc_file("/root/linux/arch/x86/boot/compressed/vmlinux.relocs", std::ifstream::binary);
+    char buf[4];
+    uint32_t x;
+    while(!reloc_file.eof()) {
+        reloc_file.read(buf, sizeof(buf));
+        x = *((uint32_t *) buf);
+        reloc.push_back(x);
+    }
+
+    if (reloc.size() < 3 || *(reloc.rbegin()) != 0 || *(reloc.rbegin() + 1) != 0) {
+        panic("Error: we do not support 32-bit relocation for now, but 32 bit relocation sections are not empty.");
+    }
+
+    uint32_t addr_mask = (1 << 31) - 1;
+    for (auto it = reloc.rbegin() + 2; it != reloc.rend(); it++) {
+        if (*it == 0) continue;
+        Addr ptr = (*it) & addr_mask;
+        uint64_t val;
+        proxy.readBlob(ptr, (void *) (&val), sizeof(val));
+        std::cout << std::hex << "Addr " << (*it) << " " << ptr << ", val " << val << ", new val " << val + delta << std::endl;
+        val += delta;
+        proxy.writeBlob(ptr, (void *) (&val), sizeof(val));
+    }
+}
+
 } // namespace loader
 } // namespace gem5

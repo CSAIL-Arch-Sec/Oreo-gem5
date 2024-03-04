@@ -84,6 +84,8 @@ class KernelWorkload(Workload):
     # TODO: Config this in running script instead!!!
     load_addr_offset = Param.UInt64(0xFFFFFFFFF5000000, "Address to offset the kernel with")
 
+    kaslr_offset = Param.UInt64(0, "Address to offset the kernel with")
+
     command_line = Param.String("a", "boot flags to pass to the kernel")
 
 

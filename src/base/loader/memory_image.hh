@@ -35,6 +35,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <fstream>
 
 #include "base/compiler.hh"
 #include "base/loader/image_file_data.hh"
@@ -131,6 +132,8 @@ class MemoryImage
     mask(Addr m) {
         return move([m](Addr a) { return a & m; });
     }
+
+    void real_reloc(Addr delta, const PortProxy &proxy);
 
     Addr
     maxAddr() const

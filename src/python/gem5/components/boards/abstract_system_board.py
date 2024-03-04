@@ -48,6 +48,7 @@ class AbstractSystemBoard(System, AbstractBoard):
         cache_hierarchy: "AbstractCacheHierarchy",
         load_addr_mask: int = 0xFFFFFFFFFFFFFFFF,
         load_addr_offset: int = 0,
+        kaslr_offset: int = 0,
         addr_check: bool = True,
     ):
         System.__init__(self)
@@ -59,6 +60,7 @@ class AbstractSystemBoard(System, AbstractBoard):
             cache_hierarchy=cache_hierarchy,
             load_addr_mask=load_addr_mask,
             load_addr_offset=load_addr_offset,
+            kaslr_offset=kaslr_offset,
             addr_check=addr_check,
         )
 

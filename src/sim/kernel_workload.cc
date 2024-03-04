@@ -36,6 +36,8 @@ namespace gem5
 
 KernelWorkload::KernelWorkload(const Params &p) : Workload(p),
     _loadAddrMask(p.load_addr_mask), _loadAddrOffset(p.load_addr_offset),
+    _kaslrOffset(p.kaslr_offset),
+//    _redOffset(p.kaslr_offset & ((1 << 30) - 1)),
     commandLine(p.command_line)
 {
     if (params().object_file == "") {
@@ -56,6 +58,7 @@ KernelWorkload::KernelWorkload(const Params &p) : Workload(p),
         // [Shixin] Debug output
         printf("@@@ _start = %lx, _end = %lx\n", _start, _end);
         printf("@@@ _loadAddrOffset = %lx\n", _loadAddrOffset);
+        printf("@@@ _kaslrOffset = %lx\n", _kaslrOffset);
 
         // If load_addr_mask is set to 0x0, then calculate the smallest mask to
         // cover all kernel addresses so gem5 can relocate the kernel to a new
@@ -117,6 +120,7 @@ KernelWorkload::initState()
         }
         // Load program sections into memory
         image.write(phys_mem);
+        image.real_reloc(_kaslrOffset, phys_mem);
 
         // [Shixin] Debug output
         printf("@@@ Kernel start = %#x\n", image.minAddr());

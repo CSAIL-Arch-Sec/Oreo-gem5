@@ -6,7 +6,7 @@ authors = ["zhizhuoxin <shixins@umich.edu>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9"
 scons = "^4.5.2"
 click = "^8.1.4"
 numpy = "^1.25.2"

@@ -62,6 +62,9 @@ class KernelWorkload : public Workload
      */
     Addr _loadAddrOffset;
 
+    Addr _kaslrOffset;
+//    Addr _redOffset;
+
     Addr _start, _end;
 
     std::vector<loader::ObjectFile *> extras;

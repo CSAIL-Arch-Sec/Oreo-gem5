@@ -72,6 +72,7 @@ class AbstractBoard:
         cache_hierarchy: Optional["AbstractCacheHierarchy"],
         load_addr_mask: int = 0xFFFFFFFFFFFFFFFF,
         load_addr_offset: int = 0,
+        kaslr_offset: int = 0,
         addr_check: bool = True,
     ) -> None:
         """
@@ -100,6 +101,7 @@ class AbstractBoard:
 
         self.load_addr_mask = load_addr_mask
         self.load_addr_offset = load_addr_offset
+        self.kaslr_offset = kaslr_offset
         self.addr_check = addr_check
 
         # This variable determines whether the board is to be executed in

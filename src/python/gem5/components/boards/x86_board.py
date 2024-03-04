@@ -79,6 +79,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         cache_hierarchy: AbstractCacheHierarchy,
         load_addr_mask: int = 0xFFFFFFFFFFFFFFFF,
         load_addr_offset: int = 0,
+        kaslr_offset: int = 0,
         addr_check: bool = True,
     ) -> None:
         super().__init__(
@@ -88,6 +89,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
             cache_hierarchy=cache_hierarchy,
             load_addr_mask=load_addr_mask,
             load_addr_offset=load_addr_offset,
+            kaslr_offset=kaslr_offset,
             addr_check=addr_check,
         )
 
@@ -104,6 +106,7 @@ class X86Board(AbstractSystemBoard, KernelDiskWorkload):
         self.workload = X86FsLinux()
         self.workload.load_addr_mask = self.load_addr_mask
         self.workload.load_addr_offset = self.load_addr_offset
+        self.workload.kaslr_offset = self.kaslr_offset
         self.workload.addr_check = self.addr_check
 
         # North Bridge
