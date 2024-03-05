@@ -23,10 +23,13 @@ proj_dir = script_dir.parent
     # default="Branch,RubyCache,TLB,PageTableWalker,DRAM"
 )
 def main(pre_setup: str, exp_script: str, debug_flags: str):
-    gem5_str = "./build/X86/gem5.opt"
+    gem5_str = "./build/X86/gem5.fast"
     gem5_script = "configs/example/gem5_library/x86-ubuntu-run-example.py"
     starting_core = "kvm"
-
+    
+    protect_kaslr = ""
+    protect_module_kaslr = ""
+    
     if pre_setup == "o3-module":
         output_dir_name = "protect_kaslr_module"
         switch_core = "o3"
@@ -34,16 +37,29 @@ def main(pre_setup: str, exp_script: str, debug_flags: str):
     elif pre_setup == "o3-baseline":
         output_dir_name = "baseline_module"
         switch_core = "o3"
-        protect_module_kaslr = ""
     elif pre_setup == "kvm":
         output_dir_name = "baseline"
         switch_core = "kvm"
-        protect_module_kaslr = ""
+    elif pre_setup == "atomic":
+        output_dir_name = "baseline"
+        starting_core = "atomic"
+        switch_core = "atomic"
+    elif pre_setup == "o3":
+        output_dir_name = "o3"
+        starting_core = "o3"
+        switch_core = "o3"
+    elif pre_setup == "o3-text":
+        output_dir_name = "o3_text"
+        starting_core = "o3"
+        switch_core = "o3"
+        protect_kaslr = "--protect-kaslr"
     else:
         print(f"Pre-setup {pre_setup} is not support, aborting.")
         return
 
     output_dir = proj_dir / "result" / output_dir_name
+
+    output_dir.mkdir(exist_ok=True)
 
     if debug_flags != "None":
         debug_option = f"--debug-flags={debug_flags}"
@@ -60,6 +76,7 @@ def main(pre_setup: str, exp_script: str, debug_flags: str):
         f"--starting-core={starting_core}",
         f"--switch-core={switch_core}",
         f"--script=/root/experiments/command-scripts/{exp_script}",
+        protect_kaslr,
         protect_module_kaslr
     ]
     cmd_str = " ".join(cmd)
