@@ -33,7 +33,7 @@ parser.add_argument(
     "--kaslr-offset",
     type=int,
     # default=0,
-    default=0xffffff8680000000,
+    default=0xffffff8080000000,
     # default=0xfffffe8680000000,
     help="KASLR offset.",
 )
