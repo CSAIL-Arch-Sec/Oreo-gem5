@@ -52,6 +52,8 @@ KernelWorkload::KernelWorkload(const Params &p) : Workload(p),
 
         image = kernelObj->buildImage();
 
+        image.set_reloc_name(params().object_file);
+
         _start = image.minAddr();
         _end = image.maxAddr();
 

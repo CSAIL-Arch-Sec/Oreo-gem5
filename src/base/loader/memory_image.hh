@@ -135,6 +135,11 @@ class MemoryImage
 
     void real_reloc(Addr delta, const PortProxy &proxy);
 
+    std::string reloc_path;
+    void set_reloc_name(const std::string &obj_path) {
+        reloc_path = obj_path + ".relocs";
+    }
+
     Addr
     maxAddr() const
     {

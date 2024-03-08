@@ -34,6 +34,7 @@ parser.add_argument(
     type=int,
     # default=0,
     default=0xffffff8680000000,
+    # default=0xfffffe8680000000,
     help="KASLR offset.",
 )
 
@@ -71,13 +72,14 @@ parser.add_argument(
 parser.add_argument(
     "--disk-image-path",
     type=str,
-    default="/root/experiments/disk-image/experiments/experiments-image/experiments",
+    # default="/root/experiments/disk-image/packer-ubuntu-server-uefi/output-experiments/packer-experiments",
+    default="/root/experiments/disk-image/experiments.img",
     help="disk image path to use for run"
 )
 parser.add_argument(
     "--disk-root-partition",
     type=str,
-    default="1",
+    default="2",
     help="root partiton of disk image"
 )
 
@@ -101,7 +103,7 @@ else:
     protect_module_kaslr = False
 
 kaslr_offset = args.kaslr_offset
-print("@@@ KASLR offset:", kaslr_offset)
+print("@@@ KASLR offset:", hex(kaslr_offset))
 
 starting_core = get_cpu_type_from_str(args.starting_core)
 switch_core = get_cpu_type_from_str(args.switch_core)

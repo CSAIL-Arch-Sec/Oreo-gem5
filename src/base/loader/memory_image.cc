@@ -75,7 +75,11 @@ MemoryImage::real_reloc(Addr delta, const PortProxy &proxy)
     std::vector<uint32_t> reloc_inverse32;
     std::vector<uint32_t> reloc32;
 
-    std::ifstream reloc_file("/root/linux/arch/x86/boot/compressed/vmlinux.relocs", std::ifstream::binary);
+    std::ifstream reloc_file(reloc_path, std::ifstream::binary);
+    if (!reloc_file.is_open()) {
+        std::cerr << "Cannot open " << reloc_path << std::endl;
+        panic("\n");
+    }
     char buf[4];
     uint32_t x;
     while(!reloc_file.eof()) {
