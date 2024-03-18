@@ -40,6 +40,10 @@ def main(pre_setup: str, exp_script: str, debug_flags: str):
     elif pre_setup == "kvm":
         output_dir_name = "baseline"
         switch_core = "kvm"
+    elif pre_setup == "kvm-module":
+        output_dir_name = "baseline"
+        switch_core = "kvm"
+        protect_module_kaslr = "--protect-module-kaslr"
     elif pre_setup == "atomic":
         output_dir_name = "baseline"
         starting_core = "atomic"
@@ -83,14 +87,16 @@ def main(pre_setup: str, exp_script: str, debug_flags: str):
     print(cmd_str)
 
     output_path = output_dir / "output.log"
+    output_path2 = output_dir / "output2.log"
     with output_path.open(mode="w") as output_file:
-        subprocess.run(
-            cmd_str,
-            shell=True,
-            cwd=str(proj_dir),
-            stdout=output_file,
-            stderr=output_file,
-        )
+        with output_path2.open(mode="w") as output_file2:
+            subprocess.run(
+                cmd_str,
+                shell=True,
+                cwd=str(proj_dir),
+                stdout=output_file,
+                stderr=output_file2,
+            )
 
 
 if __name__ == '__main__':
