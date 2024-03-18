@@ -148,11 +148,13 @@ namespace X86ISA
         //          TODO: We should ensure that in this case, bit 57 58 must be zero in Linux
         Bitfield<58, 52> delta;
         Bitfield<51, 12> base;
-        Bitfield<11, 11> avl;
+        Bitfield<11, 9> avl;
         // NOTE: "Bitfield<11, 9> avl" does not match in intel's doc on page table entry.
         //  I am not sure what it is used for.
         //  We also use bit 9, 10 for delta.
-        Bitfield<10, 9> delta2;
+        // NOTE: Intel (HW) does not use it, but SW use it!!!
+        // [Shixin] Dirty implementation: for kernel addresses, these two bits are used for delta
+        // Bitfield<10, 9> delta2;
         Bitfield<8> g;
         Bitfield<7> ps;
         Bitfield<6> d;

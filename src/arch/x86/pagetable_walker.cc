@@ -355,7 +355,12 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
 
             // [Shixin] Get kaslr offset from delta in page table entry
             // TODO: Make this 25 configurable
-            entry.kaslrDelta = pte.delta + (pte.delta2 << 7);
+            entry.kaslrDelta = pte.delta + ((pte.avl & 0x3) << 7);
+
+            if ((int64_t) entry.vaddr > 0) {
+                // User space
+                entry.kaslrDelta &= 0x1f;
+            }
 
 //            if (entry.vaddr >= 0xffffff8000000000) {
 //                std::clog << std::hex << "Vaddr " << entry.vaddr << " delta " << entry.kaslrDelta << std::endl;
@@ -389,7 +394,12 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
 
         // [Shixin] Get kaslr offset from delta in page table entry
         // TODO: Make this 25 configurable
-        entry.kaslrDelta = pte.delta + (pte.delta2 << 7);
+        entry.kaslrDelta = pte.delta + ((pte.avl & 0x3) << 7);
+
+        if ((int64_t) entry.vaddr > 0) {
+            // User space
+            entry.kaslrDelta &= 0x1f;
+        }
 
 //        if (entry.vaddr >= 0xffffff8000000000) {
 //            std::clog << std::hex << "Vaddr " << entry.vaddr << " delta " << entry.kaslrDelta << std::endl;
