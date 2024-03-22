@@ -173,8 +173,11 @@ doPopStackStuffAndCheckRIP:
     # Check if the RIP is canonical.
     srai t7, t1, 47, flags=(EZF,), dataSize=8
     # if t7 isn't 0 or -1, it wasn't canonical.
-    br label("doPopStackStuff"), flags=(CEZF,)
+    # [Shixin] If use non-canonical bits for user ASLR, the logic need to be changed
+    # TODO: Check whether we need to change this back to the original version in the baseline
     addi t0, t7, 1, flags=(EZF,), dataSize=8
+    br label("doPopStackStuff"), flags=(CEZF,)
+    andi t0, t7, 0x1ffc1, flags=(EZF,), dataSize=8
     fault "std::make_shared<GeneralProtection>(0)", flags=(nCEZF,)
 
 doPopStackStuff:
