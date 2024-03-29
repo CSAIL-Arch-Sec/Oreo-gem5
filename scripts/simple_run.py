@@ -9,6 +9,11 @@ proj_dir = script_dir.parent
 
 @click.command()
 @click.option(
+    "--sim-option",
+    type=click.Choice(['fast', 'opt']),
+    default="fast"
+)
+@click.option(
     "--pre-setup",
     type=click.STRING,
 )
@@ -22,17 +27,37 @@ proj_dir = script_dir.parent
     default="None",
     # default="Branch,RubyCache,TLB,PageTableWalker,DRAM"
 )
-def main(pre_setup: str, exp_script: str, debug_flags: str):
-    gem5_str = "./build/X86/gem5.fast"
+@click.option(
+    "--gem5-kaslr-delta",
+    type=int,
+    default=0
+)
+@click.option(
+    "--gem5-module-kaslr-delta",
+    type=int,
+    default=12
+)
+def main(
+        sim_option: str,
+        pre_setup: str,
+        exp_script: str,
+        debug_flags: str,
+        gem5_kaslr_delta: int,
+        gem5_module_kaslr_delta: int):
+    gem5_str = f"./build/X86/gem5.{sim_option}"
     gem5_script = "configs/example/gem5_library/x86-ubuntu-run-example.py"
     starting_core = "kvm"
     
     protect_kaslr = ""
     protect_module_kaslr = ""
+    protect_user_aslr = ""
+
+    # TODO: Add more configs
     
     if pre_setup == "o3-module":
         output_dir_name = "protect_kaslr_module"
         switch_core = "o3"
+        protect_kaslr = "--protect-kaslr"
         protect_module_kaslr = "--protect-module-kaslr"
     elif pre_setup == "o3-baseline":
         output_dir_name = "baseline_module"
@@ -81,7 +106,10 @@ def main(pre_setup: str, exp_script: str, debug_flags: str):
         f"--switch-core={switch_core}",
         f"--script=/root/experiments/command-scripts/{exp_script}",
         protect_kaslr,
-        protect_module_kaslr
+        protect_module_kaslr,
+        protect_user_aslr,
+        f"--gem5-kaslr-delta={gem5_kaslr_delta}",
+        f"--gem5-module-kaslr-delta={gem5_module_kaslr_delta}",
     ]
     cmd_str = " ".join(cmd)
     print(cmd_str)

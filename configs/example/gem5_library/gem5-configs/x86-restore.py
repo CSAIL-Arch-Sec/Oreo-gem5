@@ -30,30 +30,37 @@ add_cpu_arguments(parser, default_type=CPUTypes.O3)
 
 add_run_script_arguments(parser)
 
-add_kernel_phy_load_arguments(parser)
-add_protect_kaslr_arguments(parser)
-
 add_checkpoint_restore_arguments(parser)
-
-add_std_redirect_arguments(parser)
-add_debug_arguments(parser)
 
 args = parser.parse_args()
 
-if args.protect_kaslr:
-    protect_kaslr = True
-else:
-    protect_kaslr = False
+# if args.protect_kaslr:
+#     protect_kaslr = True
+# else:
+#     protect_kaslr = False
+#
+# if args.protect_module_kaslr:
+#     protect_module_kaslr = True
+# else:
+#     protect_module_kaslr = False
+#
+# if args.protect_user_aslr:
+#     protect_user_aslr = True
+# else:
+#     protect_user_aslr = False
 
-if args.protect_module_kaslr:
-    protect_module_kaslr = True
-else:
-    protect_module_kaslr = False
+# kaslr_offset = args.kaslr_offset + (args.gem5_kaslr_delta << args.gem5_kaslr_align_bits)
+# load_addr_offset = args.load_addr_offset
+# print("@@@ KASLR offset:", hex(kaslr_offset))
+# print("@@@ Physical load offset:", hex(load_addr_offset))
 
-kaslr_offset = args.kaslr_offset
-load_addr_offset = args.load_addr_offset
-print("@@@ KASLR offset:", hex(kaslr_offset))
-print("@@@ Physical load offset:", hex(load_addr_offset))
+# kernel_args_delta = []
+# if protect_module_kaslr or protect_user_aslr:
+#     kernel_args_delta.append("--")
+# if protect_module_kaslr:
+#     kernel_args_delta.append(f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}")
+# if protect_user_aslr:
+#     kernel_args_delta.append(f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}")
 
 pretty_print("Checking for required gem5 build...")
 requires(
@@ -106,12 +113,27 @@ if len(disk_image_paths) != 1:
     sys.exit("for now we are only dealing with single disk image ;-;")
 disk_image_path = disk_image_paths[0]
 
-pretty_print(f'       num_cores: {cpu_cores}', MessageType.CONFIG)
-pretty_print(f'     kernel_path: {kernel_path}', MessageType.CONFIG)
-pretty_print(f'  load_addr_mask: {hex(load_addr_mask)}', MessageType.CONFIG)
-pretty_print(f'load_addr_offset: {hex(load_addr_offset)}', MessageType.CONFIG)
-pretty_print(f'      addr_check: {"enabled" if addr_check else "disabled"}', MessageType.CONFIG)
-pretty_print(f' disk_image_path: {disk_image_path}', MessageType.CONFIG)
+cores_info = config.get("board").get("processor").get("cores")
+assert len(cores_info) > 0
+core_info = cores_info[0].get("core")
+protect_kaslr = core_info.get("protectKaslr")
+protect_module_kaslr = core_info.get("protectModuleKaslr")
+protect_user_aslr = core_info.get("protectUserAslr")
+
+kaslr_offset = config.get("board").get("workload").get("kaslr_offset")
+kernel_args = config.get("board").get("workload").get("command_line")
+
+pretty_print(f'           num_cores: {cpu_cores}', MessageType.CONFIG)
+pretty_print(f'         kernel_path: {kernel_path}', MessageType.CONFIG)
+pretty_print(f'      load_addr_mask: {hex(load_addr_mask)}', MessageType.CONFIG)
+pretty_print(f'    load_addr_offset: {hex(load_addr_offset)}', MessageType.CONFIG)
+pretty_print(f'          addr_check: {"enabled" if addr_check else "disabled"}', MessageType.CONFIG)
+pretty_print(f'     disk_image_path: {disk_image_path}', MessageType.CONFIG)
+pretty_print(f'       protect_kaslr: {protect_kaslr}', MessageType.CONFIG)
+pretty_print(f'protect_module_kaslr: {protect_module_kaslr}', MessageType.CONFIG)
+pretty_print(f'   protect_user_aslr: {protect_user_aslr}', MessageType.CONFIG)
+pretty_print(f'        kaslr_offset: {hex(kaslr_offset)}', MessageType.CONFIG)
+pretty_print(f'         kernel_args: {kernel_args}', MessageType.CONFIG)
 
 pretty_print("Setting up fixed system parameters...")
 
@@ -156,6 +178,7 @@ processor = SimpleProcessor(
     num_cores=cpu_cores,
     protect_kaslr=protect_kaslr,
     protect_module_kaslr=protect_module_kaslr,
+    protect_user_aslr=protect_user_aslr,
     kaslr_offset=kaslr_offset
 )
 
@@ -166,39 +189,23 @@ board = X86Board(
     cache_hierarchy=cache_hierarchy,
     load_addr_mask=load_addr_mask,
     load_addr_offset=load_addr_offset,
-    addr_check=addr_check
+    addr_check=addr_check,
+    kaslr_offset=kaslr_offset,
 )
 
-if protect_kaslr and protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + args.image_suffix
-elif protect_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect" + args.image_suffix
-elif protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + args.image_suffix
-else:
-    kernel_local_path = "/root/linux/vmlinux_gem5" + args.image_suffix
 board.set_kernel_disk_workload(
     kernel=CustomResource(
-        local_path=kernel_local_path
+        local_path=kernel_path
     ),
     # disk_image=Resource("x86-ubuntu-18.04-img"),
     disk_image=CustomDiskImageResource(
         local_path=disk_image_path,
-        disk_root_partition="1"
+        disk_root_partition=args.disk_root_partition
     ),
     readfile=args.script,
+    kernel_args=[kernel_args]
 )
 pretty_print(f"Script: {args.script}")
-
-parent_dir, _ = os.path.split(checkpoint_dir)
-if args.uuid_dir:
-    output_dir = os.path.join(args.outputs_dir, f'm5out-{uuid4()}')
-else:
-    output_dir = os.path.join(args.outputs_dir, "m5out-default-restore")
-set_outdir(output_dir)
-
-handle_std_redirects(args, output_dir)
-# set_debug_file(args, output_dir)
 
 def dirty_fix():
     yield False

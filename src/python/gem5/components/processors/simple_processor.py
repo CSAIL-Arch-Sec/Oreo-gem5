@@ -45,6 +45,7 @@ class SimpleProcessor(BaseCPUProcessor):
         self, cpu_type: CPUTypes, num_cores: int, isa: Optional[ISA] = None,
         protect_kaslr: bool = False,
         protect_module_kaslr: bool = False,
+        protect_user_aslr: bool = False,
         kaslr_offset: int = 0,
     ) -> None:
         """
@@ -70,6 +71,7 @@ class SimpleProcessor(BaseCPUProcessor):
                 SimpleCore(cpu_type=cpu_type, core_id=i, isa=isa,
                            protect_kaslr=protect_kaslr,
                            protect_module_kaslr=protect_module_kaslr,
+                           protect_user_aslr=protect_user_aslr,
                            kaslr_offset=kaslr_offset)
                 for i in range(num_cores)
             ]

@@ -16,6 +16,7 @@ def run(
         other_args = None,
         protect_kaslr: bool = True,
         protect_module_kaslr: bool = True,
+        protect_user_aslr: bool = True,
         kaslr_offset: int = 0xc000000,
         cpu_type: str = "O3",
         switch_cpu: bool = False,
@@ -37,6 +38,9 @@ def run(
 
     if protect_module_kaslr:
         cmd.append("--protect-module-kaslr")
+
+    if protect_user_aslr:
+        cmd.append("--protect-user-aslr")
 
     if save_checkpoint:
         cmd.append(f"--outputs-dir={output_dir}")

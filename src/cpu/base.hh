@@ -122,14 +122,15 @@ public:
     {
         KaslrKernelRegion = 0,
         KaslrModuleRegion = 1,
-        NumKaslrRegionType = 2
+        AslrUserRegion = 2,
+        NumKaslrRegionType = 3
     };
 
     bool protectKaslr[NumKaslrRegionType];
-    Addr regionStart[NumKaslrRegionType] = {0xffffff8000000000, 0xffffff8000000000};
-    Addr regionSize[NumKaslrRegionType] = {0x6000000000, 0x6000000000};
-    Addr regionAlignBits[NumKaslrRegionType] = {31, 31};
-    Addr regionMask[NumKaslrRegionType] = {0, 0};
+    Addr regionStart[NumKaslrRegionType] = {0xffffff8000000000, 0xffffff8000000000, 0};
+    Addr regionSize[NumKaslrRegionType] = {0x6000000000, 0x6000000000, 0x20000000000000};
+    Addr regionAlignBits[NumKaslrRegionType] = {31, 31, 48};
+    Addr regionMask[NumKaslrRegionType] = {0, 0, 0};
 
     // TODO: In the final design, we should not set kaslrOffset here.
     //  It should be read from page table / TLB during address translation.

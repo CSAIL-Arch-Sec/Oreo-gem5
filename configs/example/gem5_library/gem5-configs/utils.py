@@ -81,7 +81,7 @@ def handle_std_redirects(args, output_dir):
         stderr_file = args.stderr_file or os.path.join(output_dir, "sim_stdout")
         pretty_print(f"Redirecting stdout to: {stderr_file}")
         redir_fd = os.open(stderr_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
-        os.dup2(redir_fd, sys.stderr.fileno())
+        os.dup2(redir_fd, sys.stdout.fileno()) # [Shixin] Should be stdout?
 
 def set_debug_file(args, output_dir):
     debug_file_path = args.debug_file or os.path.join(output_dir, "sim_debug")

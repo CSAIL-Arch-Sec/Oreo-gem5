@@ -53,6 +53,7 @@ def run_blindside_one(
         offset: int,
         protect_text: bool,
         protect_module: bool,
+        protect_user: bool,
         debug_flags: str,
         debug_tick,
         debug_end_tick,
@@ -114,6 +115,9 @@ def run_blindside_one(
 
     if protect_module:
         cmd.append("--protect-module-kaslr")
+
+    if protect_user:
+        cmd.append("--protect-user-aslr")
 
     if image_suffix:
         cmd.append(f"--image-suffix={image_suffix}")

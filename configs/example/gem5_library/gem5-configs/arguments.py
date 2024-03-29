@@ -141,13 +141,13 @@ def add_kernel_disk_arguments(parser):
     parser.add_argument(
         "--disk-image-path",
         type=str,
-        default="/root/experiments/disk-image/experiments/experiments-image/experiments",
+        default="/root/experiments/disk-image/experiments.img",
         help="disk image path to use for run"
     )
     parser.add_argument(
         "--disk-root-partition",
         type=str,
-        default="1",
+        default="2",
         help="root partiton of disk image"
     )
 
@@ -228,10 +228,44 @@ def add_protect_kaslr_arguments(parser):
     )
 
     parser.add_argument(
+        "--protect-user-aslr",
+        action="store_true",
+        help="Whether to protect user ASLR.",
+    )
+
+    parser.add_argument(
         "--kaslr-offset",
         type=int,
-        default=0xc000000,
+        default=0xffffff8080000000,
         help="KASLR offset.",
+    )
+
+    parser.add_argument(
+        "--gem5-kaslr-align-bits",
+        type=int,
+        default=31,
+        help="Text KASLR delta align bits.",
+    )
+
+    parser.add_argument(
+        "--gem5-kaslr-delta",
+        type=int,
+        default=0,
+        help="Text KASLR delta.",
+    )
+
+    parser.add_argument(
+        "--gem5-module-kaslr-delta",
+        type=int,
+        default=0,
+        help="Module KASLR delta.",
+    )
+
+    parser.add_argument(
+        "--gem5-user-aslr-delta",
+        type=int,
+        default=0,
+        help="User ASLR delta.",
     )
 
     parser.add_argument(

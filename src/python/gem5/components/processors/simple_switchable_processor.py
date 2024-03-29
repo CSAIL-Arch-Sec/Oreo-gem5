@@ -54,6 +54,7 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
         isa: Optional[ISA] = None,
         protect_kaslr: bool = False,
         protect_module_kaslr: bool = False,
+        protect_user_aslr: bool = False,
         kaslr_offset: int = 0,
     ) -> None:
         """
@@ -94,6 +95,7 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
                 SimpleCore(cpu_type=starting_core_type, core_id=i, isa=isa,
                            protect_kaslr=protect_kaslr,
                            protect_module_kaslr=protect_module_kaslr,
+                           protect_user_aslr=protect_user_aslr,
                            kaslr_offset=kaslr_offset)
                 for i in range(num_cores)
             ],
@@ -101,6 +103,7 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
                 SimpleCore(cpu_type=switch_core_type, core_id=i, isa=isa,
                            protect_kaslr=protect_kaslr,
                            protect_module_kaslr=protect_module_kaslr,
+                           protect_user_aslr=protect_user_aslr,
                            kaslr_offset=kaslr_offset)
                 for i in range(num_cores)
             ],

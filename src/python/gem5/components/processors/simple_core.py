@@ -46,6 +46,7 @@ class SimpleCore(BaseCPUCore):
         self, cpu_type: CPUTypes, core_id: int, isa: Optional[ISA] = None,
             protect_kaslr: bool = False,
             protect_module_kaslr: bool = False,
+            protect_user_aslr: bool = False,
             kaslr_offset: int = 0,
     ):
 
@@ -62,6 +63,7 @@ class SimpleCore(BaseCPUCore):
                 isa=isa, cpu_type=cpu_type, core_id=core_id,
                 protect_kaslr=protect_kaslr,
                 protect_module_kaslr=protect_module_kaslr,
+                protect_user_aslr=protect_user_aslr,
                 kaslr_offset=kaslr_offset,
             ),
             isa=isa,
@@ -76,6 +78,7 @@ class SimpleCore(BaseCPUCore):
     def cpu_simobject_factory(cls, cpu_type: CPUTypes, isa: ISA, core_id: int,
                               protect_kaslr: bool = False,
                               protect_module_kaslr: bool = False,
+                              protect_user_aslr: bool = False,
                               kaslr_offset: int = 0):
         """
         A factory used to return the SimObject core object given the cpu type,
@@ -170,12 +173,18 @@ class SimpleCore(BaseCPUCore):
         else:
             print("@@@ In cpu core disable protect_module_kaslr")
 
+        if protect_user_aslr:
+            print("@@@ In cpu core enable protect_user_aslr")
+        else:
+            print("@@@ In cpu core disable protect_user_aslr")
+
 
         if issubclass(to_return_cls, BaseCPU):
             return to_return_cls(
                 cpu_id=core_id,
                 protectKaslr=protect_kaslr,
                 protectModuleKaslr=protect_module_kaslr,
+                protectUserAslr=protect_user_aslr,
                 kaslrOffset=kaslr_offset,
             )
 

@@ -183,6 +183,7 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
     // [Shixin] Config whether to protect kaslr
     protectKaslr[0] = p.protectKaslr;
     protectKaslr[1] = p.protectModuleKaslr;
+    protectKaslr[2] = p.protectUserAslr;
     kaslrOffset = p.kaslrOffset;
 
     // [Shixin] Calculate addr mask based on KASLR randomization region

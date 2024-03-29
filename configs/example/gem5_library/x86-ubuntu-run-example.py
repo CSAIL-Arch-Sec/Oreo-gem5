@@ -2,7 +2,7 @@ import argparse
 
 from gem5.utils.requires import requires
 from gem5.components.boards.x86_board import X86Board
-from gem5.components.memory.single_channel import SingleChannelDDR3_1600
+from gem5.components.memory import DualChannelDDR4_2400
 from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (MESITwoLevelCacheHierarchy,)
 from gem5.components.processors.simple_switchable_processor import SimpleSwitchableProcessor
 from gem5.coherence_protocol import CoherenceProtocol
@@ -30,12 +30,46 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--protect-user-aslr",
+    action="store_true",
+    help="Whether to protect user ASLR.",
+)
+
+parser.add_argument(
     "--kaslr-offset",
     type=int,
     # default=0,
     default=0xffffff8080000000,
     # default=0xfffffe8680000000,
     help="KASLR offset.",
+)
+
+parser.add_argument(
+    "--gem5-kaslr-align-bits",
+    type=int,
+    default=31,
+    help="Text KASLR delta align bits.",
+)
+
+parser.add_argument(
+    "--gem5-kaslr-delta",
+    type=int,
+    default=0,
+    help="Text KASLR delta.",
+)
+
+parser.add_argument(
+    "--gem5-module-kaslr-delta",
+    type=int,
+    default=0,
+    help="Module KASLR delta.",
+)
+
+parser.add_argument(
+    "--gem5-user-aslr-delta",
+    type=int,
+    default=0,
+    help="User ASLR delta.",
 )
 
 # NOTE: We may keep load_addr_offset = 0 if we do not
@@ -72,7 +106,6 @@ parser.add_argument(
 parser.add_argument(
     "--disk-image-path",
     type=str,
-    # default="/root/experiments/disk-image/packer-ubuntu-server-uefi/output-experiments/packer-experiments",
     default="/root/experiments/disk-image/experiments.img",
     help="disk image path to use for run"
 )
@@ -102,8 +135,21 @@ if args.protect_module_kaslr:
 else:
     protect_module_kaslr = False
 
-kaslr_offset = args.kaslr_offset
+if args.protect_user_aslr:
+    protect_user_aslr = True
+else:
+    protect_user_aslr = False
+
+kaslr_offset = args.kaslr_offset + (args.gem5_kaslr_delta << args.gem5_kaslr_align_bits)
 print("@@@ KASLR offset:", hex(kaslr_offset))
+
+kernel_args_delta = []
+if protect_module_kaslr or protect_user_aslr:
+    kernel_args_delta.append("--")
+if protect_module_kaslr:
+    kernel_args_delta.append(f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}")
+if protect_user_aslr:
+    kernel_args_delta.append(f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}")
 
 starting_core = get_cpu_type_from_str(args.starting_core)
 switch_core = get_cpu_type_from_str(args.switch_core)
@@ -133,7 +179,7 @@ cache_hierarchy = MESITwoLevelCacheHierarchy(
 # Note, by default DDR3_1600 defaults to a size of 8GiB. However, a current
 # limitation with the X86 board is it can only accept memory systems up to 3GB.
 # As such, we must fix the size.
-memory = SingleChannelDDR3_1600("2GiB")
+memory = DualChannelDDR4_2400(size="3GB")
 
 # Here we setup the processor. This is a special switchable processor in which
 # a starting core type and a switch core type must be specified. Once a
@@ -148,6 +194,7 @@ processor = SimpleSwitchableProcessor(
     num_cores=1,
     protect_kaslr=protect_kaslr,
     protect_module_kaslr=protect_module_kaslr,
+    protect_user_aslr=protect_user_aslr,
     kaslr_offset=kaslr_offset,
 )
 
@@ -158,7 +205,7 @@ board = X86Board(
     memory=memory,
     cache_hierarchy=cache_hierarchy,
     load_addr_offset=args.load_addr_offset,
-    kaslr_offset=args.kaslr_offset,
+    kaslr_offset=kaslr_offset,
 )
 
 # This is the command to run after the system has booted. The first `m5 exit`
@@ -178,14 +225,24 @@ command = "m5 exit;" \
 # and, optionally, a the contents of the "readfile". In the case of the
 # "x86-ubuntu-18.04-img", a file to be executed as a script after booting the
 # system.
-if protect_kaslr and protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + args.image_suffix
-elif protect_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect" + args.image_suffix
-elif protect_module_kaslr:
-    kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + args.image_suffix
+if protect_user_aslr:
+    if protect_kaslr and protect_module_kaslr:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_all" + args.image_suffix
+    elif protect_kaslr:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_text_user" + args.image_suffix
+    elif protect_module_kaslr:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_module_user" + args.image_suffix
+    else:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_user" + args.image_suffix
 else:
-    kernel_local_path = "/root/linux/vmlinux_gem5" + args.image_suffix
+    if protect_kaslr and protect_module_kaslr:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + args.image_suffix
+    elif protect_kaslr:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect" + args.image_suffix
+    elif protect_module_kaslr:
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + args.image_suffix
+    else:
+        kernel_local_path = "/root/linux/vmlinux_gem5" + args.image_suffix
 board.set_kernel_disk_workload(
     kernel=
     # Resource("x86-linux-kernel-5.4.49",),
@@ -199,6 +256,13 @@ board.set_kernel_disk_workload(
     ),
     # readfile_contents=command,
     readfile=args.script,
+    kernel_args=[
+        "earlyprintk=ttyS0",
+        "console=ttyS0",
+        "lpj=7999923",
+        "root={root_value}",
+        *kernel_args_delta
+    ]
 )
 
 def dirty_fix():
