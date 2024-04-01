@@ -1,7 +1,9 @@
+import shutil
 import uuid
 from pathlib import Path
 from enum import Enum
 import subprocess
+import arrow
 
 script_dir = Path(__file__).resolve().parent
 proj_dir = script_dir.parent
@@ -110,7 +112,7 @@ def get_checkpoint_args(
         starting_core: str, switch_core: str,
         protect_kaslr: bool, protect_module_kaslr: bool, protect_user_aslr: bool,
         gem5_kaslr_delta: int, gem5_module_kaslr_delta: int, gem5_user_aslr_delta: int,
-        add_checkpoint: str, use_uuid: bool, suffix: str,
+        add_checkpoint: str, uuid_str: str, suffix: str,
 ):
     if sim_mode == SimMode.SIMPLE:
         return []
@@ -122,10 +124,10 @@ def get_checkpoint_args(
     elif sim_mode == SimMode.RESTORE:
         checkpoint_dir = get_output_dir(
             SimMode.SAVE,
-            starting_core, switch_core,
+            starting_core, starting_core,
             protect_kaslr, protect_module_kaslr, protect_user_aslr,
             gem5_kaslr_delta, gem5_module_kaslr_delta, gem5_user_aslr_delta,
-            use_uuid, suffix
+            False, uuid_str, suffix
         )
         result = [f"--checkpoint-dir={checkpoint_dir}"]
         if add_checkpoint:
@@ -147,7 +149,7 @@ def get_output_dir(
         starting_core: str, switch_core: str,
         protect_kaslr: bool, protect_module_kaslr: bool, protect_user_aslr: bool,
         gem5_kaslr_delta: int, gem5_module_kaslr_delta: int, gem5_user_aslr_delta: int,
-        use_uuid: bool, suffix: str
+        use_uuid: bool, uuid_str: str, suffix: str
 ):
     dir_name_list = [
         sim_mode.name.lower(),
@@ -160,7 +162,10 @@ def get_output_dir(
     result = proj_dir / "result" / "_".join(dir_name_list)
     if sim_mode == SimMode.SAVE:
         if use_uuid:
-            result = result / str(uuid.uuid4())
+            # result = result / str(uuid.uuid4())
+            result = result / arrow.now().format("YYYY-MM-DD-HH-mm-ss")
+        elif uuid_str:
+            result = result / uuid_str
         else:
             result = result / "default"
     return result
@@ -185,7 +190,7 @@ def run_one_test(
         gem5_kaslr_delta: int, gem5_module_kaslr_delta: int, gem5_user_aslr_delta: int,
         exp_script_path: Path,
         add_checkpoint: str,
-        use_uuid: bool, suffix: str
+        use_uuid: bool, uuid_str: str, suffix: str
 ):
     if sim_option not in ["fast", "opt"]:
         print(f"Error: sim option {sim_option} is not supported!!!")
@@ -207,9 +212,8 @@ def run_one_test(
         starting_core, switch_core,
         protect_kaslr, protect_module_kaslr, protect_user_aslr,
         gem5_kaslr_delta, gem5_module_kaslr_delta, gem5_user_aslr_delta,
-        use_uuid, suffix
+        use_uuid, "", suffix
     )
-    output_dir.mkdir(exist_ok=True, parents=True)
     stdout_path = output_dir / "stdout.log"
     stderr_path = output_dir / "stderr.log"
 
@@ -242,13 +246,20 @@ def run_one_test(
         starting_core, switch_core,
         protect_kaslr, protect_module_kaslr, protect_user_aslr,
         gem5_kaslr_delta, gem5_module_kaslr_delta, gem5_user_aslr_delta,
-        add_checkpoint, use_uuid, suffix
+        add_checkpoint, uuid_str, suffix
     ))
 
     cmd_str = " ".join(cmd)
     print(cmd_str)
 
     ret = 0
+
+    # return 0
+
+    output_dir.mkdir(exist_ok=True, parents=True)
+    for child in output_dir.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child)
 
     with stdout_path.open(mode="w") as stdout_file:
         with stderr_path.open(mode="w") as stderr_file:
