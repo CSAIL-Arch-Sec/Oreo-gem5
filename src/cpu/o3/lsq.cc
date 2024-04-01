@@ -908,7 +908,7 @@ LSQ::pushRequest(const DynInstPtr& inst, bool isLoad, uint8_t *data,
                         // corrKaslrDelta is missing since page is unmapped
                     }
                 } else if (fault == NoFault) {
-                    warn("@@@ corrKaslrDelta is missing wihtout any fault "
+                    warn("@@@ corrKaslrDelta is missing without any fault "
                          "pc: %lx, upc: %lx, realAddr: %lx, effAddr: %lx\n",
                          inst->pcState().instAddr(), inst->pcState().microPC(),
                          inst->realAddr, inst->effAddr);
