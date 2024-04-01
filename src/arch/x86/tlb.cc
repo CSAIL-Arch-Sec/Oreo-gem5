@@ -216,6 +216,10 @@ TLB::translateInt(bool read, RequestPtr req, ThreadContext *tc)
     Addr vaddr = req->getVaddr();
     Addr prefix = (vaddr >> 3) & IntAddrPrefixMask;
     if (prefix == IntAddrPrefixCPUID) {
+        // [Shixin] Dirty fix for unimplemented case
+        std::clog << "### " << curTick() << " " << std::hex << vaddr << " " << prefix << std::endl;
+        warn("CPUID memory space not yet implemented!\n");
+        return std::make_shared<UnimpFault>("CPUID memory space not yet implemented!");
         panic("CPUID memory space not yet implemented!\n");
     } else if (prefix == IntAddrPrefixMSR) {
         vaddr = (vaddr >> 3) & ~IntAddrPrefixMask;
@@ -267,6 +271,10 @@ TLB::translateInt(bool read, RequestPtr req, ThreadContext *tc)
         }
         return NoFault;
     } else {
+        // [Shixin] Dirty fix for unimplemented case
+        std::clog << "### " << curTick() << " " << std::hex << vaddr << " " << prefix << std::endl;
+        warn("CPUID memory space not yet implemented!\n");
+        return std::make_shared<UnimpFault>("Access to unrecognized internal address space");
         panic("Access to unrecognized internal address space %#x.\n",
                 prefix);
     }
