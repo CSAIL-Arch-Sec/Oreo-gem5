@@ -206,6 +206,8 @@ class ThreadContext : public PCEventScope
 
     virtual const PCStateBase &corrPcState() const = 0;
 
+    virtual void fixPcStateKvmCpt(PCStateBase &unmaskedPc) {}
+
     virtual void pcStateNoRecord(const PCStateBase &val) = 0;
 
     virtual RegVal readMiscRegNoEffect(RegIndex misc_reg) const = 0;

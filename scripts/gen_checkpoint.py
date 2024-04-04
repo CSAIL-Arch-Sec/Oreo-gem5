@@ -17,7 +17,7 @@ def gen_one_checkpoint(
     delta_arg_dict = gen_delta_args(delta_args)
     exp_script_path = Path("/root/experiments/command-scripts") / "exit_immediate.rcS"
 
-    ret = run_one_test(
+    ret, output_dir = run_one_test(
         sim_mode=SimMode.SAVE,
         sim_option="fast", debug_flags="",
         starting_core=core, switch_core=core,
@@ -32,8 +32,10 @@ def gen_one_checkpoint(
 
     if ret:
         print(f"Failed generating one checkpoint, ret = {ret}!!!")
+        return None
     else:
         print("Successfully generating one checkpoint.")
+        return output_dir
 
 
 def main():
@@ -41,7 +43,8 @@ def main():
         # TODO: Use kvm generate checkpoint in the middle may help debug user aslr!
         # ["kvm", "0,0,0", "0,0,0", "500000000000,100000000000,1", False, ""],
         # ["kvm", "1,1,0", "0,0,0", "800000000000,100000000000,10", False, ""],
-        ["kvm", "0,0,0", "0,0,0", "", False, ""],
+        # ["kvm", "1,1,0", "0,0,0", "2500000000000,100000000000,5", False, ""],
+        # ["kvm", "1,1,0", "0,0,0", "", False, ""],
         # ["o3", "0,0,0", "0,0,0", "", True, ""], # Failed after: PCI: CLS 0 bytes, default 64
         # ["o3", "0,0,0", "c,6,0", "", True, ""], # Failed after: PCI: CLS 0 bytes, default 64
         # ["o3", "0,0,0", "c,0,0", "", True, ""],

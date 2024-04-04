@@ -229,6 +229,9 @@ unserialize(ThreadContext &tc, CheckpointIn &cp)
 
     std::unique_ptr<PCStateBase> pc_state(tc.pcState().clone());
     pc_state->unserialize(cp);
+    std::clog << "@@@ unserialize before fix pc " << *pc_state << std::endl;
+    tc.fixPcStateKvmCpt(*pc_state);
+    std::clog << "@@@ unserialize after fix pc " << *pc_state << std::endl;
     tc.pcState(*pc_state);
 
     // thread_num and cpu_id are deterministic from the config

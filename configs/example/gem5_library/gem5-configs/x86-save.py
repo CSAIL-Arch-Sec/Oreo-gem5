@@ -149,24 +149,31 @@ board = X86Board(
     kaslr_offset=kaslr_offset,
 )
 
+# Support boot linux with kvm when protecting kernel text aslr
+if is_kvm_cpu and protect_kaslr:
+    image_suffix = "_kvm" + args.image_suffix
+else:
+    image_suffix = args.image_suffix
+
 if protect_user_aslr:
     if protect_kaslr and protect_module_kaslr:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect_all" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_all" + image_suffix
     elif protect_kaslr:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect_text_user" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_text_user" + image_suffix
     elif protect_module_kaslr:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect_module_user" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_module_user" + image_suffix
     else:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect_user" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_user" + image_suffix
 else:
     if protect_kaslr and protect_module_kaslr:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_both" + image_suffix
     elif protect_kaslr:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect" + image_suffix
     elif protect_module_kaslr:
-        kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5_protect_module" + image_suffix
     else:
-        kernel_local_path = "/root/linux/vmlinux_gem5" + args.image_suffix
+        kernel_local_path = "/root/linux/vmlinux_gem5" + image_suffix
+
 print("Kernel path:", kernel_local_path)
 board.set_kernel_disk_workload(
     # The x86 linux kernel will be automatically downloaded to the

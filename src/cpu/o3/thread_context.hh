@@ -189,6 +189,13 @@ class ThreadContext : public gem5::ThreadContext
         return cpu->corrPcState(thread->threadId());
     }
 
+    void fixPcStateKvmCpt(PCStateBase &unmaskedPc) override {
+        auto &pc = unmaskedPc.as<X86ISA::PCState>();
+        pc.kaslrCorrDelta(cpu->getKaslrDeltaFromPC(pc.pc()));
+        pc.pc(cpu->protectKaslrMask(pc.pc()));
+        pc.npc(cpu->protectKaslrMask(pc.npc()));
+    }
+
     void pcStateNoRecord(const PCStateBase &val) override;
 
     /** Reads a miscellaneous register. */
