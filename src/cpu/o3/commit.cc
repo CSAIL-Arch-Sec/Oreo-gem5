@@ -1151,6 +1151,12 @@ Commit::commitInsts()
                               pc[tid]->instAddr(), head_inst->realAddr);
                     }
                 }
+
+                if (head_inst->mwaitEmptyPackageError()) {
+                    std::clog << "@@@ " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
+                    warn("### mwaitEmptyPackageError\n");
+                }
+
                 // [Shixin]
 
                 if (pc[tid]->instAddr() >= 0xffffffffc0000000 || head_inst->staticInst->getName() == "gem5Op") {

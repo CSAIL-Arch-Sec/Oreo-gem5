@@ -189,6 +189,7 @@ class DynInst : public ExecContext, public RefCounted
         KaslrIMemDelayError,    /// [Shixin] Protect Kaslr delay fetch error
         KaslrTagetDelayError,   /// [Shixin] Protect Kaslr delay target error
         KaslrDMemDelayError,    /// [Shixin] Protect Kaslr delay ld/st error
+        MwaitEmptyPackageError, /// [Shixin] Mwait empty package error
         MaxFlags
     };
 
@@ -389,6 +390,11 @@ class DynInst : public ExecContext, public RefCounted
     /** [Shixin] Whether or not ld/st address in KASLR region has wrong detla. */
     bool kaslrDMemDelayError() const { return instFlags[KaslrDMemDelayError]; }
     void kaslrDMemDelayError(bool b) { instFlags[KaslrDMemDelayError] = b; }
+
+    /** [Shixin] Mwait completeAcc with empty pkt (causes segfault on original gem5.
+     * Check whether it affects the commit, if not, then it is safe to ignore this case. */
+    bool mwaitEmptyPackageError() const { return instFlags[MwaitEmptyPackageError]; }
+    void mwaitEmptyPackageError(bool b) { instFlags[MwaitEmptyPackageError] = b; }
 
 
     ////////////////////////////////////////////

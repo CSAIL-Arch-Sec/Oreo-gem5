@@ -236,6 +236,11 @@ BaseCPU::mwait(ThreadID tid, PacketPtr pkt)
     AddressMonitor &monitor = addressMonitor[tid];
 
     if (!monitor.gotWakeup) {
+        if (!pkt) {
+            std::clog << "!!! BaseCPU::mwait no pkt!!!" << std::endl;
+            return false;
+        }
+
         int block_size = cacheLineSize();
         uint64_t mask = ~((uint64_t)(block_size - 1));
 

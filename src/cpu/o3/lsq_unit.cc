@@ -602,6 +602,11 @@ LSQUnit::executeLoad(const DynInstPtr &inst)
     if (load_fault == NoFault && !inst->readMemAccPredicate()) {
         assert(inst->readPredicate());
         inst->setExecuted();
+        // TODO: Figure out the reason why this happens later!!!
+        if (inst->staticInst->getName() == "mwait") {
+            std::clog << "@@@ LSQUnit::executeLoad mwait completeAcc with no pkt " << inst->pcState() << std::endl;
+            inst->mwaitEmptyPackageError(true);
+        }
         inst->completeAcc(nullptr);
         iewStage->instToCommit(inst);
         iewStage->activityThisCycle();
