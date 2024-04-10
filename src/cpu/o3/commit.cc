@@ -1099,23 +1099,26 @@ Commit::commitInsts()
                 if (archPCAddr != updatePCAddr && !isRomMicroPC(pc[tid]->microPC())) {
                     // For non ROM inst, at commit time it should get its corr PC
                     // We check whether arch PC matches corr PC, and raise fault if not
-                    std::clog << "Tick " << std::hex << curTick() << " ArchPC ";
-                    origPC.output(std::clog);
-                    std::clog << " CorrPC ";
-                    updatePC.output(std::clog);
-                    std::clog << std::endl;
-                    panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
-                          curTick(), cpu->cpuId(), tid,
-                          cpu->totalInsts(),
-                          archPCAddr, updatePCAddr);
+                    if (checkPcDelta[tid] || cpu->protectKaslrMask(archPCAddr) != cpu->protectKaslrMask(updatePCAddr)) {
+                        std::clog << "Tick " << std::hex << curTick() << " ArchPC " << origPC << " CorrPC " << updatePC << std::endl;
+                        std::clog << std::hex << origPCDelta << "=>" << origNPCDelta << " " << updatePCDelta << "=>" << updateNPCDelta << std::endl;
+                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
+                              curTick(), cpu->cpuId(), tid,
+                              cpu->totalInsts(),
+                              archPCAddr, updatePCAddr);
+                    } else {
+                        std::clog << "Tick " << std::hex << curTick() << " ArchPC " << origPC << " CorrPC " << updatePC << std::endl;
+                        std::clog << std::hex << origPCDelta << "=>" << origNPCDelta << " " << updatePCDelta << "=>" << updateNPCDelta << std::endl;
+                        warn("### tick (%lx) cpu (%lx) skip KASLR violation on non indirect branch at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
+                              curTick(), cpu->cpuId(), tid,
+                              cpu->totalInsts(),
+                              archPCAddr, updatePCAddr);
+                    }
                 }
                 if (isRomMicroPC(pc[tid]->microPC())) {
                     if (cpu->protectKaslrMask(archPCAddr) != cpu->protectKaslrMask(updatePCAddr)) {
-                        std::clog << "ArchPC ";
-                        origPC.output(std::clog);
-                        std::clog << " CorrPC ";
-                        updatePC.output(std::clog);
-                        std::clog << std::endl;
+                        std::clog << "Tick " << std::hex << curTick() << " ArchPC " << origPC << " CorrPC " << updatePC << std::endl;
+                        std::clog << std::hex << origPCDelta << "=>" << origNPCDelta << " " << updatePCDelta << "=>" << updateNPCDelta << std::endl;
                         panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst origPC != corrPC\n",
                               curTick(), cpu->cpuId(), tid,
                               cpu->totalInsts());
@@ -1127,6 +1130,13 @@ Commit::commitInsts()
                     updatePC.kaslrNpcDelta(updateNPCDelta);
                 } else if (updatePC.upc() == 0) {
                     updatePC.kaslrNpcDelta(updatePCDelta);
+                }
+
+                // NOTE: We may only check delta for targets of indirect branches in kernel mode
+                if (head_inst->isIndirectCtrl() || (int64_t) pc[tid]->instAddr() > 0) {
+                    checkPcDelta[tid] = true;
+                } else {
+                    checkPcDelta[tid] = false;
                 }
 
                 /// New Implementation
@@ -1156,6 +1166,14 @@ Commit::commitInsts()
                     std::clog << "@@@ " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
                     warn("### mwaitEmptyPackageError\n");
                 }
+
+//                static bool start_print = false;
+//                if ((pc[tid]->instAddr() & 0xff0000000000) == 0x560000000000) {
+//                    start_print = true;
+//                }
+//                if (start_print) {
+//                    std::cout << "@@@ " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
+//                }
 
                 // [Shixin]
 

@@ -426,6 +426,7 @@ class Commit
      */
     std::unique_ptr<PCStateBase> pc[MaxThreads];
     std::unique_ptr<PCStateBase> corrPC[MaxThreads];
+    bool checkPcDelta[MaxThreads];
 
     /** The sequence number of the youngest valid instruction in the ROB. */
     InstSeqNum youngestSeqNum[MaxThreads];
