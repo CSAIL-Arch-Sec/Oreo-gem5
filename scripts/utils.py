@@ -171,7 +171,7 @@ def get_output_dir(
             result = result / uuid_str
         else:
             result = result / "default"
-    if sim_mode == SimMode.RESTORE:
+    if sim_mode == SimMode.RESTORE or sim_mode == SimMode.SIMPLE:
         assert exp_script_name
         result = result / exp_script_name
     return result

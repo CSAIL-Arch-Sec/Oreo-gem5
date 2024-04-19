@@ -61,13 +61,18 @@ load_addr_offset = args.load_addr_offset
 print("@@@ KASLR offset:", hex(kaslr_offset))
 print("@@@ Physical load offset:", hex(load_addr_offset))
 
-kernel_args_delta = []
-if protect_module_kaslr or protect_user_aslr:
-    kernel_args_delta.append("--")
-if protect_module_kaslr:
-    kernel_args_delta.append(f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}")
-if protect_user_aslr:
-    kernel_args_delta.append(f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}")
+kernel_args_delta = [
+    "--",
+    f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}",
+    f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}",
+]
+# kernel_args_delta = []
+# if protect_module_kaslr or protect_user_aslr:
+#     kernel_args_delta.append("--")
+# if protect_module_kaslr:
+#     kernel_args_delta.append(f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}")
+# if protect_user_aslr:
+#     kernel_args_delta.append(f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}")
 
 # We check for the required gem5 build.
 

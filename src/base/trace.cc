@@ -65,6 +65,17 @@ namespace trace
 
 Logger *debug_logger = NULL;
 
+// [Shixin] Only enable debug trace in ROI
+static bool in_roi = false;
+
+bool get_in_roi() {
+    return in_roi;
+}
+
+void flip_in_roi() {
+    in_roi = !in_roi;
+}
+
 Logger *
 getDebugLogger()
 {

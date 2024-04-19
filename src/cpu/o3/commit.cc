@@ -1177,12 +1177,28 @@ Commit::commitInsts()
 
                 // [Shixin]
 
+                if (head_inst->staticInst->getName() == "gem5Op") {
+                    trace::flip_in_roi();
+                }
+
                 if (pc[tid]->instAddr() >= 0xffffffffc0000000 || head_inst->staticInst->getName() == "gem5Op") {
                     DPRINTF(PTW, "Commit PC %s %s\n", *pc[tid], head_inst->staticInst->getName().c_str());
                     DPRINTF(PTW, "[tid:%i] ROB has %d insts & %d free entries.\n",
                             tid, rob->countInsts(tid), rob->numFreeEntries(tid));
 //                    std::clog << "@@@ Tick " << curTick() << " commit pc (success) " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
                 }
+
+//                static bool start_print = false;
+//                if (head_inst->staticInst->getName() == "gem5Op") {
+//                    start_print = !start_print;
+//                }
+//                if (start_print && (int64_t) pc[tid]->instAddr() < 0) {
+//                    std::cout << "@@@ Commit " << std::hex << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
+//                }
+
+//                if (pc[tid]->instAddr() >= 0x5555555551e6 && pc[tid]->instAddr() < 0x555555555236) {
+//                    std::cout << "@@@ Commit " << std::hex << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
+//                }
 
 //                if (pc[tid]->instAddr() < 0x600000000000 && pc[tid]->instAddr() % 0x1000 == 0x722) {
 //                    std::clog << "@@@ Tick " << curTick() << " thread " << tid << " commit PC " << *pc[tid] << std::endl;

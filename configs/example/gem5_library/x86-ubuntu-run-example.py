@@ -143,13 +143,17 @@ else:
 kaslr_offset = args.kaslr_offset + (args.gem5_kaslr_delta << args.gem5_kaslr_align_bits)
 print("@@@ KASLR offset:", hex(kaslr_offset))
 
-kernel_args_delta = []
-if protect_module_kaslr or protect_user_aslr:
-    kernel_args_delta.append("--")
-if protect_module_kaslr:
-    kernel_args_delta.append(f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}")
-if protect_user_aslr:
-    kernel_args_delta.append(f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}")
+kernel_args_delta = [
+    "--",
+    f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}",
+    f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}",
+]
+# if protect_module_kaslr or protect_user_aslr:
+#     kernel_args_delta.append("--")
+# if protect_module_kaslr:
+#     kernel_args_delta.append(f"gem5_module_kaslr_delta={args.gem5_module_kaslr_delta}")
+# if protect_user_aslr:
+#     kernel_args_delta.append(f"gem5_user_aslr_delta={args.gem5_user_aslr_delta}")
 
 starting_core = get_cpu_type_from_str(args.starting_core)
 switch_core = get_cpu_type_from_str(args.switch_core)

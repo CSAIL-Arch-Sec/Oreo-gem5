@@ -1455,6 +1455,10 @@ Fetch::fetch(bool &status_change)
 //                std::clog << "@@@ Tick " << std::hex << curTick() << " PC " << this_pc << " " << staticInst->getName() << std::endl;
             }
 
+//            if (this_pc.instAddr() >= 0x5555555551e6 && this_pc.instAddr() < 0x555555555236) {
+//                std::cout << "@@@ Fetch " << std::hex << curTick() << " " << this_pc << " " << staticInst->getName() << std::endl;
+//            }
+
             // [Shixin] When construct dyn inst, pred_pc = this_pc. After doing prediction, pred_pc is updated.
             DynInstPtr instruction = buildInst(
                     tid, staticInst, curMacroop,

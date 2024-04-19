@@ -333,6 +333,11 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
         pte.a = 1;
         entry.writable = entry.writable && pte.w;
         entry.user = entry.user && pte.u;
+
+//        if ((vaddr & 0xfffffff00ffff000) == 0xffffff8001800000) {
+//            std::cout << std::hex << "@@@ PTW for " << vaddr << " " << pte << std::endl;
+//        }
+
         if (badNX || !pte.p) {
             doEndWalk = true;
             fault = pageFault(pte.p);
@@ -361,6 +366,14 @@ Walker::WalkerState::stepWalk(PacketPtr &write)
                 // User space
                 entry.kaslrDelta &= 0x1f;
             }
+
+//            if ((int64_t) vaddr < 0 && mode == BaseMMU::Execute) {
+//                std::cout << std::hex << "@@@ PTW insert " << vaddr << " " << pte << std::endl;
+//            }
+
+//            if ((vaddr & 0xfffffff00ffff000) == 0xffffff8001800000) {
+//                std::cout << std::hex << "@@@ PTW insert " << vaddr << " " << pte << std::endl;
+//            }
 
 //            if (entry.vaddr >= 0xffffff8000000000) {
 //                std::clog << std::hex << "Vaddr " << entry.vaddr << " delta " << entry.kaslrDelta << std::endl;

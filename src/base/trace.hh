@@ -138,6 +138,10 @@ void setDebugLogger(Logger *logger);
 void enable();
 void disable();
 
+// [Shixin] Only enable debug trace in ROI
+bool get_in_roi();
+void flip_in_roi();
+
 } // namespace trace
 
 // This silly little class allows us to wrap a string in a functor
@@ -184,7 +188,7 @@ struct StringWrap
 } while (0)
 
 #define DPRINTF(x, ...) do {                     \
-    if (GEM5_UNLIKELY(TRACING_ON && ::gem5::debug::x)) {   \
+    if (GEM5_UNLIKELY(TRACING_ON && ::gem5::trace::get_in_roi() && ::gem5::debug::x)) {   \
         ::gem5::trace::getDebugLogger()->dprintf_flag(   \
             ::gem5::curTick(), name(), #x, __VA_ARGS__); \
     }                                            \
