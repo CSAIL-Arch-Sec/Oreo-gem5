@@ -1192,7 +1192,7 @@ Commit::commitInsts()
                 static bool clear_bp = true;
                 static uint64_t total_kernel_op = 0;
                 static uint64_t total_user_op = 0;
-                static uint64_t i = 0;
+                static uint64_t j = 0;
                 if (head_inst->staticInst->getName() == "gem5Op") {
                     start_print = !start_print;
 //                    if (clear_bp) {
@@ -1200,7 +1200,7 @@ Commit::commitInsts()
 //                        std::cout << "@@@ Tick " << curTick() << " clear_bp" << std::endl;
 //                        clear_bp = false;
 //                    }
-                    if (!start_print && i++ < 10) {
+                    if (!start_print && j++ < 10) {
                         std::cout << "@@@ #kernel op " << total_kernel_op << " #user op " << total_user_op
                             << " PC " << *pc[tid] << std::endl;
                         total_kernel_op = 0;
