@@ -25,7 +25,7 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
     gen_setup_list = list(map(lambda x: get_gen_setup(*x), sim_setup_list))
     print(gen_setup_list)
 
-    with multiprocessing.Pool(16) as p:
+    with multiprocessing.Pool(6) as p:
         pool_ret = p.starmap(gen_one_checkpoint, gen_setup_list)
 
     assert len(pool_ret) == len(sim_setup_list)
