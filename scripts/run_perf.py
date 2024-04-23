@@ -94,9 +94,10 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
 )
 @click.option(
     "--num-cores",
-    type=click.INT
+    type=click.INT,
+    default=12,
 )
-def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int):
+def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores: int):
     sim_setup_base = [
         ["fast", "", "kvm", "o3", "0,0,0", "0,0,0", None, ""],
         ["fast", "", "kvm", "o3", "0,0,0", "c,0,0", None, ""],
@@ -136,7 +137,7 @@ def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int):
     for x in args_list:
         print(x)
 
-    with multiprocessing.Pool(12) as p:
+    with multiprocessing.Pool(num_cores) as p:
         p.starmap(re_one_checkpoint, args_list)
 
 
