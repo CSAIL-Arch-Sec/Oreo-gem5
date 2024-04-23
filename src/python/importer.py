@@ -45,7 +45,7 @@ class ByteCodeLoader(importlib.abc.Loader):
 class CodeImporter(object):
     def __init__(self):
         self.modules = {}
-        override_var = os.environ.get("M5_OVERRIDE_PY_SOURCE", "false")
+        override_var = os.environ.get("M5_OVERRIDE_PY_SOURCE", "true")
         self.override = override_var.lower() in ("true", "yes")
 
     def add_module(self, abspath, modpath, code):

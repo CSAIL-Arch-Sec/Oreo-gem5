@@ -74,6 +74,12 @@ class BPredUnit : public SimObject
      */
     BPredUnit(const Params &p);
 
+    virtual void reset(ThreadID tid) {
+        BTB.reset();
+        predHist[tid].clear();
+        assert(predHist[tid].empty());
+    }
+
     void regProbePoints() override;
 
     /** Perform sanity checks after a drain. */

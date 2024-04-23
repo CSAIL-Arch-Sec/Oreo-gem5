@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 from enum import Enum
 import subprocess
+from tenacity import retry
 
 script_dir = Path(__file__).resolve().parent
 proj_dir = script_dir.parent
@@ -159,21 +160,25 @@ def get_output_dir(
         f"{int(protect_kaslr)}{int(protect_module_kaslr)}{int(protect_user_aslr)}",
         f"{gem5_kaslr_delta:02x}{gem5_module_kaslr_delta:02x}{gem5_user_aslr_delta:02x}",
     ]
-    if suffix:
-        dir_name_list.append(suffix)
+    # if suffix:
+    #     dir_name_list.append(suffix)
     result = proj_dir / "result" / "_".join(dir_name_list)
     if sim_mode == SimMode.SAVE:
         if use_uuid:
             # result = result / str(uuid.uuid4())
             import arrow
-            result = result / arrow.now().format("YYYY-MM-DD-HH-mm-ss")
+            subdir_name = arrow.now().format("YYYY-MM-DD-HH-mm-ss")
         elif uuid_str:
-            result = result / uuid_str
+            subdir_name = uuid_str
         else:
-            result = result / "default"
+            subdir_name = "default"
+        if suffix:
+            result = result / f"{subdir_name}_{suffix}"
+        else:
+            result = result / subdir_name
     if sim_mode == SimMode.RESTORE or sim_mode == SimMode.SIMPLE:
         assert exp_script_name
-        result = result / exp_script_name
+        result = result / f"{exp_script_name}_{suffix}"
     return result
 
 
@@ -225,7 +230,7 @@ def run_one_test(
     stderr_path = output_dir / "stderr.log"
 
     cmd = [
-        "M5_OVERRIDE_PY_SOURCE=true",
+        # "M5_OVERRIDE_PY_SOURCE=true",
         gem5_bin,
         debug_option,
         f"--debug-file={output_dir}/trace.out.gz",
@@ -253,7 +258,7 @@ def run_one_test(
         starting_core, switch_core,
         protect_kaslr, protect_module_kaslr, protect_user_aslr,
         gem5_kaslr_delta, gem5_module_kaslr_delta, gem5_user_aslr_delta,
-        add_checkpoint, uuid_str, suffix
+        add_checkpoint, uuid_str, ""
     ))
 
     cmd_str = " ".join(cmd)
@@ -268,16 +273,32 @@ def run_one_test(
         if child.is_dir():
             shutil.rmtree(child)
 
-    with stdout_path.open(mode="w") as stdout_file:
-        with stderr_path.open(mode="w") as stderr_file:
-            p = subprocess.run(
-                cmd_str,
-                shell=True,
-                cwd=str(proj_dir),
-                stdout=stdout_file,
-                stderr=stderr_file,
-            )
-            ret = p.returncode
+    if sim_mode == SimMode.SAVE and starting_core == "kvm":
+        timeout = 180
+    else:
+        timeout = None
+
+    @retry()
+    def run():
+        with stdout_path.open(mode="w") as stdout_file:
+            with stderr_path.open(mode="w") as stderr_file:
+                p = subprocess.Popen(
+                    "exec " + cmd_str,
+                    shell=True,
+                    cwd=str(proj_dir),
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                )
+                try:
+                    p.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                    print(f"Run {output_dir} failed!!!")
+                    raise
+                ret = p.returncode
+        return ret
+
+    ret = run()
 
     return ret, output_dir
 

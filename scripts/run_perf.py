@@ -8,6 +8,7 @@ import multiprocessing
 
 def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
     def get_gen_setup(
+            sim_option: str, debug_flags: str,
             starting_core: str, swith_core: str,
             protect_args: str,
             delta_args: str,
@@ -36,7 +37,7 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
             return -1
         dir_name = output_dir.name
         if dir_name != "default":
-            sim_setup_list[i][5] = dir_name # NOTE!!! Hard code order of parameter here!!!
+            sim_setup_list[i][7] = dir_name # NOTE!!! Hard code order of parameter here!!!
 
     print(pool_ret)
 
@@ -83,15 +84,38 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     "--use-uuid",
     is_flag=True,
 )
-def main(gen_cpt: bool, use_uuid: bool):
-    sim_setup = [
-        ["kvm", "o3", "0,0,0", "0,0,0", None, "", ""],
-        ["kvm", "o3", "0,0,0", "c,0,0", None, "", ""],
-        # ["kvm", "o3", "1,0,0", "c,0,0", None, "", ""],
-        ["kvm", "o3", "1,1,0", "c,0,0", None, "", ""],
+@click.option(
+    "--begin-cpt",
+    type=click.INT,
+)
+@click.option(
+    "--num-cpt",
+    type=click.INT,
+)
+@click.option(
+    "--num-cores",
+    type=click.INT
+)
+def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int):
+    sim_setup_base = [
+        ["fast", "", "kvm", "o3", "0,0,0", "0,0,0", None, ""],
+        ["fast", "", "kvm", "o3", "0,0,0", "c,0,0", None, ""],
+        # ["fast", "", "kvm", "o3", "1,0,0", "c,0,0", None, ""],
+        # ["fast", "", "kvm", "o3", "1,1,0", "c,0,0", None, ""],
+        ["fast", "", "kvm", "o3", "1,1,1", "c,0,0", None, ""],
     ]
 
+    sim_setup = []
+
+    for base_setup in sim_setup_base:
+        for i in range(begin_cpt, begin_cpt + num_cpt):
+            sim_setup.append(base_setup + [str(i)])
+
+    print(sim_setup)
+
     lebench_id_list = list(range(len(performance_test_list)))
+    # lebench_id_list = [0, 11, 22]
+    # lebench_id_list = [22]
     rerun_list = ["context-switch", "thrcreate", "big-select"]
 
     exp_script_path_list = gen_lebench_script_path_list(lebench_id_list)
@@ -104,12 +128,15 @@ def main(gen_cpt: bool, use_uuid: bool):
         if ret:
             print("Error when generating checkpoint. Stopping...")
             return
+    else:
+        for s in sim_setup:
+            s[7] = "default_" + s[8]
 
     args_list = gen_full_arg_list(sim_setup, exp_script_path_list)
     for x in args_list:
         print(x)
 
-    with multiprocessing.Pool(16) as p:
+    with multiprocessing.Pool(12) as p:
         p.starmap(re_one_checkpoint, args_list)
 
 

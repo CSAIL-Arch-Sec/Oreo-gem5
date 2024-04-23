@@ -621,6 +621,10 @@ class CPU : public BaseCPU
     // hardware transactional memory
     void htmSendAbortSignal(ThreadID tid, uint64_t htm_uid,
                             HtmFailureFaultCause cause) override;
+
+    void clear_bp(ThreadID tid) {
+        fetch.clear_bp(tid);
+    }
 };
 
 } // namespace o3

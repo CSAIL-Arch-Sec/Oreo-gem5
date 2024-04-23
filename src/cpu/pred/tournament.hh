@@ -70,6 +70,15 @@ class TournamentBP : public BPredUnit
      */
     TournamentBP(const TournamentBPParams &params);
 
+    void reset(ThreadID tid) override {
+        BPredUnit::reset(tid);
+        for (auto &a : localCtrs) a.reset();
+        for (auto &a : globalCtrs) a.reset();
+        for (auto &a : globalHistory) a = 0;
+        for (auto &a : choiceCtrs) a.reset();
+        for (auto &a : localHistoryTable) a = 0;
+    }
+
     /**
      * Looks up the given address in the branch predictor and returns
      * a true/false value as to whether it is taken.  Also creates a

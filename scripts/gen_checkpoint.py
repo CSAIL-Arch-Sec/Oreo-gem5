@@ -34,7 +34,7 @@ def gen_one_checkpoint(
         print(f"Failed generating one checkpoint, ret = {ret}!!!")
         return None
     else:
-        print("Successfully generating one checkpoint.")
+        print(f"Successfully generating one checkpoint {output_dir}")
         return output_dir
 
 
