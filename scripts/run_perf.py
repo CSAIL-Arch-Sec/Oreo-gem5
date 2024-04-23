@@ -99,11 +99,11 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
 )
 def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores: int):
     sim_setup_base = [
-        ["fast", "", "kvm", "o3", "0,0,0", "0,0,0", None, ""],
-        ["fast", "", "kvm", "o3", "0,0,0", "c,0,0", None, ""],
-        # ["fast", "", "kvm", "o3", "1,0,0", "c,0,0", None, ""],
-        # ["fast", "", "kvm", "o3", "1,1,0", "c,0,0", None, ""],
-        ["fast", "", "kvm", "o3", "1,1,1", "c,0,0", None, ""],
+        # ["fast", "", "kvm", "o3", "0,0,0", "0,0,0", None, ""],
+        ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, ""],
+        # ["fast", "", "kvm", "o3", "1,0,0", "c,c,0", None, ""],
+        # ["fast", "", "kvm", "o3", "1,1,0", "c,c,0", None, ""],
+        ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, ""],
     ]
 
     sim_setup = []
