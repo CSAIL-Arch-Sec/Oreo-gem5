@@ -1134,7 +1134,7 @@ Commit::commitInsts()
 
                 // NOTE: We may only check delta for targets of indirect branches in kernel mode
                 if (head_inst->isIndirectCtrl() || (int64_t) pc[tid]->instAddr() > 0) {
-                    checkPcDelta[tid] = true;
+                    checkPcDelta[tid] = false;
                 } else {
                     checkPcDelta[tid] = false;
                 }
@@ -1190,11 +1190,17 @@ Commit::commitInsts()
 
                 static bool start_print = false;
                 static bool clear_bp = true;
+                static bool clear_tlb = true;
                 static uint64_t total_kernel_op = 0;
                 static uint64_t total_user_op = 0;
                 static uint64_t j = 0;
                 if (head_inst->staticInst->getName() == "gem5Op") {
                     start_print = !start_print;
+//                    if (clear_tlb) {
+//                        cpu->flushTLBs();
+//                        std::cout << "@@@ Tick " << curTick() << " clear_tlb" << std::endl;
+//                        clear_tlb = false;
+//                    }
 //                    if (clear_bp) {
 //                        cpu->clear_bp(tid);
 //                        std::cout << "@@@ Tick " << curTick() << " clear_bp" << std::endl;
@@ -1211,6 +1217,7 @@ Commit::commitInsts()
                 if (start_print) {
                     if ((int64_t) pc[tid]->instAddr() < 0) total_kernel_op++;
                     else total_user_op++;
+//                    std::cout << "@@@ " << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName() << std::endl;
                 }
 
 //                if (start_print && (int64_t) pc[tid]->instAddr() < 0) {
