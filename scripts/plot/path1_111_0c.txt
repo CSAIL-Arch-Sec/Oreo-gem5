@@ -1,0 +1,21 @@
+...
+21226833675000: board.processor.cores.core.branchPred: [tid:0] Squashing from sequence number 0, setting target to (0xffffff8040000003=>0xffffff804000000b).(0=>1)
+...
+21226833675500: board.processor.cores.core.mmu.itb: Translating vaddr 0xffffff8040000000.
+21226833675500: board.processor.cores.core.mmu.itb: In protected mode.
+21226833675500: board.processor.cores.core.mmu.itb: Paging enabled.
+21226833675500: board.processor.cores.core.mmu.itb: Entry found with paddr 0xf5a1000, doing protection checks.
+21226833675500: board.processor.cores.core.mmu.itb: Translated 0xffffff8040000000 -> 0xf5a1000.
+...
+21226833676000: board.cache_hierarchy.ruby_system.l1_controllers.L1Dcache: No tag match for address: 0xf5a1000
+21226833676000: board.cache_hierarchy.ruby_system.l1_controllers.L1Icache: No tag match for address: 0xf5a1000
+21226833676000: board.cache_hierarchy.ruby_system.l1_controllers.L1Icache: address: 0xf5a1000
+21226833676000: board.cache_hierarchy.ruby_system.l1_controllers.L1Icache: Allocate clearing lock for addr: f5a1000
+...
+21226833682500: board.processor.cores.core.branchPred: [tid:0] [sn:0] Branch predictor predicted 0 for PC (0xffffff8040000003=>0xffffff8040000004).(7=>8)
+21226833682500: board.processor.cores.core.branchPred: [tid:0] [sn:0] Creating prediction history for PC (0xffffff8040000003=>0xffffff8040000004).(7=>8)
+21226833682500: board.processor.cores.core.branchPred: [tid:0] [sn:0] History entry added. predHist.size(): 3
+21226833683000: board.processor.cores.core.branchPred: [tid:0] [sn:0] Branch predictor predicted 0 for PC (0xffffff8040000003=>0xffffff8040000004).(15=>16)
+21226833683000: board.processor.cores.core.branchPred: [tid:0] [sn:0] Creating prediction history for PC (0xffffff8040000003=>0xffffff8040000004).(15=>16)
+21226833683000: board.processor.cores.core.branchPred: [tid:0] [sn:0] History entry added. predHist.size(): 4
+...

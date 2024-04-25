@@ -1,0 +1,22 @@
+...
+branchPred: [tid:0] Squashing from sequence number 0, setting target to
+            (0xffffff86c0000003=>0xffffff86c000000b).(0=>1)
+...
+mmu.itb: Translating vaddr 0xffffff86c0000000.
+mmu.itb: In protected mode.
+mmu.itb: Paging enabled.
+mmu.itb: Handling a TLB miss for address 0xffffff86c0000000 at pc 0xffffff86400000ac.
+mmu.itb.walker: @@@ Make request for vaddr ffffff86c0000000, paddr 8b60ff8
+L1Dcache: address: 0x8b60fc0 found
+L1Icache: No tag match for address: 0x8b60fc0
+L1Dcache: address: 0x8b60fc0 found
+L1Icache: No tag match for address: 0x8b60fc0
+mmu.itb.walker: Got long mode PML4 entry 0x00000001e10067.
+mmu.itb.walker: @@@ New step paddr 1e100d8
+L1Dcache: address: 0x1e100c0 found
+L1Icache: No tag match for address: 0x1e100c0
+L1Dcache: address: 0x1e100c0 found
+L1Icache: No tag match for address: 0x1e100c0
+mmu.itb.walker: Got long mode PDP entry 0x00000000000000.
+mmu.itb.walker: Raising page fault.
+...
