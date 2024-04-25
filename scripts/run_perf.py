@@ -116,7 +116,7 @@ def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores:
 
     lebench_id_list = list(range(len(performance_test_list)))
     # lebench_id_list = [0, 11, 22]
-    lebench_id_list = [0]
+    # lebench_id_list = [0]
     rerun_list = ["context-switch", "thrcreate", "big-select"]
 
     exp_script_path_list = gen_lebench_script_path_list(lebench_id_list)
