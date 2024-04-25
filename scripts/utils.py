@@ -99,11 +99,12 @@ def get_gem5_script(sim_mode: SimMode):
         return proj_dir / "configs/example/gem5_library/gem5-configs/x86-restore.py"
 
 
-def get_core_args(sim_mode: SimMode, starting_core: str, switch_core: str):
+def get_core_args(sim_mode: SimMode, starting_core: str, switch_core: str, sim_cpu_cores: int):
     if sim_mode == SimMode.SIMPLE:
-        return [f"--starting-core={starting_core.lower()}", f"--switch-core={switch_core.lower()}"]
+        return [f"--starting-core={starting_core.lower()}", f"--switch-core={switch_core.lower()}",
+                f"--cpu-cores={sim_cpu_cores}"]
     elif sim_mode == SimMode.SAVE:
-        return [f"--cpu-type={starting_core.upper()}"]
+        return [f"--cpu-type={starting_core.upper()}", f"--cpu-cores={sim_cpu_cores}"]
     else:
         return [f"--cpu-type={switch_core.upper()}"]
     
@@ -197,6 +198,7 @@ def run_one_test(
         sim_mode: SimMode,
         sim_option: str, debug_flags: str,
         starting_core: str, switch_core: str,
+        sim_cpu_cores: int,
         protect_kaslr: bool, protect_module_kaslr: bool, protect_user_aslr: bool,
         gem5_kaslr_delta: int, gem5_module_kaslr_delta: int, gem5_user_aslr_delta: int,
         exp_script_path: Path,
@@ -240,7 +242,7 @@ def run_one_test(
 
     cmd.extend(get_after_boot_script(sim_mode, exp_script_path))
     
-    cmd.extend(get_core_args(sim_mode, starting_core, switch_core))
+    cmd.extend(get_core_args(sim_mode, starting_core, switch_core, sim_cpu_cores))
 
     if sim_mode != SimMode.RESTORE:
         # NOTE: Although we do not pass these args to the gem5 script, we still need them for

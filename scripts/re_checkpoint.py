@@ -24,6 +24,7 @@ def re_one_checkpoint(
         sim_mode=SimMode.RESTORE,
         sim_option=sim_option, debug_flags=debug_flags,
         starting_core=starting_core, switch_core=swith_core,
+        sim_cpu_cores=0,
         exp_script_path=exp_script_path,
         add_checkpoint=(None if cpt_tick is None else str(cpt_tick)),
         use_uuid=False,
@@ -59,8 +60,9 @@ def get_script(module_delta: int, user_delta: int):
 def get_blindside_script(probe_module: int, delta: int):
     script = (f"cd /home/gem5/experiments/modules\n"
               f"insmod blindside_kernel.ko\n"
-              f"/home/gem5/experiments/bin/blindside {probe_module} {delta}\n"
+              f"/home/gem5/experiments/bin/blindside {probe_module} {delta:03}\n"
               # f"sleep 1\n"
+              # f"echo {delta:03}\n"
               f"m5 exit")
 
     output_dir = script_dir / "other_scripts"
@@ -73,11 +75,27 @@ def get_blindside_script(probe_module: int, delta: int):
     return output_path
 
 
+def get_leak2_syscall_script():
+    script = (f"/home/gem5/experiments/bin/leak_path_2\n"
+              f"m5 exit")
+
+    output_dir = script_dir / "other_scripts"
+    output_dir.mkdir(exist_ok=True)
+
+    output_path = output_dir / f"leak2_syscall.rcS"
+    with output_path.open(mode="w") as output_file:
+        output_file.write(script)
+
+    return output_path
+
+
 def main():
     path0 = get_script(12, 0)
     path1 = get_script(12, 1)
     blindside_path_00 = get_blindside_script(1, 0)
     blindside_path_0c = get_blindside_script(1, 0xc)
+    blindside_path_0d = get_blindside_script(1, 0xd)
+    leak2_syscall_path = get_leak2_syscall_script()
 
     args_list = [
         # ["fast", "", "kvm", "o3", "0,0,0", "0,0,0", 500000000000, "", ""],
@@ -92,10 +110,23 @@ def main():
         # ["fast", "", "kvm", "o3", "1,1,1", "c,0,0", None, "default", "", path0],
         # ["fast", "", "kvm", "o3", "1,1,1", "c,0,0", None, "default", "", path1],
 
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "2024-04-19-07-34-52", "", blindside_path_00],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "2024-04-19-07-34-52", "", blindside_path_0c],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "2024-04-19-07-34-52", "", blindside_path_00],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "2024-04-19-07-34-52", "", blindside_path_0c],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_00],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_00],
+
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d],
+
+        # ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
+        # ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],
+
+        # ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_00],
+        # ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c],
+        # ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d],
+
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", leak2_syscall_path],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", leak2_syscall_path],
     ]
 
     with multiprocessing.Pool(16) as p:

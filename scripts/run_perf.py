@@ -20,7 +20,7 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
             cpt_str = ""
         else:
             cpt_str = str(cpt_tick)
-        return [starting_core, protect_args, delta_args, cpt_str, use_uuid, suffix]
+        return [starting_core, 2, protect_args, delta_args, cpt_str, use_uuid, suffix]
 
     gen_setup_list = list(map(lambda x: get_gen_setup(*x), sim_setup_list))
     print(gen_setup_list)
@@ -116,7 +116,7 @@ def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores:
 
     lebench_id_list = list(range(len(performance_test_list)))
     # lebench_id_list = [0, 11, 22]
-    # lebench_id_list = [22]
+    lebench_id_list = [0]
     rerun_list = ["context-switch", "thrcreate", "big-select"]
 
     exp_script_path_list = gen_lebench_script_path_list(lebench_id_list)

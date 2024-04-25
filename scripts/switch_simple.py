@@ -18,6 +18,7 @@ def switch_simple(
         sim_mode=SimMode.SIMPLE,
         sim_option="fast", debug_flags="",
         starting_core=starting_core, switch_core=swith_core,
+        sim_cpu_cores=1,
         exp_script_path=exp_script_path,
         add_checkpoint="",
         use_uuid=use_uuid,
