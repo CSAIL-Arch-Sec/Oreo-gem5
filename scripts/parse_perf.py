@@ -3,7 +3,7 @@ import click
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from enum import StrEnum
+from strenum import StrEnum
 
 
 class ColName(StrEnum):

@@ -13,6 +13,7 @@ numpy = "^1.25.2"
 seaborn = "^0.13.0"
 arrow = "^1.3.0"
 tenacity = "^8.2.3"
+strenum = "^0.4.15"
 
 
 [build-system]
