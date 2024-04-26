@@ -40,10 +40,15 @@ def main():
     entrybleed_path = get_entrybleed_script()
 
     args_list = [
-        # ["kvm", "o3", "0,0,0", "c,0,0", None, "2024-04-14-06-29-01", "", double_page_fault_path],
-        # ["kvm", "o3", "1,1,1", "c,0,0", None, "2024-04-14-06-29-01", "", double_page_fault_path],
-        ["kvm", "o3", "0,0,0", "c,0,0", None, "2024-04-14-06-29-01", "", entrybleed_path],
-        ["kvm", "o3", "1,1,1", "c,0,0", None, "2024-04-14-06-29-01", "", entrybleed_path],
+        # ["fast", "", "kvm", "o3", "0,0,0", "c,0,0", None, "2024-04-14-06-29-01", "", double_page_fault_path],
+        # ["fast", "", "kvm", "o3", "1,1,1", "c,0,0", None, "2024-04-14-06-29-01", "", double_page_fault_path],
+        ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", entrybleed_path],
+        ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", entrybleed_path],
+
+        ["fast", "", "kvm", "o3", "0,0,0", "cd,cd,0", None, "default", "", entrybleed_path],
+        ["fast", "", "kvm", "o3", "1,1,1", "cd,cd,0", None, "default", "", entrybleed_path],
+        ["fast", "", "kvm", "o3", "0,0,0", "7d,7d,0", None, "default", "", entrybleed_path],
+        ["fast", "", "kvm", "o3", "1,1,1", "7d,7d,0", None, "default", "", entrybleed_path],
     ]
 
     with multiprocessing.Pool(16) as p:
