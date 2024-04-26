@@ -113,10 +113,10 @@ def main():
         # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_00],
         # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_00],
 
-        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
-        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],
-        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c],
-        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d],
 
         # ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
         # ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],
@@ -125,8 +125,8 @@ def main():
         # ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c],
         # ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d],
 
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", leak2_syscall_path],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", leak2_syscall_path],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", leak2_syscall_path],
+        # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", leak2_syscall_path],
     ]
 
     with multiprocessing.Pool(16) as p:
