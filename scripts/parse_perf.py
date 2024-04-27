@@ -3,6 +3,7 @@ import click
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 from strenum import StrEnum
 
 
@@ -22,6 +23,7 @@ class ColNamePrefix(StrEnum):
     median = "median"
     normalize_mean = "normalize mean"
     normalize_median = "normalize median"
+    overhead = "overhead"
 
 
 def add_prefix_col_name(col: str, prefix: ColNamePrefix):
@@ -97,13 +99,15 @@ def generate_plot_df(df: pd.DataFrame, setup_list: list, plot_col_name: str):
     return result
 
 
-def get_plot_name(col_name: ColName, col_name_prefix: ColNamePrefix):
+def get_plot_name(col_name: ColName, col_name_prefix: ColNamePrefix, output_suffix: str):
     col_name_no_space = col_name.split()[0]
     col_name_prefix_no_space = col_name_prefix.replace(" ", "_")
-    return f"lebench_{col_name_no_space}_{col_name_prefix_no_space}.pdf"
+    return f"lebench-{output_suffix}-{col_name_no_space}_{col_name_prefix_no_space}.pdf"
 
 
-def generate_plot(data: pd.DataFrame, output_dir: Path, col_name: ColName, col_name_prefix: ColNamePrefix):
+def generate_plot(data: pd.DataFrame, output_dir: Path,
+                  col_name: ColName, col_name_prefix: ColNamePrefix,
+                  output_suffix: str):
     plt.figure(figsize=(16, 9))
     sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)
     ax = sns.boxplot(x=ColName.name, y=add_prefix_col_name(col_name, col_name_prefix),
@@ -114,7 +118,73 @@ def generate_plot(data: pd.DataFrame, output_dir: Path, col_name: ColName, col_n
     ax.axhline(y=1, linewidth=1, color='gray', ls='-')
     plt.xticks(rotation=90)
     plt.tight_layout()
-    plt.savefig(output_dir / get_plot_name(col_name, col_name_prefix))
+    plt.savefig(output_dir / get_plot_name(col_name, col_name_prefix, output_suffix))
+
+
+def get_overhead_df_helper(df: pd.DataFrame, col: ColName, prefix: ColNamePrefix, overhead_df: pd.DataFrame):
+    baseline = df.loc["Baseline"][col]
+    oreo = df.loc["Oreo"][col]
+    overhead_df[add_prefix_col_name(add_prefix_col_name(col, ColNamePrefix.overhead), prefix)] = (oreo - baseline) / baseline * 100
+
+
+def get_overhead_df(df: pd.DataFrame):
+    # cols = [col for col in all_data.columns if col not in [ColName.mean, ColName.closest_k]]
+    df_list = [
+        [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).mean(), ColNamePrefix.mean],
+        [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).median(), ColNamePrefix.median]
+    ]
+
+    print(df_list[0][0])
+    print(df_list[1][0])
+
+    overhead_df = pd.DataFrame()
+    for df, prefix in df_list:
+        for col in [ColName.closest_k, ColName.mean]:
+            get_overhead_df_helper(df, col, prefix, overhead_df)
+
+    overhead_df.loc[(len(overhead_df.index), "Avg"), :] = overhead_df.mean()
+    overhead_df.loc[(len(overhead_df.index), "Min"), :] = overhead_df.min()
+    overhead_df.loc[(len(overhead_df.index), "Max"), :] = overhead_df.max()
+    return overhead_df
+
+
+def plot_overhead_df(overhead_df: pd.DataFrame, output_dir: Path,
+                     col_name: ColName, col_name_prefix: ColNamePrefix,
+                     output_suffix: str):
+    plot_df = overhead_df.drop([(len(overhead_df.index) - 2, "Min"), (len(overhead_df.index) - 1, "Max")])
+    plt.figure(figsize=(24, 9))
+    sns.set_theme(style="ticks", palette="pastel", font_scale=3)
+    y_name = add_prefix_col_name(add_prefix_col_name(col_name, ColNamePrefix.overhead), col_name_prefix)
+    ax = sns.barplot(plot_df, x=ColName.name, y=y_name)
+    ax.set(xlabel=None, ylabel="Overhead (%)")
+    ax.yaxis.set_major_locator(MultipleLocator(2))
+    ax.grid()
+    # ax.axhline(y=0, linewidth=1, color='gray', ls='-')
+    # ax.axhline(y=5, linewidth=1, color='gray', ls='-')
+    # ax.axhline(y=-5, linewidth=1, color='gray', ls='-')
+    # ax.axhline(y=3, linewidth=1, color='gray', ls='-')
+    # ax.axhline(y=-3, linewidth=1, color='gray', ls='-')
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    col_name_first = col_name.split()[0]
+    plot_name = f"lebench-{output_suffix}-{col_name_first}_{ColNamePrefix.overhead}_{col_name_prefix}.pdf"
+    plt.savefig(output_dir / plot_name)
+
+
+def get_suffix_list(suffix_range: str):
+    def get_range_from_range_str(x: str):
+        begin, end = x.split(",")
+        return list(range(int(begin), int(end)))
+
+    range_str_list = suffix_range.split(";")
+    range_list = []
+    for x in range_str_list:
+        range_list.extend(get_range_from_range_str(x))
+    return range_list
+
+
+def get_output_suffix(suffix_range: str):
+    return suffix_range.replace(",", "_").replace(";", "-")
 
 
 @click.command()
@@ -126,17 +196,22 @@ def generate_plot(data: pd.DataFrame, output_dir: Path, col_name: ColName, col_n
     "--plot",
     is_flag=True,
 )
-def main(parse: bool, plot: bool):
+@click.option(
+    "--suffix-range",
+    type=click.STRING,
+)
+def main(parse: bool, plot: bool, suffix_range: str):
     setup_list = [
         # "restore_ko_000_000000",
         "restore_ko_000_0c0c00",
         "restore_ko_111_0c0c00"
     ]
+    suffix_list = get_suffix_list(suffix_range)
+    output_suffix = get_output_suffix(suffix_range)
+
     output_dir = script_dir / "plot"
     output_dir.mkdir(exist_ok=True)
-    data_filename = "lebench_new.csv"
-
-    suffix_list = list(range(6))
+    data_filename = f"lebench-{output_suffix}.csv"
 
     if parse:
         all_data = read_all_setup_result(list(range(len(performance_test_list))), setup_list, suffix_list)
@@ -149,15 +224,22 @@ def main(parse: bool, plot: bool):
         all_data = pd.read_csv(output_dir / data_filename, index_col=0,
                                dtype={ColName.protect_setup: str, ColName.delta_setup: str})
 
+    overhead_df = get_overhead_df(all_data)
+    overhead_df.to_csv(output_dir / f"lebench-{output_suffix}-overhead.csv")
+
     if plot:
         # generate_plot_df(all_data, setup_list, "mean (ns)")
         # generate_plot_df(all_data, setup_list, "stddev (ns)")
         # generate_plot_df(all_data, setup_list, "closest_k (ns)")
 
-        generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_mean)
-        generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_median)
-        generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_mean)
-        generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_median)
+        generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_mean, output_suffix)
+        generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_median, output_suffix)
+        generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_mean, output_suffix)
+        generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_median, output_suffix)
+
+        for col_name in [ColName.closest_k, ColName.mean]:
+            for col_name_prefix in [ColNamePrefix.mean, ColNamePrefix.median]:
+                plot_overhead_df(overhead_df, output_dir, col_name, col_name_prefix, output_suffix)
 
     # plt.figure(figsize=(16, 9))
     # sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)
