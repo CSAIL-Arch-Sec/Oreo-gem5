@@ -74,9 +74,12 @@ def read_all_setup_result(bench_id_list: list, setup_dirname_list: list, suffix_
 
 
 def normalize_df(df: pd.DataFrame):
-    mean_df = df.groupby([ColName.bench_id, ColName.name]).mean()
+    baseline_df = df[df.index.get_level_values(ColName.protect_setup) == "000"]
+    # print(baseline_df)
+    # baseline_df = df[df[ColName.protect_setup] == "000"]
+    mean_df = baseline_df.groupby([ColName.bench_id, ColName.name]).mean()
     mean_df = mean_df.rename(lambda x: add_prefix_col_name(x, ColNamePrefix.mean), axis="columns")
-    median_df = df.groupby([ColName.bench_id, ColName.name]).median()
+    median_df = baseline_df.groupby([ColName.bench_id, ColName.name]).median()
     median_df = median_df.rename(lambda x: add_prefix_col_name(x, ColNamePrefix.median), axis="columns")
     orig_cols = df.columns
     df = df.join(mean_df, on=[ColName.bench_id, ColName.name])
@@ -95,7 +98,7 @@ def generate_plot_df(df: pd.DataFrame, setup_list: list, plot_col_name: str):
     result_list = list(map(lambda x: df.loc[x[0], x[1]][plot_col_name], index_list))
     result = pd.concat(result_list, axis=1).transpose()
     result = result.set_index(result_index)
-    print(result)
+    # print(result)
     return result
 
 
@@ -115,6 +118,8 @@ def generate_plot(data: pd.DataFrame, output_dir: Path,
                 data=data,
                 width=0.5)
     # sns.despine(offset=10, trim=True)
+    mean_or_median = col_name_prefix.split()[1]
+    ax.set(xlabel=None, ylabel=f"Latency/{mean_or_median} of baseline latency")
     ax.axhline(y=1, linewidth=1, color='gray', ls='-')
     plt.xticks(rotation=90)
     plt.tight_layout()
@@ -134,8 +139,8 @@ def get_overhead_df(df: pd.DataFrame):
         [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).median(), ColNamePrefix.median]
     ]
 
-    print(df_list[0][0])
-    print(df_list[1][0])
+    # print(df_list[0][0])
+    # print(df_list[1][0])
 
     overhead_df = pd.DataFrame()
     for df, prefix in df_list:
@@ -169,6 +174,47 @@ def plot_overhead_df(overhead_df: pd.DataFrame, output_dir: Path,
     col_name_first = col_name.split()[0]
     plot_name = f"lebench-{output_suffix}-{col_name_first}_{ColNamePrefix.overhead}_{col_name_prefix}.pdf"
     plt.savefig(output_dir / plot_name)
+
+
+def plot_together(data_df: pd.DataFrame, col_name_1: ColName, col_name_prefix_1: ColNamePrefix,
+                  overhead_df: pd.DataFrame, col_name_2: ColName, col_name_prefix_2: ColNamePrefix,
+                  output_dir: Path, output_suffix: str):
+    fig, axes = plt.subplots(2, 1, sharex='col', height_ratios=(1, 2), tight_layout=True)
+
+    sns.set_theme(style="ticks", palette="pastel")
+    sns.boxplot(ax=axes[1],
+                x=ColName.name, y=add_prefix_col_name(col_name_1, col_name_prefix_1),
+                hue=ColName.setup, palette=["m", "g"],
+                data=data_df,
+                width=0.8)
+    # sns.despine(offset=10, trim=True)
+    mean_or_median = col_name_prefix_1.split()[1]
+    axes[1].set(xlabel=None, ylabel=f"Latency normalizd to baseline")
+    axes[1].axhline(y=1, linewidth=1, color='gray', ls='-')
+    axes[1].grid()
+    axes[1].legend(title=None)
+    # plt.xticks(rotation=90)
+    # plt.tight_layout()
+
+    plot_df = overhead_df.drop([(len(overhead_df.index) - 3, "Avg"),
+                                (len(overhead_df.index) - 2, "Min"),
+                                (len(overhead_df.index) - 1, "Max")])
+    # plt.figure(figsize=(24, 9))
+    # sns.set_theme(style="ticks", palette="pastel", font_scale=3)
+    sns.set_theme(style="ticks", palette="pastel")
+    y_name = add_prefix_col_name(add_prefix_col_name(col_name_2, ColNamePrefix.overhead), col_name_prefix_2)
+    sns.barplot(plot_df,
+                ax=axes[0],
+                x=ColName.name, y=y_name)
+    axes[0].set(xlabel=None, ylabel="Overhead (%)")
+    axes[0].yaxis.set_major_locator(MultipleLocator(2))
+    axes[0].grid()
+
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig(output_dir / f"lebench-both-{output_suffix}.pdf")
+
+
 
 
 def get_suffix_list(suffix_range: str):
@@ -207,7 +253,7 @@ def main(parse: bool, plot: bool, suffix_range: str):
         "restore_ko_111_0c0c00"
     ]
     suffix_list = get_suffix_list(suffix_range)
-    output_suffix = get_output_suffix(suffix_range)
+    output_suffix = "new-" + get_output_suffix(suffix_range)
 
     output_dir = script_dir / "plot"
     output_dir.mkdir(exist_ok=True)
@@ -232,14 +278,18 @@ def main(parse: bool, plot: bool, suffix_range: str):
         # generate_plot_df(all_data, setup_list, "stddev (ns)")
         # generate_plot_df(all_data, setup_list, "closest_k (ns)")
 
-        generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_mean, output_suffix)
-        generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_median, output_suffix)
-        generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_mean, output_suffix)
-        generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_median, output_suffix)
+        # generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_mean, output_suffix)
+        # generate_plot(all_data, output_dir, ColName.closest_k, ColNamePrefix.normalize_median, output_suffix)
+        # generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_mean, output_suffix)
+        # generate_plot(all_data, output_dir, ColName.mean, ColNamePrefix.normalize_median, output_suffix)
+        #
+        # for col_name in [ColName.closest_k, ColName.mean]:
+        #     for col_name_prefix in [ColNamePrefix.mean, ColNamePrefix.median]:
+        #         plot_overhead_df(overhead_df, output_dir, col_name, col_name_prefix, output_suffix)
 
-        for col_name in [ColName.closest_k, ColName.mean]:
-            for col_name_prefix in [ColNamePrefix.mean, ColNamePrefix.median]:
-                plot_overhead_df(overhead_df, output_dir, col_name, col_name_prefix, output_suffix)
+        plot_together(all_data, ColName.mean, ColNamePrefix.normalize_median,
+                      overhead_df, ColName.mean, ColNamePrefix.mean,
+                      output_dir, output_suffix)
 
     # plt.figure(figsize=(16, 9))
     # sns.set_theme(style="ticks", palette="pastel", font_scale=1.5)

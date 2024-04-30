@@ -46,6 +46,7 @@ def main():
     # xtick_list = [0xffffff8001800040, 0xffffff8601800040, 0xffffffee81800040]
     xtick_list = [0xffffff8001800040, 0xffffffee81800040]
     ax.set_xticks(xtick_list, list(map(hex, xtick_list)))
+    ax.legend(title=None)
     plt.tight_layout()
     plt.savefig(script_dir / "plot" / "prefetch_plot.pdf")
 
