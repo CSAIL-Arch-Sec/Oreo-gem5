@@ -1134,9 +1134,9 @@ Commit::commitInsts()
 
                 // NOTE: We may only check delta for targets of indirect branches in kernel mode
                 if (head_inst->isIndirectCtrl() || (int64_t) pc[tid]->instAddr() > 0) {
-                    checkPcDelta[tid] = false;
+                    checkPcDelta[tid] = true;
                 } else {
-                    checkPcDelta[tid] = false;
+                    checkPcDelta[tid] = true;
                 }
 
                 /// New Implementation
