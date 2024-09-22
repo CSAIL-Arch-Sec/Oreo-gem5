@@ -43,7 +43,38 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
 
     return 0
 
-def gen_spec_script_single_bench(
+
+def gen_spec2017_script_full(
+        bench_name: str, size: str,
+        output_dir: Path,
+):
+    s = (
+        f"cd /home/gem5/spec2017\n"
+        f"source shrc\n"
+        f"m5 resetstats\n"
+        f"runcpu --size {size} --iterations 1 --config myconfig.x86.cfg --define gcc_dir=\"/usr\" --noreportable --nobuild {bench_name}\n"
+        # f"echo 'finish runspec with ret code $?'\n"
+        f"m5 dumpresetstats\n"
+        # f"m5 exit\n"
+    )
+
+    output_path = output_dir / f"{bench_name}.rcS"
+    with output_path.open(mode="w") as output_file:
+        output_file.write(s)
+
+    return output_path
+
+
+def gen_spec2017_script_path_list(
+        bench_name_list: list, size: str,
+        gen_fun
+):
+    output_dir = script_dir / "spec2017_scripts"
+    output_dir.mkdir(exist_ok=True)
+    return list(map(lambda x: gen_fun(x, size, output_dir), bench_name_list))
+
+
+def gen_spec2006_script_single_bench(
         bench_name: str, size: str, output_dir: Path,
         warmup_ns: int = 10 ** 9,
         sim_ns: int = 10 ** 9,
@@ -79,14 +110,14 @@ def gen_spec_script_single_bench(
     return output_path
 
 
-def gen_spec_script_path_list(
+def gen_spec2006_script_path_list(
         bench_name_list: list, size: str,
         warmup_ns: int = 10 ** 9,
         sim_ns: int = 10 ** 9,
 ):
     output_dir = script_dir / "spec_scripts"
     output_dir.mkdir(exist_ok=True)
-    return list(map(lambda x: gen_spec_script_single_bench(x, size, output_dir, warmup_ns=warmup_ns, sim_ns=sim_ns), bench_name_list))
+    return list(map(lambda x: gen_spec2006_script_single_bench(x, size, output_dir, warmup_ns=warmup_ns, sim_ns=sim_ns), bench_name_list))
 
 
 def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
@@ -160,9 +191,11 @@ def main(
     print(sim_setup)
 
     # run_bench_list = [ "401.bzip2" ]
-    run_bench_list = spec_bench_list
+    # run_bench_list = spec2006_bench_list
+    run_bench_list = spec2017_intrate_bench_list
 
-    exp_script_path_list = gen_spec_script_path_list(run_bench_list, spec_size, warmup_ns=warmup_ns, sim_ns=sim_ns)
+    # exp_script_path_list = gen_spec2006_script_path_list(run_bench_list, spec_size, warmup_ns=warmup_ns, sim_ns=sim_ns)
+    exp_script_path_list = gen_spec2017_script_path_list(run_bench_list, spec_size, gen_spec2017_script_full)
     for x in exp_script_path_list:
         print(x)
 
@@ -180,8 +213,8 @@ def main(
     for x in args_list:
         print(x)
 
-    with multiprocessing.Pool(num_cores) as p:
-        p.starmap(re_one_checkpoint, args_list)
+    # with multiprocessing.Pool(num_cores) as p:
+    #     p.starmap(re_one_checkpoint, args_list)
 
 
 if __name__ == '__main__':
