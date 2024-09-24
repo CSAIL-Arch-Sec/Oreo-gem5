@@ -55,7 +55,7 @@ def gen_spec2017_script_full(
         f"runcpu --size {size} --iterations 1 --config myconfig.x86.cfg --define gcc_dir=\"/usr\" --noreportable --nobuild {bench_name}\n"
         # f"echo 'finish runspec with ret code $?'\n"
         f"m5 dumpresetstats\n"
-        # f"m5 exit\n"
+        f"m5 exit\n"
     )
 
     output_path = output_dir / f"{bench_name}.rcS"
@@ -213,8 +213,8 @@ def main(
     for x in args_list:
         print(x)
 
-    # with multiprocessing.Pool(num_cores) as p:
-    #     p.starmap(re_one_checkpoint, args_list)
+    with multiprocessing.Pool(num_cores) as p:
+        p.starmap(re_one_checkpoint, args_list)
 
 
 if __name__ == '__main__':

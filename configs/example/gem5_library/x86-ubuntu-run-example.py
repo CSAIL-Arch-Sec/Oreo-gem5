@@ -104,6 +104,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--cpu-cores",
+    type=int,
+    default=2,
+    help="number of cpu cores for run"
+)
+
+parser.add_argument(
     "--disk-image-path",
     type=str,
     default="/root/experiments/disk-image/experiments.img",
@@ -195,7 +202,7 @@ processor = SimpleSwitchableProcessor(
     # starting_core_type=CPUTypes.NONCACHING,
     starting_core_type=starting_core,
     switch_core_type=switch_core,
-    num_cores=1,
+    num_cores=args.cpu_cores,
     protect_kaslr=protect_kaslr,
     protect_module_kaslr=protect_module_kaslr,
     protect_user_aslr=protect_user_aslr,

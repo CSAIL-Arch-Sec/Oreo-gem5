@@ -1214,6 +1214,60 @@ Commit::commitInsts()
                     }
                 }
 
+//                static uint64_t kernel_inst_count = 0;
+//                static uint64_t user_inst_count = 0;
+//                static bool start_print_user = false;
+//                static uint64_t print_user_counter = 0;
+//                if ((int64_t) pc[tid]->instAddr() > 0) {
+//                    user_inst_count++;
+//                } else {
+//                    kernel_inst_count++;
+//                }
+//                if (pc[tid]->instAddr() == 0x555555d6a394) {
+//                    start_print_user = true;
+//                    print_user_counter = 0;
+//                }
+//                if (start_print_user && (int64_t) pc[tid]->instAddr() > 0 && print_user_counter++ < 1000) {
+//                    std::cout << "!!! " << curTick() << " " << *pc[tid] << " "
+//                              << head_inst->staticInst->disassemble(pc[tid]->instAddr());
+//                    if (head_inst->isLoad()) {
+//                        std::cout << " " << std::hex << head_inst->realAddr
+//                                  << " " << *((uint64_t*) head_inst->memData) << std::endl;
+//                    } else if (head_inst->isStore()) {
+//                        std::cout << " " << std::hex << head_inst->realAddr << std::endl;
+//                    } else {
+//                        std::cout << std::endl;
+//                    }
+//                }
+//                if (head_inst->isLoad()) {
+//                    if ((head_inst->realAddr & 0xfffffffffffffff8) == 0x55555616f618 ||
+//                        (head_inst->realAddr & 0xfffffffffffffff8) == 0x55555616f6c0) {
+//                        std::cout << "@@@ " << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName()
+//                                  << " " << std::hex << head_inst->realAddr
+//                                  << " " << *((uint64_t*) head_inst->memData) << std::dec
+//                                  << " " << kernel_inst_count << " " << user_inst_count << std::endl;
+//                    }
+//                } else if (head_inst->isStore()) {
+//                    if ((head_inst->realAddr & 0xfffffffffffffff8) == 0x55555616f618 ||
+//                        (head_inst->realAddr & 0xfffffffffffffff8) == 0x55555616f6c0) {
+//                        std::cout << "@@@ " << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName()
+//                                  << " " << std::hex << head_inst->realAddr << std::dec
+//                                  << " " << kernel_inst_count << " " << user_inst_count << std::endl;
+//                    }
+//                }
+//
+//                if (pc[tid]->instAddr() == 0x555555d704be || pc[tid]->instAddr() == 0x555555600000) {
+//                    if (head_inst->isMemRef()) {
+//                        std::cout << "@@@ " << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName()
+//                                  << " " << std::hex << head_inst->realAddr
+//                                  << " " << *((uint64_t*) head_inst->memData) << std::dec
+//                                  << std::endl;
+//                    } else {
+//                        std::cout << "@@@ " << curTick() << " " << *pc[tid] << " " << head_inst->staticInst->getName()
+//                                  << " " << kernel_inst_count << " " << user_inst_count << std::endl;
+//                    }
+//                }
+
                 if (start_print) {
                     if ((int64_t) pc[tid]->instAddr() < 0) total_kernel_op++;
                     else total_user_op++;
