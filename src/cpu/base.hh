@@ -161,7 +161,7 @@ public:
         return 0;
     }
 
-    void protectKaslrTestMask(const PCStateBase &origPC, bool testDelta, char *note) {
+    void protectKaslrTestMask(const PCStateBase &origPC, bool testDelta, const char *note) {
         auto &pc = origPC.as<X86ISA::PCState>();
         if (!protectKaslrValid(pc.pc(), 0) || !protectKaslrValid(pc.npc(), 0)) {
             std::clog << "@@@ Tick " << curTick() << " warn pc/npc protectKaslrTestMask PC State " << pc << " " << note << std::endl;
@@ -173,7 +173,7 @@ public:
         }
     }
 
-    void protectKaslrClearDelta(PCStateBase &origPC, bool clearPCDelta, bool clearNPCDelta, char *note) {
+    void protectKaslrClearDelta(PCStateBase &origPC, bool clearPCDelta, bool clearNPCDelta, const char *note) {
         // This function would change origPC
         auto &pc = origPC.as<X86ISA::PCState>();
         if (clearPCDelta) {

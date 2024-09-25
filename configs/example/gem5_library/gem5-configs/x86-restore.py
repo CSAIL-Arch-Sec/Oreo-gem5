@@ -201,13 +201,13 @@ board = X86Board(
 )
 
 board.set_kernel_disk_workload(
-    kernel=CustomResource(
+    kernel=KernelResource(
         local_path=kernel_path
     ),
     # disk_image=Resource("x86-ubuntu-18.04-img"),
-    disk_image=CustomDiskImageResource(
+    disk_image=DiskImageResource(
         local_path=disk_image_path,
-        disk_root_partition=args.disk_root_partition
+        root_partition=args.disk_root_partition
     ),
     readfile=args.script,
     kernel_args=[kernel_args]

@@ -91,7 +91,7 @@ MemoryImage::real_reloc(Addr delta, const PortProxy &proxy)
         panic("Error: we do not support 32-bit relocation for now, but 32 bit relocation sections are not empty.");
     }
 
-    uint32_t addr_mask = (1 << 31) - 1;
+    uint32_t addr_mask = - 1;
     for (auto it = reloc.rbegin() + 2; it != reloc.rend(); it++) {
         if (*it == 0) continue;
         Addr ptr = (*it) & addr_mask;

@@ -184,13 +184,13 @@ board.set_kernel_disk_workload(
     # The x86 linux kernel will be automatically downloaded to the
     # `~/.cache/gem5` directory if not already present.
     # kernel=args.kernel,
-    kernel=CustomResource(
+    kernel=KernelResource(
         local_path=kernel_local_path,
     ),
     # disk_image=Resource("x86-ubuntu-18.04-img"),
-    disk_image=CustomDiskImageResource(
+    disk_image=DiskImageResource(
         local_path=args.disk_image_path,
-        disk_root_partition=args.disk_root_partition
+        root_partition=args.disk_root_partition
     ),
     kernel_args=[
         "earlyprintk=ttyS0",

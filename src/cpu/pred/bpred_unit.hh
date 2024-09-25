@@ -83,7 +83,7 @@ class BPredUnit : public SimObject
     BPredUnit(const Params &p);
 
     virtual void reset(ThreadID tid) {
-        BTB.reset();
+//        BTB.reset();
         predHist[tid].clear();
         assert(predHist[tid].empty());
     }

@@ -8,7 +8,7 @@ from gem5.components.processors.simple_switchable_processor import SimpleSwitcha
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.isas import ISA
 from gem5.components.processors.cpu_types import CPUTypes, get_cpu_type_from_str
-from gem5.resources.resource import Resource, CustomResource, CustomDiskImageResource
+from gem5.resources.resource import KernelResource, DiskImageResource
 from gem5.simulate.simulator import Simulator
 from gem5.simulate.exit_event import ExitEvent
 
@@ -203,6 +203,7 @@ processor = SimpleSwitchableProcessor(
     starting_core_type=starting_core,
     switch_core_type=switch_core,
     num_cores=args.cpu_cores,
+    isa=ISA.X86,
     protect_kaslr=protect_kaslr,
     protect_module_kaslr=protect_module_kaslr,
     protect_user_aslr=protect_user_aslr,
@@ -264,13 +265,13 @@ else:
 board.set_kernel_disk_workload(
     kernel=
     # Resource("x86-linux-kernel-5.4.49",),
-    CustomResource(
+    KernelResource(
         local_path=kernel_local_path,
     ),
     # disk_image=Resource("x86-ubuntu-18.04-img"),
-    disk_image=CustomDiskImageResource(
+    disk_image=DiskImageResource(
         local_path=args.disk_image_path,
-        disk_root_partition=args.disk_root_partition
+        root_partition=args.disk_root_partition
     ),
     # readfile_contents=command,
     readfile=args.script,
