@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2022 Arm Limited
+ * Copyright (c) 2010-2023 Arm Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -41,7 +41,9 @@
 #ifndef __ARCH_ARM_REGS_MISC_HH__
 #define __ARCH_ARM_REGS_MISC_HH__
 
+#include <array>
 #include <bitset>
+#include <optional>
 #include <tuple>
 
 #include "arch/arm/regs/misc_types.hh"
@@ -92,11 +94,10 @@ namespace ArmISA
         MISCREG_NMRR_MAIR1_NS,
         MISCREG_NMRR_MAIR1_S,
         MISCREG_PMXEVTYPER_PMCCFILTR,
-        MISCREG_SCTLR_RST,
         MISCREG_SEV_MAILBOX,
         MISCREG_TLBINEEDSYNC,
 
-        // AArch32 CP14 registers (debug/trace/ThumbEE/Jazelle control)
+        // AArch32 CP14 registers (debug/trace control)
         MISCREG_DBGDIDR,
         MISCREG_DBGDSCRint,
         MISCREG_DBGDCCINT,
@@ -583,17 +584,22 @@ namespace ArmISA
         MISCREG_VMPIDR_EL2,
         MISCREG_SCTLR_EL1,
         MISCREG_SCTLR_EL12,
+        MISCREG_SCTLR2_EL1,
+        MISCREG_SCTLR2_EL12,
         MISCREG_ACTLR_EL1,
         MISCREG_CPACR_EL1,
         MISCREG_CPACR_EL12,
         MISCREG_SCTLR_EL2,
+        MISCREG_SCTLR2_EL2,
         MISCREG_ACTLR_EL2,
         MISCREG_HCR_EL2,
+        MISCREG_HCRX_EL2,
         MISCREG_MDCR_EL2,
         MISCREG_CPTR_EL2,
         MISCREG_HSTR_EL2,
         MISCREG_HACR_EL2,
         MISCREG_SCTLR_EL3,
+        MISCREG_SCTLR2_EL3,
         MISCREG_ACTLR_EL3,
         MISCREG_SCR_EL3,
         MISCREG_SDER32_EL3,
@@ -605,8 +611,11 @@ namespace ArmISA
         MISCREG_TTBR1_EL12,
         MISCREG_TCR_EL1,
         MISCREG_TCR_EL12,
+        MISCREG_TCR2_EL1,
+        MISCREG_TCR2_EL12,
         MISCREG_TTBR0_EL2,
         MISCREG_TCR_EL2,
+        MISCREG_TCR2_EL2,
         MISCREG_VTTBR_EL2,
         MISCREG_VTCR_EL2,
         MISCREG_VSTTBR_EL2,
@@ -681,37 +690,83 @@ namespace ArmISA
         MISCREG_AT_S1E3R_Xt,
         MISCREG_AT_S1E3W_Xt,
         MISCREG_TLBI_VMALLE1IS,
-        MISCREG_TLBI_VAE1IS_Xt,
-        MISCREG_TLBI_ASIDE1IS_Xt,
-        MISCREG_TLBI_VAAE1IS_Xt,
-        MISCREG_TLBI_VALE1IS_Xt,
-        MISCREG_TLBI_VAALE1IS_Xt,
+        MISCREG_TLBI_VMALLE1OS,
+        MISCREG_TLBI_VAE1IS,
+        MISCREG_TLBI_VAE1OS,
+        MISCREG_TLBI_ASIDE1IS,
+        MISCREG_TLBI_ASIDE1OS,
+        MISCREG_TLBI_VAAE1IS,
+        MISCREG_TLBI_VAAE1OS,
+        MISCREG_TLBI_VALE1IS,
+        MISCREG_TLBI_VALE1OS,
+        MISCREG_TLBI_VAALE1IS,
+        MISCREG_TLBI_VAALE1OS,
         MISCREG_TLBI_VMALLE1,
-        MISCREG_TLBI_VAE1_Xt,
-        MISCREG_TLBI_ASIDE1_Xt,
-        MISCREG_TLBI_VAAE1_Xt,
-        MISCREG_TLBI_VALE1_Xt,
-        MISCREG_TLBI_VAALE1_Xt,
-        MISCREG_TLBI_IPAS2E1IS_Xt,
-        MISCREG_TLBI_IPAS2LE1IS_Xt,
+        MISCREG_TLBI_VAE1,
+        MISCREG_TLBI_ASIDE1,
+        MISCREG_TLBI_VAAE1,
+        MISCREG_TLBI_VALE1,
+        MISCREG_TLBI_VAALE1,
+        MISCREG_TLBI_IPAS2E1IS,
+        MISCREG_TLBI_IPAS2E1OS,
+        MISCREG_TLBI_IPAS2LE1IS,
+        MISCREG_TLBI_IPAS2LE1OS,
         MISCREG_TLBI_ALLE2IS,
-        MISCREG_TLBI_VAE2IS_Xt,
+        MISCREG_TLBI_ALLE2OS,
+        MISCREG_TLBI_VAE2IS,
+        MISCREG_TLBI_VAE2OS,
         MISCREG_TLBI_ALLE1IS,
-        MISCREG_TLBI_VALE2IS_Xt,
+        MISCREG_TLBI_ALLE1OS,
+        MISCREG_TLBI_VALE2IS,
+        MISCREG_TLBI_VALE2OS,
         MISCREG_TLBI_VMALLS12E1IS,
-        MISCREG_TLBI_IPAS2E1_Xt,
-        MISCREG_TLBI_IPAS2LE1_Xt,
+        MISCREG_TLBI_VMALLS12E1OS,
+        MISCREG_TLBI_IPAS2E1,
+        MISCREG_TLBI_IPAS2LE1,
         MISCREG_TLBI_ALLE2,
-        MISCREG_TLBI_VAE2_Xt,
+        MISCREG_TLBI_VAE2,
         MISCREG_TLBI_ALLE1,
-        MISCREG_TLBI_VALE2_Xt,
+        MISCREG_TLBI_VALE2,
         MISCREG_TLBI_VMALLS12E1,
         MISCREG_TLBI_ALLE3IS,
-        MISCREG_TLBI_VAE3IS_Xt,
-        MISCREG_TLBI_VALE3IS_Xt,
+        MISCREG_TLBI_ALLE3OS,
+        MISCREG_TLBI_VAE3IS,
+        MISCREG_TLBI_VAE3OS,
+        MISCREG_TLBI_VALE3IS,
+        MISCREG_TLBI_VALE3OS,
         MISCREG_TLBI_ALLE3,
-        MISCREG_TLBI_VAE3_Xt,
-        MISCREG_TLBI_VALE3_Xt,
+        MISCREG_TLBI_VAE3,
+        MISCREG_TLBI_VALE3,
+        MISCREG_TLBI_RVAE1,
+        MISCREG_TLBI_RVAAE1,
+        MISCREG_TLBI_RVALE1,
+        MISCREG_TLBI_RVAALE1,
+        MISCREG_TLBI_RIPAS2E1,
+        MISCREG_TLBI_RIPAS2LE1,
+        MISCREG_TLBI_RVAE2,
+        MISCREG_TLBI_RVALE2,
+        MISCREG_TLBI_RVAE3,
+        MISCREG_TLBI_RVALE3,
+        MISCREG_TLBI_RVAE1IS,
+        MISCREG_TLBI_RVAAE1IS,
+        MISCREG_TLBI_RVALE1IS,
+        MISCREG_TLBI_RVAALE1IS,
+        MISCREG_TLBI_RIPAS2E1IS,
+        MISCREG_TLBI_RIPAS2LE1IS,
+        MISCREG_TLBI_RVAE2IS,
+        MISCREG_TLBI_RVALE2IS,
+        MISCREG_TLBI_RVAE3IS,
+        MISCREG_TLBI_RVALE3IS,
+        MISCREG_TLBI_RVAE1OS,
+        MISCREG_TLBI_RVAAE1OS,
+        MISCREG_TLBI_RVALE1OS,
+        MISCREG_TLBI_RVAALE1OS,
+        MISCREG_TLBI_RIPAS2E1OS,
+        MISCREG_TLBI_RIPAS2LE1OS,
+        MISCREG_TLBI_RVAE2OS,
+        MISCREG_TLBI_RVALE2OS,
+        MISCREG_TLBI_RVAE3OS,
+        MISCREG_TLBI_RVALE3OS,
         MISCREG_PMINTENSET_EL1,
         MISCREG_PMINTENCLR_EL1,
         MISCREG_PMCR_EL0,
@@ -825,6 +880,7 @@ namespace ArmISA
         MISCREG_TTBR1_EL2,
 
         MISCREG_ID_AA64MMFR2_EL1,
+        MISCREG_ID_AA64MMFR3_EL1,
 
         //PAuth Key Regsiters
         MISCREG_APDAKeyHi_EL1,
@@ -1062,6 +1118,48 @@ namespace ArmISA
         MISCREG_ZCR_EL12,
         MISCREG_ZCR_EL1,
 
+        // SME
+        MISCREG_ID_AA64SMFR0_EL1,
+        MISCREG_SVCR,
+        MISCREG_SMIDR_EL1,
+        MISCREG_SMPRI_EL1,
+        MISCREG_SMPRIMAP_EL2,
+        MISCREG_SMCR_EL3,
+        MISCREG_SMCR_EL2,
+        MISCREG_SMCR_EL12,
+        MISCREG_SMCR_EL1,
+        MISCREG_TPIDR2_EL0,
+        MISCREG_MPAMSM_EL1,
+
+        // FEAT_RNG
+        MISCREG_RNDR,
+        MISCREG_RNDRRS,
+
+        // FEAT_FGT
+        MISCREG_HFGITR_EL2,
+        MISCREG_HFGRTR_EL2,
+        MISCREG_HFGWTR_EL2,
+        MISCREG_HDFGRTR_EL2,
+        MISCREG_HDFGWTR_EL2,
+
+        // FEAT_MPAM
+        MISCREG_MPAMIDR_EL1,
+        MISCREG_MPAM0_EL1,
+        MISCREG_MPAM1_EL1,
+        MISCREG_MPAM2_EL2,
+        MISCREG_MPAM3_EL3,
+        MISCREG_MPAM1_EL12,
+        MISCREG_MPAMHCR_EL2,
+        MISCREG_MPAMVPMV_EL2,
+        MISCREG_MPAMVPM0_EL2,
+        MISCREG_MPAMVPM1_EL2,
+        MISCREG_MPAMVPM2_EL2,
+        MISCREG_MPAMVPM3_EL2,
+        MISCREG_MPAMVPM4_EL2,
+        MISCREG_MPAMVPM5_EL2,
+        MISCREG_MPAMVPM6_EL2,
+        MISCREG_MPAMVPM7_EL2,
+
         // NUM_PHYS_MISCREGS specifies the number of actual physical
         // registers, not considering the following pseudo-registers
         // (dummy registers), like MISCREG_UNKNOWN, MISCREG_IMPDEF_UNIMPL.
@@ -1105,6 +1203,7 @@ namespace ArmISA
         MISCREG_IMPLEMENTED,
         MISCREG_UNVERIFIABLE,   // Does the value change on every read (e.g. a
                                 // arch generic counter)
+        MISCREG_UNSERIALIZE,    // Should the checkpointed value be restored?
         MISCREG_WARN_NOT_FAIL,  // If MISCREG_IMPLEMENTED is deasserted, it
                                 // tells whether the instruction should raise a
                                 // warning or fail
@@ -1210,6 +1309,12 @@ namespace ArmISA
             return *this;
         }
         chain
+        reset(uint64_t res_val) const
+        {
+            entry._reset = res_val;
+            return *this;
+        }
+        chain
         res0(uint64_t mask) const
         {
             entry._res0 = mask;
@@ -1222,13 +1327,13 @@ namespace ArmISA
             return *this;
         }
         chain
-        raz(uint64_t mask) const
+        raz(uint64_t mask = (uint64_t)-1) const
         {
             entry._raz  = mask;
             return *this;
         }
         chain
-        rao(uint64_t mask) const
+        rao(uint64_t mask = (uint64_t)-1) const
         {
             entry._rao  = mask;
             return *this;
@@ -1248,6 +1353,12 @@ namespace ArmISA
         unverifiable(bool v = true) const
         {
             entry.info[MISCREG_UNVERIFIABLE] = v;
+            return *this;
+        }
+        chain
+        unserialize(bool v = true) const
+        {
+            entry.info[MISCREG_UNSERIALIZE] = v;
             return *this;
         }
         chain
@@ -1451,6 +1562,13 @@ namespace ArmISA
             return *this;
         }
         chain
+        monWrite(bool v = true) const
+        {
+            monSecureWrite(v);
+            monNonSecureWrite(v);
+            return *this;
+        }
+        chain
         monSecure(bool v = true) const
         {
             monSecureRead(v);
@@ -1569,7 +1687,7 @@ namespace ArmISA
           : entry(e)
         {
             // force unimplemented registers to be thusly declared
-            implemented(1);
+            implemented(1).unserialize(1);
         }
     };
 
@@ -1681,7 +1799,7 @@ namespace ArmISA
                                      unsigned crn, unsigned crm,
                                      unsigned op2);
     MiscRegIndex decodeAArch64SysReg(const MiscRegNum64 &misc_reg);
-    MiscRegNum64 encodeAArch64SysReg(MiscRegIndex misc_reg);
+    std::optional<MiscRegNum64> encodeAArch64SysReg(MiscRegIndex misc_reg);
 
     // Whether a particular AArch64 system register is -always- read only.
     bool aarch64SysRegReadOnly(MiscRegIndex miscReg);
@@ -1725,7 +1843,6 @@ namespace ArmISA
         "nmrr_mair1_ns",
         "nmrr_mair1_s",
         "pmxevtyper_pmccfiltr",
-        "sctlr_rst",
         "sev_mailbox",
         "tlbi_needsync",
 
@@ -2214,17 +2331,22 @@ namespace ArmISA
         "vmpidr_el2",
         "sctlr_el1",
         "sctlr_el12",
+        "sctlr2_el1",
+        "sctlr2_el12",
         "actlr_el1",
         "cpacr_el1",
         "cpacr_el12",
         "sctlr_el2",
+        "sctlr2_el2",
         "actlr_el2",
         "hcr_el2",
+        "hcrx_el2",
         "mdcr_el2",
         "cptr_el2",
         "hstr_el2",
         "hacr_el2",
         "sctlr_el3",
+        "sctlr2_el3",
         "actlr_el3",
         "scr_el3",
         "sder32_el3",
@@ -2236,8 +2358,11 @@ namespace ArmISA
         "ttbr1_el12",
         "tcr_el1",
         "tcr_el12",
+        "tcr2_el1",
+        "tcr2_el12",
         "ttbr0_el2",
         "tcr_el2",
+        "tcr2_el2",
         "vttbr_el2",
         "vtcr_el2",
         "vsttbr_el2",
@@ -2312,37 +2437,83 @@ namespace ArmISA
         "at_s1e3r_xt",
         "at_s1e3w_xt",
         "tlbi_vmalle1is",
-        "tlbi_vae1is_xt",
-        "tlbi_aside1is_xt",
-        "tlbi_vaae1is_xt",
-        "tlbi_vale1is_xt",
-        "tlbi_vaale1is_xt",
+        "tlbi_vmalle1os",
+        "tlbi_vae1is",
+        "tlbi_vae1os",
+        "lbi_aside1is_xt",
+        "tlbi_aside1os",
+        "tlbi_vaae1is",
+        "tlbi_vaae1os",
+        "tlbi_vale1is",
+        "tlbi_vale1os",
+        "tlbi_vaale1is",
+        "tlbi_vaale1os",
         "tlbi_vmalle1",
-        "tlbi_vae1_xt",
-        "tlbi_aside1_xt",
-        "tlbi_vaae1_xt",
-        "tlbi_vale1_xt",
-        "tlbi_vaale1_xt",
-        "tlbi_ipas2e1is_xt",
-        "tlbi_ipas2le1is_xt",
+        "tlbi_vae1",
+        "tlbi_aside1",
+        "tlbi_vaae1",
+        "tlbi_vale1",
+        "tlbi_vaale1",
+        "tlbi_ipas2e1is",
+        "tlbi_ipas2e1os",
+        "tlbi_ipas2le1is",
+        "tlbi_ipas2le1os",
         "tlbi_alle2is",
-        "tlbi_vae2is_xt",
+        "tlbi_alle2os",
+        "tlbi_vae2is",
+        "tlbi_vae2os",
         "tlbi_alle1is",
-        "tlbi_vale2is_xt",
+        "tlbi_alle1os",
+        "tlbi_vale2is",
+        "tlbi_vale2os",
         "tlbi_vmalls12e1is",
-        "tlbi_ipas2e1_xt",
-        "tlbi_ipas2le1_xt",
+        "tlbi_vmalls12e1os",
+        "tlbi_ipas2e1",
+        "tlbi_ipas2le1",
         "tlbi_alle2",
-        "tlbi_vae2_xt",
+        "tlbi_vae2",
         "tlbi_alle1",
-        "tlbi_vale2_xt",
+        "tlbi_vale2",
         "tlbi_vmalls12e1",
         "tlbi_alle3is",
-        "tlbi_vae3is_xt",
-        "tlbi_vale3is_xt",
+        "tlbi_alle3os",
+        "tlbi_vae3is",
+        "tlbi_vae3os",
+        "tlbi_vale3is",
+        "tlbi_vale3os",
         "tlbi_alle3",
-        "tlbi_vae3_xt",
-        "tlbi_vale3_xt",
+        "tlbi_vae3",
+        "tlbi_vale3",
+        "tlbi_rvae1",
+        "tlbi_rvaae1",
+        "tlbi_rvale1",
+        "tlbi_rvaale1",
+        "tlbi_ripas2e1",
+        "tlbi_ripas2le1",
+        "tlbi_rvae2",
+        "tlbi_rvale2",
+        "tlbi_rvae3",
+        "tlbi_rvale3",
+        "tlbi_rvae1is",
+        "tlbi_rvaae1is",
+        "tlbi_rvale1is",
+        "tlbi_rvaale1is",
+        "tlbi_ripas2e1is",
+        "tlbi_ripas2le1is",
+        "tlbi_rvae2is",
+        "tlbi_rvale2is",
+        "tlbi_rvae3is",
+        "tlbi_rvale3is",
+        "tlbi_rvae1os",
+        "tlbi_rvaae1os",
+        "tlbi_rvale1os",
+        "tlbi_rvaale1os",
+        "tlbi_ripas2e1os",
+        "tlbi_ripas2le1os",
+        "tlbi_rvae2os",
+        "tlbi_rvale2os",
+        "tlbi_rvae3os",
+        "tlbi_rvale3os",
         "pmintenset_el1",
         "pmintenclr_el1",
         "pmcr_el0",
@@ -2450,6 +2621,7 @@ namespace ArmISA
 
         "ttbr1_el2",
         "id_aa64mmfr2_el1",
+        "id_aa64mmfr3_el1",
 
         "apdakeyhi_el1",
         "apdakeylo_el1",
@@ -2683,6 +2855,45 @@ namespace ArmISA
         "zcr_el2",
         "zcr_el12",
         "zcr_el1",
+
+        "id_aa64smfr0_el1",
+        "svcr",
+        "smidr_el1",
+        "smpri_el1",
+        "smprimap_el2",
+        "smcr_el3",
+        "smcr_el2",
+        "smcr_el12",
+        "smcr_el1",
+        "tpidr2_el0",
+        "mpamsm_el1",
+
+        "rndr",
+        "rndrrs",
+
+        "hfgitr_el2",
+        "hfgrtr_el2",
+        "hfgwtr_el2",
+        "hdfgrtr_el2",
+        "hdfgwtr_el2",
+
+        // FEAT_MPAM
+        "mpamidr_el1",
+        "mpam0_el1",
+        "mpam1_el1",
+        "mpam2_el2",
+        "mpam3_el3",
+        "mpam1_el12",
+        "mpamhcr_el2",
+        "mpamvpmv_el2",
+        "mpamvpm0_el2",
+        "mpamvpm1_el2",
+        "mpamvpm2_el2",
+        "mpamvpm3_el2",
+        "mpamvpm4_el2",
+        "mpamvpm5_el2",
+        "mpamvpm6_el2",
+        "mpamvpm7_el2",
 
         "num_phys_regs",
 

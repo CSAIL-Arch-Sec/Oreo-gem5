@@ -38,7 +38,6 @@
 
 #include "base/atomicio.hh"
 #include "base/logging.hh"
-#include "base/output.hh"
 #include "base/str.hh"
 #include "debug/FmtFlag.hh"
 #include "debug/FmtStackTrace.hh"
@@ -120,7 +119,7 @@ void
 Logger::dump(Tick when, const std::string &name,
          const void *d, int len, const std::string &flag)
 {
-    if (!name.empty() && ignore.match(name))
+    if (!isEnabled(name))
         return;
 
     const char *data = static_cast<const char *>(d);
@@ -160,7 +159,7 @@ void
 OstreamLogger::logMessage(Tick when, const std::string &name,
         const std::string &flag, const std::string &message)
 {
-    if (!name.empty() && ignore.match(name))
+    if (!isEnabled(name))
         return;
 
     if (!debug::FmtTicksOff && (when != MaxTick))

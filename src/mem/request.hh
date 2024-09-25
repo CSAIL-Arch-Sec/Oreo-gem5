@@ -58,6 +58,7 @@
 
 #include "base/amo.hh"
 #include "base/compiler.hh"
+#include "base/extensible.hh"
 #include "base/flags.hh"
 #include "base/types.hh"
 #include "cpu/inst_seq.hh"
@@ -74,7 +75,6 @@ namespace gem5
  * doesn't cause a problem with stats and is large enough to realistic
  * benchmarks (Linux/Android boot, BBench, etc.)
  */
-GEM5_DEPRECATED_NAMESPACE(ContextSwitchTaskId, context_switch_task_id);
 namespace context_switch_task_id
 {
     enum TaskId
@@ -94,7 +94,7 @@ class ThreadContext;
 typedef std::shared_ptr<Request> RequestPtr;
 typedef uint16_t RequestorID;
 
-class Request
+class Request : public Extensible<Request>
 {
   public:
     typedef uint64_t FlagsType;
@@ -158,7 +158,7 @@ class Request
         MEM_SWAP                    = 0x00400000,
         MEM_SWAP_COND               = 0x00800000,
         /** This request is a read which will be followed by a write. */
-        READ_MODIFY_WRITE           = 0x00020000,
+        READ_MODIFY_WRITE           = 0x0020000000000000,
 
         /** The request is a prefetch. */
         PREFETCH                    = 0x01000000,
@@ -292,8 +292,8 @@ class Request
 
     /**
      * These bits are used to set the coherence policy for the GPU and are
-     * encoded in the GCN3 instructions. The GCN3 ISA defines two cache levels
-     * See the AMD GCN3 ISA Architecture Manual for more details.
+     * encoded in the Vega instructions. The Vega ISA defines two cache levels
+     * See the AMD Vega ISA Architecture Manual for more details.
      *
      * INV_L1: L1 cache invalidation
      * FLUSH_L2: L2 cache flush
@@ -509,7 +509,8 @@ class Request
     }
 
     Request(const Request& other)
-        : _paddr(other._paddr), _size(other._size),
+        : Extensible<Request>(other),
+          _paddr(other._paddr), _size(other._size),
           _byteEnable(other._byteEnable),
           _requestorId(other._requestorId),
           _flags(other._flags),
@@ -762,6 +763,13 @@ class Request
         assert(atomicOpFunctor);
         return atomicOpFunctor.get();
     }
+
+    void
+    setAtomicOpFunctor(AtomicOpFunctorPtr amo_op)
+    {
+        atomicOpFunctor = std::move(amo_op);
+    }
+
 
     /**
      * Accessor for hardware transactional memory abort cause.
@@ -1108,12 +1116,24 @@ class Request
 
     bool isAcquire() const { return _cacheCoherenceFlags.isSet(ACQUIRE); }
 
+
+    /**
+     * Accessor functions for the cache bypass flags. The cache bypass
+     * can specify which levels in the hierarchy to bypass. If GLC_BIT
+     * is set, the requests are globally coherent and bypass TCP.
+     * If SLC_BIT is set, then the requests are system level coherent
+     * and bypass both TCP and TCC.
+     */
+    bool isGLCSet() const {return _cacheCoherenceFlags.isSet(GLC_BIT); }
+    bool isSLCSet() const {return _cacheCoherenceFlags.isSet(SLC_BIT); }
+
     /**
      * Accessor functions for the memory space configuration flags and used by
      * GPU ISAs such as the Heterogeneous System Architecture (HSA). Note that
      * setting extraFlags should be done via setCacheCoherenceFlags().
      */
     bool isInvL1() const { return _cacheCoherenceFlags.isSet(INV_L1); }
+    bool isInvL2() const { return _cacheCoherenceFlags.isSet(GL2_CACHE_INV); }
 
     bool
     isGL2CacheFlush() const

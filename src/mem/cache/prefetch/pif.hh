@@ -49,7 +49,6 @@ namespace gem5
 
 struct PIFPrefetcherParams;
 
-GEM5_DEPRECATED_NAMESPACE(Prefetcher, prefetch);
 namespace prefetch
 {
 
@@ -139,6 +138,7 @@ class PIF : public Queued
         {
             HistoryBuffer::iterator historyIt;
         };
+
         /**
          * The index table is a small cache-like structure that facilitates
          * fast search of the history buffer.
@@ -183,7 +183,8 @@ class PIF : public Queued
         ~PIF() = default;
 
         void calculatePrefetch(const PrefetchInfo &pfi,
-                               std::vector<AddrPriority> &addresses);
+                               std::vector<AddrPriority> &addresses,
+                               const CacheAccessor &cache);
 
         /**
          * Add a SimObject and a probe name to monitor the retired instructions

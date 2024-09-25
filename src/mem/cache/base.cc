@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2018-2019 ARM Limited
+ * Copyright (c) 2012-2013, 2018-2019, 2023-2024 ARM Limited
  * All rights reserved.
  *
  * The license below extends only to copyright in the software and shall
@@ -58,6 +58,7 @@
 #include "mem/cache/prefetch/base.hh"
 #include "mem/cache/queue_entry.hh"
 #include "mem/cache/tags/compressed_tags.hh"
+#include "mem/cache/tags/partitioning_policies/partition_manager.hh"
 #include "mem/cache/tags/super_blk.hh"
 #include "params/BaseCache.hh"
 #include "params/WriteAllocator.hh"
@@ -67,10 +68,11 @@ namespace gem5
 {
 
 BaseCache::CacheResponsePort::CacheResponsePort(const std::string &_name,
-                                          BaseCache *_cache,
+                                          BaseCache& _cache,
                                           const std::string &_label)
-    : QueuedResponsePort(_name, _cache, queue),
-      queue(*_cache, *this, true, _label),
+    : QueuedResponsePort(_name, queue),
+      cache{_cache},
+      queue(_cache, *this, true, _label),
       blocked(false), mustSendRetry(false),
       sendRetryEvent([this]{ processSendRetry(); }, _name)
 {
@@ -78,12 +80,14 @@ BaseCache::CacheResponsePort::CacheResponsePort(const std::string &_name,
 
 BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
     : ClockedObject(p),
-      cpuSidePort (p.name + ".cpu_side_port", this, "CpuSidePort"),
+      cpuSidePort (p.name + ".cpu_side_port", *this, "CpuSidePort"),
       memSidePort(p.name + ".mem_side_port", this, "MemSidePort"),
+      accessor(*this),
       mshrQueue("MSHRs", p.mshrs, 0, p.demand_mshr_reserve, p.name),
       writeBuffer("write buffer", p.write_buffers, p.mshrs, p.name),
       tags(p.tags),
       compressor(p.compressor),
+      partitionManager(p.partitioning_manager),
       prefetcher(p.prefetcher),
       writeAllocator(p.write_allocator),
       writebackClean(p.writeback_clean),
@@ -125,7 +129,7 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
 
     tags->tagsInit();
     if (prefetcher)
-        prefetcher->setCache(this);
+        prefetcher->setParentInfo(system, getProbeManager(), getBlockSize());
 
     fatal_if(compressor && !dynamic_cast<CompressedTags*>(tags),
         "The tags of compressed cache %s must derive from CompressedTags",
@@ -150,7 +154,7 @@ BaseCache::CacheResponsePort::setBlocked()
     // if we already scheduled a retry in this cycle, but it has not yet
     // happened, cancel it
     if (sendRetryEvent.scheduled()) {
-        owner.deschedule(sendRetryEvent);
+        cache.deschedule(sendRetryEvent);
         DPRINTF(CachePort, "Port descheduled retry\n");
         mustSendRetry = true;
     }
@@ -164,7 +168,7 @@ BaseCache::CacheResponsePort::clearBlocked()
     blocked = false;
     if (mustSendRetry) {
         // @TODO: need to find a better time (next cycle?)
-        owner.schedule(sendRetryEvent, curTick() + 1);
+        cache.schedule(sendRetryEvent, curTick() + 1);
     }
 }
 
@@ -447,7 +451,7 @@ BaseCache::recvTimingReq(PacketPtr pkt)
     if (satisfied) {
         // notify before anything else as later handleTimingReqHit might turn
         // the packet in a response
-        ppHit->notify(pkt);
+        ppHit->notify(CacheAccessProbeArg(pkt,accessor));
 
         if (prefetcher && blk && blk->wasPrefetched()) {
             DPRINTF(Cache, "Hit on prefetch for addr %#x (%s)\n",
@@ -459,12 +463,13 @@ BaseCache::recvTimingReq(PacketPtr pkt)
     } else {
         handleTimingReqMiss(pkt, blk, forward_time, request_time);
 
-        ppMiss->notify(pkt);
+        ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
     }
 
     if (prefetcher) {
         // track time of availability of next prefetch, if any
-        Tick next_pf_time = prefetcher->nextPrefetchReadyTime();
+        Tick next_pf_time = std::max(
+                            prefetcher->nextPrefetchReadyTime(), clockEdge());
         if (next_pf_time != MaxTick) {
             schedMemSideSendEvent(next_pf_time);
         }
@@ -555,7 +560,7 @@ BaseCache::recvTimingResp(PacketPtr pkt)
             writeAllocator->allocate() : mshr->allocOnFill();
         blk = handleFill(pkt, blk, writebacks, allocate);
         assert(blk != nullptr);
-        ppFill->notify(pkt);
+        ppFill->notify(CacheAccessProbeArg(pkt, accessor));
     }
 
     // Don't want to promote the Locked RMW Read until
@@ -769,7 +774,9 @@ void
 BaseCache::updateBlockData(CacheBlk *blk, const PacketPtr cpkt,
     bool has_old_data)
 {
-    DataUpdate data_update(regenerateBlkAddr(blk), blk->isSecure());
+    CacheDataUpdateProbeArg data_update(
+        regenerateBlkAddr(blk), blk->isSecure(),
+        blk->getSrcRequestorId(), accessor);
     if (ppDataUpdate->hasListeners()) {
         if (has_old_data) {
             data_update.oldData = std::vector<uint64_t>(blk->data,
@@ -786,6 +793,7 @@ BaseCache::updateBlockData(CacheBlk *blk, const PacketPtr cpkt,
         if (cpkt) {
             data_update.newData = std::vector<uint64_t>(blk->data,
                 blk->data + (blkSize / sizeof(uint64_t)));
+            data_update.hwPrefetched = blk->wasPrefetched();
         }
         ppDataUpdate->notify(data_update);
     }
@@ -807,7 +815,9 @@ BaseCache::cmpAndSwap(CacheBlk *blk, PacketPtr pkt)
     assert(sizeof(uint64_t) >= pkt->getSize());
 
     // Get a copy of the old block's contents for the probe before the update
-    DataUpdate data_update(regenerateBlkAddr(blk), blk->isSecure());
+    CacheDataUpdateProbeArg data_update(
+        regenerateBlkAddr(blk), blk->isSecure(), blk->getSrcRequestorId(),
+        accessor);
     if (ppDataUpdate->hasListeners()) {
         data_update.oldData = std::vector<uint64_t>(blk->data,
             blk->data + (blkSize / sizeof(uint64_t)));
@@ -1022,7 +1032,8 @@ BaseCache::updateCompressionData(CacheBlk *&blk, const uint64_t* data,
         CacheBlk *victim = nullptr;
         if (replaceExpansions || is_data_contraction) {
             victim = tags->findVictim(regenerateBlkAddr(blk),
-                blk->isSecure(), compression_size, evict_blks);
+                blk->isSecure(), compression_size, evict_blks,
+                blk->getPartitionId());
 
             // It is valid to return nullptr if there is no victim
             if (!victim) {
@@ -1104,7 +1115,9 @@ BaseCache::satisfyRequest(PacketPtr pkt, CacheBlk *blk, bool, bool)
         if (pkt->isAtomicOp()) {
             // Get a copy of the old block's contents for the probe before
             // the update
-            DataUpdate data_update(regenerateBlkAddr(blk), blk->isSecure());
+            CacheDataUpdateProbeArg data_update(
+                regenerateBlkAddr(blk), blk->isSecure(),
+                blk->getSrcRequestorId(), accessor);
             if (ppDataUpdate->hasListeners()) {
                 data_update.oldData = std::vector<uint64_t>(blk->data,
                     blk->data + (blkSize / sizeof(uint64_t)));
@@ -1123,6 +1136,7 @@ BaseCache::satisfyRequest(PacketPtr pkt, CacheBlk *blk, bool, bool)
             if (ppDataUpdate->hasListeners()) {
                 data_update.newData = std::vector<uint64_t>(blk->data,
                     blk->data + (blkSize / sizeof(uint64_t)));
+                data_update.hwPrefetched = blk->wasPrefetched();
                 ppDataUpdate->notify(data_update);
             }
 
@@ -1628,10 +1642,13 @@ BaseCache::allocateBlock(const PacketPtr pkt, PacketList &writebacks)
         blk_size_bits = comp_data->getSizeBits();
     }
 
+    // get partitionId from Packet
+    const auto partition_id = partitionManager ?
+        partitionManager->readPacketPartitionID(pkt) : 0;
     // Find replacement victim
     std::vector<CacheBlk*> evict_blks;
     CacheBlk *victim = tags->findVictim(addr, is_secure, blk_size_bits,
-                                        evict_blks);
+                                        evict_blks, partition_id);
 
     // It is valid to return nullptr if there is no victim
     if (!victim)
@@ -2505,11 +2522,15 @@ BaseCache::CacheStats::regStats()
 void
 BaseCache::regProbePoints()
 {
-    ppHit = new ProbePointArg<PacketPtr>(this->getProbeManager(), "Hit");
-    ppMiss = new ProbePointArg<PacketPtr>(this->getProbeManager(), "Miss");
-    ppFill = new ProbePointArg<PacketPtr>(this->getProbeManager(), "Fill");
+    ppHit = new ProbePointArg<CacheAccessProbeArg>(
+        this->getProbeManager(), "Hit");
+    ppMiss = new ProbePointArg<CacheAccessProbeArg>(
+        this->getProbeManager(), "Miss");
+    ppFill = new ProbePointArg<CacheAccessProbeArg>(
+        this->getProbeManager(), "Fill");
     ppDataUpdate =
-        new ProbePointArg<DataUpdate>(this->getProbeManager(), "Data Update");
+        new ProbePointArg<CacheDataUpdateProbeArg>(
+            this->getProbeManager(), "Data Update");
 }
 
 ///////////////
@@ -2521,12 +2542,12 @@ bool
 BaseCache::CpuSidePort::recvTimingSnoopResp(PacketPtr pkt)
 {
     // Snoops shouldn't happen when bypassing caches
-    assert(!cache->system->bypassCaches());
+    assert(!cache.system->bypassCaches());
 
     assert(pkt->isResponse());
 
     // Express snoop responses from requestor to responder, e.g., from L1 to L2
-    cache->recvTimingSnoopResp(pkt);
+    cache.recvTimingSnoopResp(pkt);
     return true;
 }
 
@@ -2534,7 +2555,7 @@ BaseCache::CpuSidePort::recvTimingSnoopResp(PacketPtr pkt)
 bool
 BaseCache::CpuSidePort::tryTiming(PacketPtr pkt)
 {
-    if (cache->system->bypassCaches() || pkt->isExpressSnoop()) {
+    if (cache.system->bypassCaches() || pkt->isExpressSnoop()) {
         // always let express snoop packets through even if blocked
         return true;
     } else if (blocked || mustSendRetry) {
@@ -2551,14 +2572,14 @@ BaseCache::CpuSidePort::recvTimingReq(PacketPtr pkt)
 {
     assert(pkt->isRequest());
 
-    if (cache->system->bypassCaches()) {
+    if (cache.system->bypassCaches()) {
         // Just forward the packet if caches are disabled.
         // @todo This should really enqueue the packet rather
-        [[maybe_unused]] bool success = cache->memSidePort.sendTimingReq(pkt);
+        [[maybe_unused]] bool success = cache.memSidePort.sendTimingReq(pkt);
         assert(success);
         return true;
     } else if (tryTiming(pkt)) {
-        cache->recvTimingReq(pkt);
+        cache.recvTimingReq(pkt);
         return true;
     }
     return false;
@@ -2567,39 +2588,39 @@ BaseCache::CpuSidePort::recvTimingReq(PacketPtr pkt)
 Tick
 BaseCache::CpuSidePort::recvAtomic(PacketPtr pkt)
 {
-    if (cache->system->bypassCaches()) {
+    if (cache.system->bypassCaches()) {
         // Forward the request if the system is in cache bypass mode.
-        return cache->memSidePort.sendAtomic(pkt);
+        return cache.memSidePort.sendAtomic(pkt);
     } else {
-        return cache->recvAtomic(pkt);
+        return cache.recvAtomic(pkt);
     }
 }
 
 void
 BaseCache::CpuSidePort::recvFunctional(PacketPtr pkt)
 {
-    if (cache->system->bypassCaches()) {
+    if (cache.system->bypassCaches()) {
         // The cache should be flushed if we are in cache bypass mode,
         // so we don't need to check if we need to update anything.
-        cache->memSidePort.sendFunctional(pkt);
+        cache.memSidePort.sendFunctional(pkt);
         return;
     }
 
     // functional request
-    cache->functionalAccess(pkt, true);
+    cache.functionalAccess(pkt, true);
 }
 
 AddrRangeList
 BaseCache::CpuSidePort::getAddrRanges() const
 {
-    return cache->getAddrRanges();
+    return cache.getAddrRanges();
 }
 
 
 BaseCache::
-CpuSidePort::CpuSidePort(const std::string &_name, BaseCache *_cache,
+CpuSidePort::CpuSidePort(const std::string &_name, BaseCache& _cache,
                          const std::string &_label)
-    : CacheResponsePort(_name, _cache, _label), cache(_cache)
+    : CacheResponsePort(_name, _cache, _label)
 {
 }
 
@@ -2686,7 +2707,7 @@ BaseCache::CacheReqPacketQueue::sendDeferredPacket()
 BaseCache::MemSidePort::MemSidePort(const std::string &_name,
                                     BaseCache *_cache,
                                     const std::string &_label)
-    : CacheRequestPort(_name, _cache, _reqQueue, _snoopRespQueue),
+    : CacheRequestPort(_name, _reqQueue, _snoopRespQueue),
       _reqQueue(*_cache, *this, _snoopRespQueue, _label),
       _snoopRespQueue(*_cache, *this, true, _label), cache(_cache)
 {

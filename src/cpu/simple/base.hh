@@ -233,6 +233,8 @@ class BaseSimpleCPU : public BaseCPU
     }
 
     void countInst();
+    void countFetchInst();
+    void countCommitInst();
     Counter totalInsts() const override;
     Counter totalOps() const override;
 

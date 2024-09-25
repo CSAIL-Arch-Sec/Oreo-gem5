@@ -474,7 +474,7 @@ class Fetch
     ThreadID retryTid;
 
     /** Cache block size. */
-    unsigned int cacheBlkSize;
+    Addr cacheBlkSize;
 
     /** The size of the fetch buffer in bytes. The fetch buffer
      *  itself may be smaller than a cache line.
@@ -543,12 +543,6 @@ class Fetch
         FetchStatGroup(CPU *cpu, Fetch *fetch);
         // @todo: Consider making these
         // vectors and tracking on a per thread basis.
-        /** Stat for total number of cycles stalled due to an icache miss. */
-        statistics::Scalar icacheStallCycles;
-        /** Stat for total number of fetched instructions. */
-        statistics::Scalar insts;
-        /** Total number of fetched branches. */
-        statistics::Scalar branches;
         /** Stat for total number of predicted branches. */
         statistics::Scalar predictedBranches;
         /** Stat for total number of cycles spent fetching. */
@@ -591,10 +585,6 @@ class Fetch
         statistics::Distribution nisnDist;
         /** Rate of how often fetch was idle. */
         statistics::Formula idleRate;
-        /** Number of branch fetches per cycle. */
-        statistics::Formula branchRate;
-        /** Number of instruction fetched per cycle. */
-        statistics::Formula rate;
     } fetchStats;
 };
 

@@ -207,13 +207,28 @@ void
 TlmToGem5Bridge<BITWIDTH>::sendBeginResp(tlm::tlm_generic_payload &trans,
                                          sc_core::sc_time &delay)
 {
-    Gem5SystemC::Gem5Extension *extension = nullptr;
-    trans.get_extension(extension);
-    panic_if(extension == nullptr,
-             "Missing gem5 extension when sending BEGIN_RESP");
-    auto pkt = extension->getPacket();
+    MemBackdoor::Flags flags;
+    switch (trans.get_command()) {
+      case tlm::TLM_READ_COMMAND:
+        flags = MemBackdoor::Readable;
+        break;
+      case tlm::TLM_WRITE_COMMAND:
+        flags = MemBackdoor::Writeable;
+        break;
+      default:
+        panic("TlmToGem5Bridge: "
+                "received transaction with unsupported command");
+    }
+    Addr start_addr = trans.get_address();
+    Addr length = trans.get_data_length();
 
-    setPayloadResponse(trans, pkt);
+    MemBackdoorReq req({start_addr, start_addr + length}, flags);
+    MemBackdoorPtr backdoor = nullptr;
+
+    bmp.sendMemBackdoorReq(req, backdoor);
+
+    if (backdoor)
+        trans.set_dmi_allowed(true);
 
     tlm::tlm_phase phase = tlm::BEGIN_RESP;
 
@@ -252,6 +267,7 @@ TlmToGem5Bridge<BITWIDTH>::handleBeginReq(tlm::tlm_generic_payload &trans)
         sendEndReq(trans);
         if (!needsResponse) {
             auto delay = sc_core::SC_ZERO_TIME;
+            setPayloadResponse(trans, pkt);
             sendBeginResp(trans, delay);
         }
         trans.release();
@@ -281,6 +297,24 @@ void
 TlmToGem5Bridge<BITWIDTH>::destroyPacket(PacketPtr pkt)
 {
     delete pkt;
+}
+
+template <unsigned int BITWIDTH>
+void
+TlmToGem5Bridge<BITWIDTH>::cacheBackdoor(gem5::MemBackdoorPtr backdoor)
+{
+    if (backdoor == nullptr) return;
+
+    // We only need to register the callback at the first time.
+    if (requestedBackdoors.find(backdoor) == requestedBackdoors.end()) {
+        backdoor->addInvalidationCallback(
+            [this](const MemBackdoor &backdoor)
+            {
+                invalidateDmi(backdoor);
+            }
+        );
+        requestedBackdoors.emplace(backdoor);
+    }
 }
 
 template <unsigned int BITWIDTH>
@@ -344,9 +378,29 @@ TlmToGem5Bridge<BITWIDTH>::b_transport(tlm::tlm_generic_payload &trans,
     pkt->pushSenderState(new Gem5SystemC::TlmSenderState(trans));
 
     MemBackdoorPtr backdoor = nullptr;
-    Tick ticks = bmp.sendAtomicBackdoor(pkt, backdoor);
-    if (backdoor)
+    Tick ticks = 0;
+
+    // Check if we have a backdoor meet the request. If yes, we can just hints
+    // the requestor the DMI is supported.
+    for (auto& b : requestedBackdoors) {
+        if (pkt->getAddrRange().isSubset(b->range()) &&
+            ((!pkt->isWrite() && b->readable()) ||
+             (pkt->isWrite() && b->writeable()))) {
+            backdoor = b;
+        }
+    }
+
+    if (backdoor) {
+        ticks = bmp.sendAtomic(pkt);
+    } else {
+        ticks = bmp.sendAtomicBackdoor(pkt, backdoor);
+    }
+
+    // Hints the requestor the DMI is supported.
+    if (backdoor) {
         trans.set_dmi_allowed(true);
+        cacheBackdoor(backdoor);
+    }
 
     // send an atomic request to gem5
     panic_if(pkt->needsResponse() && !pkt->isResponse(),
@@ -401,13 +455,26 @@ bool
 TlmToGem5Bridge<BITWIDTH>::get_direct_mem_ptr(tlm::tlm_generic_payload &trans,
                                               tlm::tlm_dmi &dmi_data)
 {
-    auto [pkt, pkt_created] = payload2packet(_id, trans);
-    pkt->pushSenderState(new Gem5SystemC::TlmSenderState(trans));
-    if (pkt_created)
-        pkt->req->setFlags(Request::NO_ACCESS);
+    MemBackdoor::Flags flags;
+    switch (trans.get_command()) {
+      case tlm::TLM_READ_COMMAND:
+        flags = MemBackdoor::Readable;
+        break;
+      case tlm::TLM_WRITE_COMMAND:
+        flags = MemBackdoor::Writeable;
+        break;
+      default:
+        panic("TlmToGem5Bridge: "
+                "received transaction with unsupported command");
+    }
+    Addr start_addr = trans.get_address();
+    Addr length = trans.get_data_length();
 
+    MemBackdoorReq req({start_addr, start_addr + length}, flags);
     MemBackdoorPtr backdoor = nullptr;
-    bmp.sendAtomicBackdoor(pkt, backdoor);
+
+    bmp.sendMemBackdoorReq(req, backdoor);
+
     if (backdoor) {
         trans.set_dmi_allowed(true);
         dmi_data.set_dmi_ptr(backdoor->ptr());
@@ -421,30 +488,10 @@ TlmToGem5Bridge<BITWIDTH>::get_direct_mem_ptr(tlm::tlm_generic_payload &trans,
         if (backdoor->writeable())
             access = (access_t)(access | tlm::tlm_dmi::DMI_ACCESS_WRITE);
         dmi_data.set_granted_access(access);
-
-        // We only need to register the callback at the first time.
-        if (requestedBackdoors.find(backdoor) == requestedBackdoors.end()) {
-            backdoor->addInvalidationCallback(
-                [this](const MemBackdoor &backdoor)
-                {
-                    invalidateDmi(backdoor);
-                }
-            );
-            requestedBackdoors.emplace(backdoor);
-        }
+        cacheBackdoor(backdoor);
     }
 
-    gem5::Packet::SenderState *senderState = pkt->popSenderState();
-    sc_assert(
-        nullptr != dynamic_cast<Gem5SystemC::TlmSenderState*>(senderState));
-
-    // clean up
-    delete senderState;
-
-    setPayloadResponse(trans, pkt);
-
-    if (pkt_created)
-        destroyPacket(pkt);
+    trans.set_response_status(tlm::TLM_OK_RESPONSE);
 
     return backdoor != nullptr;
 }
@@ -478,6 +525,8 @@ TlmToGem5Bridge<BITWIDTH>::recvTimingResp(PacketPtr pkt)
     sc_assert(tlmSenderState != nullptr);
 
     auto &trans = tlmSenderState->trans;
+    setPayloadResponse(trans, pkt);
+    sendBeginResp(trans, delay);
 
     Gem5SystemC::Gem5Extension *extension = nullptr;
     trans.get_extension(extension);
@@ -490,7 +539,6 @@ TlmToGem5Bridge<BITWIDTH>::recvTimingResp(PacketPtr pkt)
     if (extension == nullptr)
         destroyPacket(pkt);
 
-    sendBeginResp(trans, delay);
     trans.release();
 
     return true;
@@ -509,17 +557,18 @@ TlmToGem5Bridge<BITWIDTH>::recvReqRetry()
     bool needsResponse = pendingPacket->needsResponse();
     if (bmp.sendTimingReq(pendingPacket)) {
         waitForRetry = false;
-        pendingPacket = nullptr;
 
         auto &trans = *pendingRequest;
         sendEndReq(trans);
         if (!needsResponse) {
             auto delay = sc_core::SC_ZERO_TIME;
+            setPayloadResponse(trans, pendingPacket);
             sendBeginResp(trans, delay);
         }
         trans.release();
 
         pendingRequest = nullptr;
+        pendingPacket = nullptr;
     }
 }
 
@@ -577,12 +626,12 @@ TlmToGem5Bridge<BITWIDTH>::before_end_of_elaboration()
         DPRINTF(TlmBridge, "register blocking interface");
         socket.register_b_transport(
                 this, &TlmToGem5Bridge<BITWIDTH>::b_transport);
-        socket.register_get_direct_mem_ptr(
-                this, &TlmToGem5Bridge<BITWIDTH>::get_direct_mem_ptr);
     } else {
         panic("gem5 operates neither in Timing nor in Atomic mode");
     }
 
+    socket.register_get_direct_mem_ptr(
+            this, &TlmToGem5Bridge<BITWIDTH>::get_direct_mem_ptr);
     socket.register_transport_dbg(
             this, &TlmToGem5Bridge<BITWIDTH>::transport_dbg);
 

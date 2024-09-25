@@ -37,6 +37,7 @@
 #include "base/compiler.hh"
 #include "cpu/base.hh"
 #include "cpu/thread_context.hh"
+#include "debug/MatRegs.hh"
 #include "params/X86ISA.hh"
 #include "sim/serialize.hh"
 
@@ -146,19 +147,31 @@ RegClass vecRegClass(VecRegClass, VecRegClassName, 1, debug::IntRegs);
 RegClass vecElemClass(VecElemClass, VecElemClassName, 2, debug::IntRegs);
 RegClass vecPredRegClass(VecPredRegClass, VecPredRegClassName, 1,
         debug::IntRegs);
+RegClass matRegClass(MatRegClass, MatRegClassName, 0, debug::MatRegs);
 
 } // anonymous namespace
 
-ISA::ISA(const X86ISAParams &p) : BaseISA(p), vendorString(p.vendor_string)
+ISA::ISA(const X86ISAParams &p)
+    : BaseISA(p, "x86"), cpuid(new X86CPUID(p.vendor_string, p.name_string))
 {
-    fatal_if(vendorString.size() != 12,
-             "CPUID vendor string must be 12 characters\n");
+    cpuid->addStandardFunc(FamilyModelStepping, p.FamilyModelStepping);
+    cpuid->addStandardFunc(CacheParams, p.CacheParams);
+    cpuid->addStandardFunc(ExtendedFeatures, p.ExtendedFeatures);
+    cpuid->addStandardFunc(ExtendedState, p.ExtendedState);
+
+    cpuid->addExtendedFunc(FamilyModelSteppingBrandFeatures,
+                          p.FamilyModelSteppingBrandFeatures);
+    cpuid->addExtendedFunc(L1CacheAndTLB, p.L1CacheAndTLB);
+    cpuid->addExtendedFunc(L2L3CacheAndL2TLB, p.L2L3CacheAndL2TLB);
+    cpuid->addExtendedFunc(APMInfo, p.APMInfo);
+    cpuid->addExtendedFunc(LongModeAddressSize, p.LongModeAddressSize);
 
     _regClasses.push_back(&flatIntRegClass);
     _regClasses.push_back(&flatFloatRegClass);
     _regClasses.push_back(&vecRegClass);
     _regClasses.push_back(&vecElemClass);
     _regClasses.push_back(&vecPredRegClass);
+    _regClasses.push_back(&matRegClass);
     _regClasses.push_back(&ccRegClass);
     _regClasses.push_back(&miscRegClass);
 
@@ -231,6 +244,10 @@ ISA::readMiscReg(RegIndex idx)
         return base;
     }
 
+    if (idx == misc_reg::Xcr0) {
+        return regVal[idx] | 1;
+    }
+
     return readMiscRegNoEffect(idx);
 }
 
@@ -249,7 +266,7 @@ ISA::setMiscRegNoEffect(RegIndex idx, RegVal val)
         reg_width = 3;
         break;
       case misc_reg::Ftw:
-        reg_width = 8;
+        reg_width = 16;
         break;
       case misc_reg::Fsw:
       case misc_reg::Fcw:
@@ -324,6 +341,8 @@ ISA::setMiscReg(RegIndex idx, RegVal val)
         }
         break;
       case misc_reg::Cr8:
+        break;
+      case misc_reg::Xcr0:
         break;
       case misc_reg::Rflags:
         {
@@ -478,6 +497,8 @@ ISA::setMiscReg(RegIndex idx, RegVal val)
 void
 ISA::serialize(CheckpointOut &cp) const
 {
+    BaseISA::serialize(cp);
+
     SERIALIZE_ARRAY(regVal, misc_reg::NumRegs);
 }
 

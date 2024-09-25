@@ -25,14 +25,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from m5.util import warn
-from .base_cpu_processor import BaseCPUProcessor
-from ..processors.simple_core import SimpleCore
-
-from .cpu_types import CPUTypes
-from ...isas import ISA
-
 from typing import Optional
+
+from m5.util import warn
+
+from ...isas import ISA
+from ..processors.simple_core import SimpleCore
+from .base_cpu_processor import BaseCPUProcessor
+from .cpu_types import CPUTypes
 
 
 class SimpleProcessor(BaseCPUProcessor):
@@ -42,7 +42,7 @@ class SimpleProcessor(BaseCPUProcessor):
     """
 
     def __init__(
-        self, cpu_type: CPUTypes, num_cores: int, isa: Optional[ISA] = None,
+        self, cpu_type: CPUTypes, num_cores: int, isa: ISA,
         protect_kaslr: bool = False,
         protect_module_kaslr: bool = False,
         protect_user_aslr: bool = False,
@@ -50,22 +50,11 @@ class SimpleProcessor(BaseCPUProcessor):
     ) -> None:
         """
         :param cpu_type: The CPU type for each type in the processor.
+
         :param num_cores: The number of CPU cores in the processor.
 
-        :param isa: The ISA of the processor. This argument is optional. If not
-        set the `runtime.get_runtime_isa` is used to determine the ISA at
-        runtime. **WARNING**: This functionality is deprecated. It is
-        recommended you explicitly set your ISA via SimpleProcessor
-        construction.
+        :param isa: The ISA of the processor.
         """
-        if not isa:
-            warn(
-                "An ISA for the SimpleProcessor was not set. This will "
-                "result in usage of `runtime.get_runtime_isa` to obtain the "
-                "ISA. This function is deprecated and will be removed in "
-                "future releases of gem5. Please explicitly state the ISA "
-                "via the processor constructor."
-            )
         super().__init__(
             cores=[
                 SimpleCore(cpu_type=cpu_type, core_id=i, isa=isa,

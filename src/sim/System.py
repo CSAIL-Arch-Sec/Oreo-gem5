@@ -37,13 +37,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from m5.SimObject import *
-from m5.params import *
-from m5.proxy import *
-
 from m5.objects.DVFSHandler import *
 from m5.objects.SimpleMemory import *
 from m5.objects.Workload import StubWorkload
+from m5.params import *
+from m5.proxy import *
+from m5.SimObject import *
 
 
 class MemoryMode(Enum):
@@ -62,7 +61,9 @@ class System(SimObject):
         PyBindMethod("setMemoryMode"),
     ]
 
-    memories = VectorParam.AbstractMemory(Self.all, "All memories in the system")
+    memories = VectorParam.AbstractMemory(
+        Self.all, "All memories in the system"
+    )
     mem_mode = Param.MemoryMode("atomic", "The mode the memory system is in")
 
     thermal_model = Param.ThermalModel(NULL, "Thermal model")
@@ -75,16 +76,20 @@ class System(SimObject):
     # mmap). By enabling this flag, we accommodate cases where a large
     # (but sparse) memory is simulated.
     mmap_using_noreserve = Param.Bool(
-        False, "mmap the backing store " "without reserving swap"
+        False, "mmap the backing store without reserving swap"
     )
 
     # The memory ranges are to be populated when creating the system
     # such that these can be passed from the I/O subsystem through an
     # I/O bridge or cache
-    mem_ranges = VectorParam.AddrRange([], "Ranges that constitute main memory")
+    mem_ranges = VectorParam.AddrRange(
+        [], "Ranges that constitute main memory"
+    )
 
     # The ranges backed by a shadowed ROM
-    shadow_rom_ranges = VectorParam.AddrRange([], "Ranges  backed by a " "shadowed ROM")
+    shadow_rom_ranges = VectorParam.AddrRange(
+        [], "Ranges  backed by a shadowed ROM"
+    )
 
     shared_backstore = Param.String(
         "",
@@ -105,7 +110,8 @@ class System(SimObject):
 
     exit_on_work_items = Param.Bool(
         False,
-        "Exit from the simulation loop when " "encountering work item annotations.",
+        "Exit from the simulation loop when "
+        "encountering work item annotations.",
     )
     work_item_id = Param.Int(-1, "specific work item id")
     num_work_ids = Param.Int(16, "Number of distinct work item types")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 ARM Limited
+ * Copyright (c) 2020-2021, 2024 Arm Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -79,6 +79,12 @@ class RubyRequest : public Message
     bool m_isTlbi;
     // Should be uint64, but SLICC complains about casts
     Addr m_tlbiTransactionUid;
+    // GPU cache bypass flags. GLC bypasses L1 while SLC bypasses both L1 and
+    // L2 if set to true. They are set to false by default and they must be
+    // explicitly set to true in the program in order to bypass caches
+    bool m_isGLCSet;
+    bool m_isSLCSet;
+    bool m_isSecure;
 
     RubyRequest(Tick curTime, uint64_t _paddr, int _len,
         uint64_t _pc, RubyRequestType _type, RubyAccessMode _access_mode,
@@ -96,9 +102,17 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0)
+          m_tlbiTransactionUid(0),
+          m_isSecure(m_pkt ? m_pkt->req->isSecure() : false)
     {
         m_LineAddress = makeLineAddress(m_PhysicalAddress);
+        if (_pkt) {
+            m_isGLCSet = m_pkt->req->isGLCSet();
+            m_isSLCSet = m_pkt->req->isSLCSet();
+        } else {
+            m_isGLCSet = 0;
+            m_isSLCSet = 0;
+        }
     }
 
     /** RubyRequest for memory management commands */
@@ -117,9 +131,17 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0)
+          m_tlbiTransactionUid(0),
+          m_isSecure(m_pkt->req->isSecure())
     {
         assert(m_pkt->req->isMemMgmt());
+        if (_pkt) {
+            m_isGLCSet = m_pkt->req->isGLCSet();
+            m_isSLCSet = m_pkt->req->isSLCSet();
+        } else {
+            m_isGLCSet = 0;
+            m_isSLCSet = 0;
+        }
     }
 
     RubyRequest(Tick curTime, uint64_t _paddr, int _len,
@@ -145,9 +167,17 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0)
+          m_tlbiTransactionUid(0),
+          m_isSecure(m_pkt->req->isSecure())
     {
         m_LineAddress = makeLineAddress(m_PhysicalAddress);
+        if (_pkt) {
+            m_isGLCSet = m_pkt->req->isGLCSet();
+            m_isSLCSet = m_pkt->req->isSLCSet();
+        } else {
+            m_isGLCSet = 0;
+            m_isSLCSet = 0;
+        }
     }
 
     RubyRequest(Tick curTime, uint64_t _paddr, int _len,
@@ -174,9 +204,18 @@ class RubyRequest : public Message
           m_htmFromTransaction(false),
           m_htmTransactionUid(0),
           m_isTlbi(false),
-          m_tlbiTransactionUid(0)
+          m_tlbiTransactionUid(0),
+          m_isSecure(m_pkt->req->isSecure())
     {
         m_LineAddress = makeLineAddress(m_PhysicalAddress);
+        if (_pkt) {
+            m_isGLCSet = m_pkt->req->isGLCSet();
+            m_isSLCSet = m_pkt->req->isSLCSet();
+
+        } else {
+            m_isGLCSet = 0;
+            m_isSLCSet = 0;
+        }
     }
 
     RubyRequest(Tick curTime) : Message(curTime) {}
@@ -192,6 +231,8 @@ class RubyRequest : public Message
     const PrefetchBit& getPrefetch() const { return m_Prefetch; }
     RequestPtr getRequestPtr() const { return m_pkt->req; }
 
+    void setWriteMask(uint32_t offset, uint32_t len,
+        std::vector< std::pair<int,AtomicOpFunctor*>> atomicOps);
     void print(std::ostream& out) const;
     bool functionalRead(Packet *pkt);
     bool functionalRead(Packet *pkt, WriteMask &mask);

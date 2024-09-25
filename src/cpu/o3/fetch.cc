@@ -79,7 +79,7 @@ namespace o3
 {
 
 Fetch::IcachePort::IcachePort(Fetch *_fetch, CPU *_cpu) :
-        RequestPort(_cpu->name() + ".icache_port", _cpu), fetch(_fetch)
+        RequestPort(_cpu->name() + ".icache_port"), fetch(_fetch)
 {}
 
 
@@ -161,12 +161,6 @@ Fetch::regProbePoints()
 
 Fetch::FetchStatGroup::FetchStatGroup(CPU *cpu, Fetch *fetch)
     : statistics::Group(cpu, "fetch"),
-    ADD_STAT(icacheStallCycles, statistics::units::Cycle::get(),
-             "Number of cycles fetch is stalled on an Icache miss"),
-    ADD_STAT(insts, statistics::units::Count::get(),
-             "Number of instructions fetch has processed"),
-    ADD_STAT(branches, statistics::units::Count::get(),
-             "Number of branches that fetch encountered"),
     ADD_STAT(predictedBranches, statistics::units::Count::get(),
              "Number of branches that fetch has predicted taken"),
     ADD_STAT(cycles, statistics::units::Cycle::get(),
@@ -203,21 +197,8 @@ Fetch::FetchStatGroup::FetchStatGroup(CPU *cpu, Fetch *fetch)
              "Number of instructions fetched each cycle (Total)"),
     ADD_STAT(idleRate, statistics::units::Ratio::get(),
              "Ratio of cycles fetch was idle",
-             idleCycles / cpu->baseStats.numCycles),
-    ADD_STAT(branchRate, statistics::units::Ratio::get(),
-             "Number of branch fetches per cycle",
-             branches / cpu->baseStats.numCycles),
-    ADD_STAT(rate, statistics::units::Rate<
-                    statistics::units::Count, statistics::units::Cycle>::get(),
-             "Number of inst fetches per cycle",
-             insts / cpu->baseStats.numCycles)
+             idleCycles / cpu->baseStats.numCycles)
 {
-        icacheStallCycles
-            .prereq(icacheStallCycles);
-        insts
-            .prereq(insts);
-        branches
-            .prereq(branches);
         predictedBranches
             .prereq(predictedBranches);
         cycles
@@ -255,10 +236,6 @@ Fetch::FetchStatGroup::FetchStatGroup(CPU *cpu, Fetch *fetch)
             .flags(statistics::pdf);
         idleRate
             .prereq(idleRate);
-        branchRate
-            .flags(statistics::total);
-        rate
-            .flags(statistics::total);
 }
 void
 Fetch::setTimeBuffer(TimeBuffer<TimeStruct> *time_buffer)
@@ -555,7 +532,7 @@ Fetch::lookupAndUpdateNextPC(const DynInstPtr &inst, PCStateBase &next_pc)
     inst->setPredTarg(next_pc);
     inst->setPredTaken(predict_taken);
 
-    ++fetchStats.branches;
+    cpu->fetchStats[tid]->numBranches++;
 
     if (predict_taken) {
         ++fetchStats.predictedBranches;
@@ -781,7 +758,8 @@ Fetch::doSquash(const PCStateBase &new_pc, const DynInstPtr squashInst,
     corrKaslrDelta[tid] = 0;
 
     fetchOffset[tid] = 0;
-    if (squashInst && squashInst->pcState().instAddr() == new_pc.instAddr()) {
+    if (squashInst && squashInst->pcState().instAddr() == new_pc.instAddr() &&
+        !squashInst->isLastMicroop()) {
         macroop[tid] = squashInst->macroop;
         corrKaslrDelta[tid] = squashInst->pcState().as<X86ISA::PCState>().kaslrCorrDelta();
     }
@@ -1243,8 +1221,9 @@ Fetch::fetch(bool &status_change)
 
             fetchCacheLine(fetchAddr, tid, this_pc.instAddr());
 
-            if (fetchStatus[tid] == IcacheWaitResponse)
-                ++fetchStats.icacheStallCycles;
+            if (fetchStatus[tid] == IcacheWaitResponse) {
+                cpu->fetchStats[tid]->icacheStallCycles++;
+            }
             else if (fetchStatus[tid] == ItlbWait)
                 ++fetchStats.tlbCycles;
             else
@@ -1382,7 +1361,7 @@ Fetch::fetch(bool &status_change)
                     staticInst = dec_ptr->decode(this_pc);
 
                     // Increment stat of fetched instructions.
-                    ++fetchStats.insts;
+                    cpu->fetchStats[tid]->numInsts++;
 
                     if (staticInst->isMacroop()) {
                         // Get a macroop
@@ -1801,7 +1780,7 @@ Fetch::profileStall(ThreadID tid)
         ++fetchStats.squashCycles;
         DPRINTF(Fetch, "[tid:%i] Fetch is squashing!\n", tid);
     } else if (fetchStatus[tid] == IcacheWaitResponse) {
-        ++fetchStats.icacheStallCycles;
+        cpu->fetchStats[tid]->icacheStallCycles++;
         DPRINTF(Fetch, "[tid:%i] Fetch is waiting cache response!\n",
                 tid);
     } else if (fetchStatus[tid] == ItlbWait) {
