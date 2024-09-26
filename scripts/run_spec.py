@@ -101,7 +101,7 @@ def gen_spec_script_scheduled(
         f"m5 resetstats {reset_wait_ns} &\n"
         f"m5 dumpresetstats {warmup_ns + reset_wait_ns} &\n"
         f"m5 dumpstats {warmup_ns + sim_ns + reset_wait_ns} &\n"
-        f"{cmd}\n"
+        f"taskset -c 1 {cmd}\n"
         f"echo 'finish runspec with ret code $?'\n"
         f"sleep 1\n"
         f"m5 exit\n"
