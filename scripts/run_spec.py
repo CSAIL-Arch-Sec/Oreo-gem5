@@ -23,7 +23,7 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
             cpt_str = ""
         else:
             cpt_str = str(cpt_tick)
-        return [starting_core, 2, protect_args, delta_args, cpt_str, use_uuid, suffix]
+        return [starting_core, 1, protect_args, delta_args, cpt_str, use_uuid, suffix]
 
     gen_setup_list = list(map(lambda x: get_gen_setup(*x), sim_setup_list))
     print(gen_setup_list)
@@ -101,7 +101,7 @@ def gen_spec_script_scheduled(
         f"m5 resetstats {reset_wait_ns} &\n"
         f"m5 dumpresetstats {warmup_ns + reset_wait_ns} &\n"
         f"m5 dumpstats {warmup_ns + sim_ns + reset_wait_ns} &\n"
-        f"taskset -c 1 {cmd}\n"
+        f"{cmd}\n"
         f"echo 'finish runspec with ret code $?'\n"
         f"sleep 1\n"
         f"m5 exit\n"
