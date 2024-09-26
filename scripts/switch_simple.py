@@ -45,15 +45,15 @@ def main():
     #           f"sleep 100")
 
     size = "test"
-    bench_name = "502.gcc_r"
-    # bench_name = "500.perlbench_r"
+    # bench_name = "502.gcc_r"
+    bench_name = "500.perlbench_r"
 
     # script = (
     #     f"cd /home/gem5/spec2017\n"
     #     f"source shrc\n"
-    #     f"m5 exit\n"
     #     f"sleep 1\n"
-    #     f"m5 resetstats\n"
+    #     f"m5 exit\n"
+    #     # f"m5 resetstats\n"
     #     f"runcpu --size {size} --iterations 1 --config myconfig.x86.cfg --define gcc_dir=\"/usr\" --noreportable --nobuild {bench_name}\n"
     #     # f"echo 'finish runspec with ret code $?'\n"
     #     f"m5 dumpresetstats\n"
@@ -62,14 +62,14 @@ def main():
     # )
 
     script = (
-        f"cd /home/gem5/spec2017/benchspec/CPU/502.gcc_r/run/run_base_test_mytest-m64.0000\n"
-        # f"cd /home/gem5/spec2017/benchspec/CPU/500.perlbench_r/run/run_base_test_mytest-m64.0000\n"
+        # f"cd /home/gem5/spec2017/benchspec/CPU/502.gcc_r/run/run_base_test_mytest-m64.0000\n"
+        f"cd /home/gem5/spec2017/benchspec/CPU/500.perlbench_r/run/run_base_test_mytest-m64.0000\n"
         f"sleep 1\n"
         f"m5 exit\n"
         # f"m5 resetstats\n"
         # f"./cpugcc_r_base.mytest-m64 t1.c -O3 -finline-limit=50000 -o t1.opts-O3_-finline-limit_50000.s\n"
-        f"./cpugcc_r_base.mytest-m64 t1.c -O3 -o t1.opts-O3_-finline-limit_50000.s\n"
-        # f"./perlbench_r_base.mytest-m64 -I. -I./lib test.pl\n"
+        # f"./cpugcc_r_base.mytest-m64 t1.c -O3 -o t1.opts-O3_-finline-limit_50000.s\n"
+        f"./perlbench_r_base.mytest-m64 -I. -I./lib test.pl\n"
         f"m5 dumpresetstats\n"
         f"sleep 1\n"
         f"m5 exit\n"

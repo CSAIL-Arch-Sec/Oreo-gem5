@@ -1,3 +1,6 @@
+import re
+import subprocess
+
 from utils import *
 from gen_checkpoint import gen_one_checkpoint
 from re_checkpoint import re_one_checkpoint
@@ -42,6 +45,92 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
     print(pool_ret)
 
     return 0
+
+
+def copy_all_spec_cmd(
+        server_ip: str,
+        output_base_dir: Path,
+        bench_list: list,
+):
+    input_base_dir = Path("/home/gem5/spec2017/benchspec/CPU")
+
+    for bench_name in bench_list:
+        run_dir = Path(f"{bench_name}/run/run_base_refrate_mytest-m64.0000")
+        input_dir = input_base_dir / run_dir
+        input_path = input_dir / "speccmds.cmd"
+        output_dir = output_base_dir / bench_name
+        output_dir.mkdir(exist_ok=True, parents=True)
+        scp_cmd = f"scp {server_ip}:{input_path} {output_dir}"
+        subprocess.run(scp_cmd, shell=True)
+        cwd_path = output_dir / "cwd"
+        with cwd_path.open(mode="w") as cwd_file:
+            cwd_file.write(f"{input_dir}\n")
+
+
+def convert_all_spec_cmd(all_cmd_dir: Path, bench_list: list):
+    for bench_name in bench_list:
+        cmd_dir = all_cmd_dir / bench_name
+        input_path = cmd_dir / "speccmds.cmd"
+        output_path = cmd_dir / "mycmds.cmd"
+
+        with input_path.open() as input_file:
+            lines = input_file.readlines()
+
+        result = []
+        for line in lines:
+            x = re.search(r"^-o \S+ -e \S+ ([^>]+) > \S+ 2>> \S+$", line)
+            if x is not None:
+                result.append(f"{x.group(1)}\n")
+
+        with output_path.open(mode="w") as output_file:
+            output_file.writelines(result)
+
+
+def gen_spec_script_scheduled(
+        cwd: str, cmd: str,
+        output_path: Path,
+        warmup_ns: int = 10 ** 9,
+        sim_ns: int = 10 ** 9,
+):
+    reset_wait_ns = 1000000
+    exit_wait_ns = 5000000
+
+    s = (
+        f"cd {cwd}\n"
+        f"m5 exit {warmup_ns + sim_ns + exit_wait_ns} &\n"
+        f"m5 resetstats {reset_wait_ns} &\n"
+        f"m5 dumpresetstats {warmup_ns + reset_wait_ns} &\n"
+        f"m5 dumpstats {warmup_ns + sim_ns + reset_wait_ns} &\n"
+        f"{cmd}\n"
+        f"echo 'finish runspec with ret code $?'\n"
+        f"sleep 1\n"
+        f"m5 exit\n"
+    )
+
+    with output_path.open(mode="w") as output_file:
+        output_file.write(s)
+
+
+def gen_spec_script_path_list(
+        bench_name_list: list, output_dir: Path,
+        warmup_ns: int = 10 ** 9,
+        sim_ns: int = 10 ** 9,
+):
+    output_dir.mkdir(exist_ok=True)
+    all_cmd_dir = script_dir / "spec_cmd"
+    result = []
+    for bench_name in bench_name_list:
+        cmd_dir = all_cmd_dir / bench_name
+        with (cmd_dir / "cwd").open() as cwd_file:
+            cwd_str = cwd_file.read().strip()
+        with (cmd_dir / "mycmds.cmd").open() as cmd_file:
+            cmd_list = cmd_file.readlines()
+
+        for i, cmd_str in enumerate(cmd_list):
+            output_path = output_dir / f"{bench_name}-input{i}.rcS"
+            gen_spec_script_scheduled(cwd_str, cmd_str, output_path, warmup_ns, sim_ns)
+            result.append(output_path)
+    return result
 
 
 def gen_spec2017_script_full(
@@ -131,6 +220,14 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
 
 @click.command()
 @click.option(
+    "--copy-spec-cmd",
+    is_flag=True,
+)
+@click.option(
+    "--convert-spec-cmd",
+    is_flag=True,
+)
+@click.option(
     "--gen-cpt",
     is_flag=True,
 )
@@ -167,6 +264,8 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     default=1000000000
 )
 def main(
+        copy_spec_cmd: bool,
+        convert_spec_cmd: bool,
         gen_cpt: bool,
         use_uuid: bool,
         begin_cpt: int,
@@ -176,6 +275,22 @@ def main(
         warmup_ns: int,
         sim_ns: int,
 ):
+    if copy_spec_cmd:
+        copy_all_spec_cmd(
+            "gem5@172.16.65.128",
+            script_dir / "spec_cmd",
+            spec2017_intrate_bench_list
+        )
+
+    if convert_spec_cmd:
+        convert_all_spec_cmd(
+            script_dir / "spec_cmd",
+            spec2017_intrate_bench_list
+        )
+
+    if copy_spec_cmd or convert_spec_cmd:
+        return
+
     sim_setup_base = [
         ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, ""],
         ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, ""],
@@ -195,7 +310,8 @@ def main(
     run_bench_list = spec2017_intrate_bench_list
 
     # exp_script_path_list = gen_spec2006_script_path_list(run_bench_list, spec_size, warmup_ns=warmup_ns, sim_ns=sim_ns)
-    exp_script_path_list = gen_spec2017_script_path_list(run_bench_list, spec_size, gen_spec2017_script_full)
+    # exp_script_path_list = gen_spec2017_script_path_list(run_bench_list, spec_size, gen_spec2017_script_full)
+    exp_script_path_list = gen_spec_script_path_list(run_bench_list, script_dir / "spec2017_scripts", warmup_ns=warmup_ns, sim_ns=sim_ns)
     for x in exp_script_path_list:
         print(x)
 
