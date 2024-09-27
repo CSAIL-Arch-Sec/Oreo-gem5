@@ -2,6 +2,7 @@ from utils import *
 import click
 import pandas as pd
 import re
+from pprint import pprint
 
 term_str = "term"
 val_str = "val"
@@ -9,24 +10,30 @@ val_str = "val"
 useful_columns = {
     "simTicks": "simTicks",
     "hostSeconds": "hostSeconds",
-    "board.processor.cores0.core.numCycles": "0.numCycles",
-    "board.processor.cores0.core.idleCycles": "0.idleCycles",
-    "board.processor.cores0.core.quiesceCycles": "0.quiesceCycles",
-    "board.processor.cores0.core.committedInsts": "0.committedInsts",
-    "board.processor.cores0.core.cpi": "0.cpi",
-    "board.processor.cores0.core.ipc": "0.ipc",
-    "board.processor.cores1.core.numCycles": "1.numCycles",
-    "board.processor.cores1.core.idleCycles": "1.idleCycles",
-    "board.processor.cores1.core.quiesceCycles": "1.quiesceCycles",
-    "board.processor.cores1.core.committedInsts": "1.committedInsts",
-    "board.processor.cores1.core.cpi": "1.cpi",
-    "board.processor.cores1.core.ipc": "1.ipc",
+    "board.processor.cores.core.numCycles": "numCycles",
+    "board.processor.cores.core.idleCycles": "idleCycles",
+    # "board.processor.cores.core.quiesceCycles": "quiesceCycles",
+    "board.processor.cores.core.commitStats0.numInsts": "committedInsts",
+    "board.processor.cores.core.cpi": "cpi",
+    "board.processor.cores.core.ipc": "ipc",
 }
 
 default_setup_map = {
     "Baseline": "restore_ko_000_0c0c00",
     "Oreo": "restore_ko_111_0c0c00"
 }
+
+
+def get_useful_columns(core_id: int | None):
+    if core_id is None:
+        return useful_columns
+
+    result = {}
+    for key, value in useful_columns.items():
+        new_key = re.sub(r"core0", f"core{core_id}", key)
+        result[new_key] = value
+    return result
+
 
 def split_stats(lines: list):
     start_lines = []
@@ -56,7 +63,8 @@ def parse_stats_line(line: str):
         return None
 
 
-def parse_stats_lines(lines: list, name: str):
+def parse_stats_lines(lines: list, core_id: int | None, **kwargs):
+    core_useful_columns = get_useful_columns(core_id)
     data = []
     for line in lines:
         x = parse_stats_line(line)
@@ -64,27 +72,59 @@ def parse_stats_lines(lines: list, name: str):
             data.append(x)
     # print("Skip #lines", len(lines) - len(data))
     df = pd.DataFrame(data=data).set_index(0).transpose()
-    df.rename(columns=useful_columns, inplace=True)
-    df = df[useful_columns.values()]
-    df["name"] = name
+    df.rename(columns=core_useful_columns, inplace=True)
+    df = df[core_useful_columns.values()]
+    for key, value in kwargs.items():
+        df[key] = value
+    if core_id is not None:
+        df["core-id"] = core_id
     # print(df)
     return df
 
 
-def parse_all(input_dir: Path, roi_idx: int, expected_stats: int, setup_map: dict, benchmark_list: list, benchmark_suffix: str):
+def parse_all(
+        input_dir: Path,
+        roi_idx: int, expected_stats: int,
+        core_id: int | None,
+        setup_map: dict,
+        benchmark_list: list,
+        ckpt_id_list: list,
+):
     setup_df_list = []
     for setup_name, setup_dir_name in setup_map.items():
         df_list = []
-        for benchmark in benchmark_list:
-            stats_path = input_dir / setup_dir_name / f"{benchmark}{benchmark_suffix}" / "stats.txt"
+        setup_dir = input_dir / setup_dir_name
+        for result_dir in setup_dir.iterdir():
+            result_dir_name = result_dir.name
+            x = re.search(r"([\w.]+)-input(\d+)_(\d+)", result_dir_name)
+            if x is None:
+                continue
+            benchmark, input_id, ckpt_id = x.groups()
+            if benchmark not in benchmark_list:
+                continue
+            if int(ckpt_id) not in ckpt_id_list:
+                continue
+            # Check whether it has some additional output (might imply a error in running)
+            board_path = result_dir / "board.pc.com_1.device"
+            with board_path.open() as board_file:
+                board_last_line = board_file.readlines()[-1].strip()
+            if board_last_line != "Loading new script...":
+                print(f"Warning: bench {benchmark} input {input_id} run {ckpt_id} might encounter an error")
+            # Parse stats file
+            stats_path = result_dir / "stats.txt"
             with stats_path.open() as stats_file:
                 lines = stats_file.readlines()
             split_lines = split_stats(lines)
             if len(split_lines) == expected_stats:
                 lines = split_lines[roi_idx]
-                df_list.append(parse_stats_lines(lines, benchmark))
+                df_list.append(
+                    parse_stats_lines(
+                        lines=lines, core_id=core_id,
+                        name=benchmark, input_id=input_id, ckpt_id=ckpt_id,
+                    )
+                )
             else:
-                print(f"Do not have enough roi for config {setup_name} benchmark {benchmark}")
+                print(f"Do not have enough roi for config {setup_name} benchmark {benchmark} input {input_id} run {ckpt_id}")
         df = pd.concat(df_list)
         df["setup"] = setup_name
         setup_df_list.append(df)
@@ -118,13 +158,24 @@ def cal_overhead(df: pd.DataFrame, term_name: str, need_avg: bool):
     "--parse-raw",
     is_flag=True,
 )
-def main(parse_raw: bool):
+@click.option(
+    "--begin-cpt",
+    type=click.INT,
+)
+@click.option(
+    "--num-cpt",
+    type=click.INT,
+)
+def main(
+        parse_raw: bool,
+        begin_cpt: int, num_cpt: int,
+):
     raw_result_dir = proj_dir / "result"
     output_dir = script_dir / "spec_output"
     output_dir.mkdir(exist_ok=True)
 
     # benchmark_list = ["401.bzip2"]
-    benchmark_list = spec2006_bench_list
+    benchmark_list = spec2017_intrate_bench_list
     benchmark_suffix = "_0"
 
     # import subprocess
@@ -151,9 +202,10 @@ def main(parse_raw: bool):
             input_dir=raw_result_dir,
             roi_idx=1,
             expected_stats=3,
+            core_id=None,
             setup_map=default_setup_map,
             benchmark_list=benchmark_list,
-            benchmark_suffix=benchmark_suffix
+            ckpt_id_list=list(range(begin_cpt, begin_cpt + num_cpt))
         )
         df.to_csv(output_dir / "test.csv")
     else:
