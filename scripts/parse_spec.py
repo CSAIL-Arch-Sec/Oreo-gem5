@@ -232,12 +232,24 @@ def main(
         df = pd.read_csv(output_dir / "test.csv")
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["ipc"])
-        mean_df.to_csv(output_dir / "separate_input_mean.csv")
-        overhead_df.to_csv(output_dir / "separate_input_overhead.csv", float_format="%.10f")
+        mean_df.to_csv(output_dir / "separate_input_mean_ipc.csv")
+        overhead_df.to_csv(output_dir / "separate_input_overhead_ipc.csv", float_format="%.10f")
+        print(overhead_df.mean(axis=0))
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["ipc"])
-        mean_df.to_csv(output_dir / "merge_input_mean.csv")
-        overhead_df.to_csv(output_dir / "merge_input_overhead.csv", float_format="%.10f")
+        mean_df.to_csv(output_dir / "merge_input_mean_ipc.csv")
+        overhead_df.to_csv(output_dir / "merge_input_overhead_ipc.csv", float_format="%.10f")
+        print(overhead_df.mean(axis=0))
+
+        mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["cpi"])
+        mean_df.to_csv(output_dir / "separate_input_mean_cpi.csv")
+        overhead_df.to_csv(output_dir / "separate_input_overhead_cpi.csv", float_format="%.10f")
+        print(overhead_df.mean(axis=0))
+
+        mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["cpi"])
+        mean_df.to_csv(output_dir / "merge_input_mean_cpi.csv")
+        overhead_df.to_csv(output_dir / "merge_input_overhead_cpi.csv", float_format="%.10f")
+        print(overhead_df.mean(axis=0))
 
         # cal_overhead(df, "cpi", True)
         # cal_overhead(df, "ipc", True)

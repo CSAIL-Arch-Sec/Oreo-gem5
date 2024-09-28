@@ -93,7 +93,7 @@ def gen_spec_script_scheduled(
         sim_ns: int = 10 ** 9,
 ):
     reset_wait_ns = 1000000
-    exit_wait_ns = 5000000
+    exit_wait_ns = 10000000
 
     s = (
         f"cd {cwd}\n"
@@ -307,6 +307,7 @@ def main(
 
     # run_bench_list = [ "401.bzip2" ]
     # run_bench_list = spec2006_bench_list
+    # run_bench_list = [ "525.x264_r" ]
     run_bench_list = spec2017_intrate_bench_list
 
     # exp_script_path_list = gen_spec2006_script_path_list(run_bench_list, spec_size, warmup_ns=warmup_ns, sim_ns=sim_ns)
