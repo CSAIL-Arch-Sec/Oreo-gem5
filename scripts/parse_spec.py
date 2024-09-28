@@ -12,7 +12,7 @@ useful_columns = {
     "hostSeconds": "hostSeconds",
     "board.processor.cores.core.numCycles": "numCycles",
     "board.processor.cores.core.idleCycles": "idleCycles",
-    # "board.processor.cores.core.quiesceCycles": "quiesceCycles",
+    "board.processor.cores.core.quiesceCycles": "quiesceCycles",
     "board.processor.cores.core.commitStats0.numInsts": "committedInsts",
     "board.processor.cores.core.cpi": "cpi",
     "board.processor.cores.core.ipc": "ipc",
@@ -109,13 +109,14 @@ def parse_all(
             with board_path.open() as board_file:
                 board_last_line = board_file.readlines()[-1].strip()
             if board_last_line != "Loading new script...":
-                print(f"Warning: bench {benchmark} input {input_id} run {ckpt_id} might encounter an error")
+                print(f"Warning: {board_path} might encounter an error")
+                print(board_last_line)
             # Parse stats file
             stats_path = result_dir / "stats.txt"
             with stats_path.open() as stats_file:
                 lines = stats_file.readlines()
             split_lines = split_stats(lines)
-            if len(split_lines) == expected_stats:
+            if len(split_lines) > roi_idx:
                 lines = split_lines[roi_idx]
                 df_list.append(
                     parse_stats_lines(
@@ -123,13 +124,30 @@ def parse_all(
                         name=benchmark, input_id=input_id, ckpt_id=ckpt_id,
                     )
                 )
+                if len(split_lines) != expected_stats:
+                    print(f"Do not have all roi for {stats_path}")
             else:
-                print(f"Do not have enough roi for config {setup_name} benchmark {benchmark} input {input_id} run {ckpt_id}")
+                print(f"Do not have roi for {stats_path}")
         df = pd.concat(df_list)
         df["setup"] = setup_name
         setup_df_list.append(df)
     df = pd.concat(setup_df_list)
+    df.sort_values(["setup", "name", "input_id", "ckpt_id"], inplace=True)
     return df
+
+
+def cal_mean_overhead(df: pd.DataFrame, group_columns: list, overhead_terms: list):
+    mean_df = df.groupby(group_columns).mean()
+    mean_df.reset_index(inplace=True)
+    baseline_df = mean_df.loc[mean_df["setup"] == "Baseline"]
+    oreo_df = mean_df.loc[mean_df["setup"] == "Oreo"]
+    index_columns = [ x for x in group_columns if x != "setup" ]
+    baseline_df.set_index(index_columns, inplace=True)
+    oreo_df.set_index(index_columns, inplace=True)
+    overhead_df = pd.DataFrame(index=baseline_df.index)
+    for term in overhead_terms:
+        overhead_df[term] = (oreo_df[term] - baseline_df[term]) / baseline_df[term] * 100
+    return mean_df, overhead_df
 
 
 def cal_overhead(df: pd.DataFrame, term_name: str, need_avg: bool):
@@ -161,10 +179,12 @@ def cal_overhead(df: pd.DataFrame, term_name: str, need_avg: bool):
 @click.option(
     "--begin-cpt",
     type=click.INT,
+    default=0,
 )
 @click.option(
     "--num-cpt",
     type=click.INT,
+    default=0,
 )
 def main(
         parse_raw: bool,
@@ -211,8 +231,16 @@ def main(
     else:
         df = pd.read_csv(output_dir / "test.csv")
 
-        cal_overhead(df, "cpi", True)
-        cal_overhead(df, "ipc", True)
+        mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["ipc"])
+        mean_df.to_csv(output_dir / "separate_input_mean.csv")
+        overhead_df.to_csv(output_dir / "separate_input_overhead.csv", float_format="%.10f")
+
+        mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["ipc"])
+        mean_df.to_csv(output_dir / "merge_input_mean.csv")
+        overhead_df.to_csv(output_dir / "merge_input_overhead.csv", float_format="%.10f")
+
+        # cal_overhead(df, "cpi", True)
+        # cal_overhead(df, "ipc", True)
 
 
 if __name__ == '__main__':
