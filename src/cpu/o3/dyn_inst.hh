@@ -1143,9 +1143,10 @@ class DynInst : public ExecContext, public RefCounted
     getDestRegOperand(const StaticInst *si, int idx)
     {
         PhysRegIdPtr reg = renamedDestIdx(idx);
-        if (reg->is(InvalidRegClass))
+        if (reg->is(IntRegClass) || reg->is(FloatRegClass) || reg->is(VecElemClass) || reg->is(CCRegClass))
+            return cpu->getReg(reg, threadNumber);
+        else
             return 0;
-        return cpu->getReg(reg, threadNumber);
     }
 
     void

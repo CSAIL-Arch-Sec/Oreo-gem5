@@ -1221,6 +1221,33 @@ Commit::commitInsts()
 //                    }
 //                }
 
+//                uint64_t begin_pc = 0x555555554000 + 0x225d0;
+//                uint64_t end_pc = 0x555555554000 + 0x225b9;
+//                static bool start_debug_print = false;
+//                static uint64_t debug_count = 0;
+//                if (pc[tid]->instAddr() == begin_pc) {
+//                    start_debug_print = true;
+//                } else if (pc[tid]->instAddr() == end_pc) {
+//                    start_debug_print = false;
+//                }
+//                if (pc[tid]->instAddr() < 0x655555554000 && (start_debug_print || debug_count++ < 1000)) {
+//                    std::cout << "!!! " << curTick() << " " << *pc[tid] << " "
+//                              << head_inst->staticInst->disassemble(pc[tid]->instAddr());
+//                    if (head_inst->numDestRegs() > 0) {
+//                        std::cout << " dest=" << head_inst->getDestRegOperand(head_inst->staticInst.get(), 0) << " ";
+//                    }
+//                    if (head_inst->isLoad()) {
+//                        std::cout << " " << std::hex << head_inst->realAddr
+//                                  << " " << *((uint64_t*) head_inst->memData);
+//                    } else if (head_inst->isStore()) {
+//                        std::cout << " " << std::hex << head_inst->realAddr;
+//                        for (int ii = 0; ii < head_inst->numSrcRegs() && ii < 2; ii++) {
+//                            std::cout << " " << head_inst->getRegOperand(head_inst->staticInst.get(), ii);
+//                        }
+//                    }
+//                    std::cout << std::endl;
+//                }
+
                 if (start_print) {
                     if ((int64_t) pc[tid]->instAddr() < 0) total_kernel_op++;
                     else total_user_op++;
