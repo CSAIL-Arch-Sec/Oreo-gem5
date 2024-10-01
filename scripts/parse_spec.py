@@ -96,7 +96,7 @@ def parse_all(
         setup_dir = input_dir / setup_dir_name
         for result_dir in setup_dir.iterdir():
             result_dir_name = result_dir.name
-            x = re.search(r"([\w.]+)-input(\d+)_(\d+)", result_dir_name)
+            x = re.search(r"([\w.]+)-input(\d+)-delta\d+_(\d+)", result_dir_name)
             if x is None:
                 continue
             benchmark, input_id, ckpt_id = x.groups()
