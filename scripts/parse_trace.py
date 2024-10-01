@@ -1,5 +1,5 @@
 import re
-
+import gzip
 from utils import *
 from pathlib import Path
 
@@ -9,8 +9,13 @@ def grep_file(input_path: Path, output_dir: Path, match_list: list):
     for _, name, _ in match_list:
         output_dict[name] = []
 
-    with input_path.open(mode="r") as input_file:
-        lines = input_file.readlines()
+    with gzip.open(input_path, mode="rb") as input_file:
+        s = input_file.read()
+        lines = s.decode().split("\n")
+        print(len(lines))
+
+    # with input_path.open(mode="r") as input_file:
+    #     lines = input_file.readlines()
 
     for line in lines:
         # used = False
@@ -31,7 +36,8 @@ def grep_file(input_path: Path, output_dir: Path, match_list: list):
 
 
 def extract_branch_pred(line: str):
-    x = re.search(r"\(([a-z\d]+)=>[a-z\d]+\)", line)
+    # x = re.search(r"\(([a-z\d]+)=>[a-z\d]+\)", line)
+    x = re.search(r"PC:(0x[a-z\d]+)", line)
     assert x is not None
     return x.group(1) + "\n"
 
@@ -57,14 +63,14 @@ def extract_cache(line: str):
 
 
 def extract_dram(line: str):
-    x = re.search(f"Address: ([a-z\d]+) Rank", line)
+    x = re.search(r"Address: ([a-z\d]+) Rank", line)
     assert x is not None
     return x.group(1) + "\n"
 
 
 def main():
     match_list = [
-        ["Creating prediction history", "branchPred", extract_branch_pred],
+        ["Branch predictor predicted", "branchPred", extract_branch_pred],
         ["tb: Translating vaddr", "tlb", extract_tlb],
         ["itb: Translating vaddr", "iTLB", extract_tlb],
         ["dtb: Translating vaddr", "dTLB", extract_tlb],
@@ -77,17 +83,17 @@ def main():
         ["dram: Address:", "DRAM", extract_dram],
     ]
 
-    path_0_c = proj_dir / "blindside_000_0c_2.txt"
-    path_0_d = proj_dir / "blindside_000_0d_2.txt"
-    path_1_c = proj_dir / "blindside_111_0c_2.txt"
-    path_1_d = proj_dir / "blindside_111_0d_2.txt"
+    path_0_c = proj_dir / "result/restore_ko_000_0c0c00/blindside_1_0c_/trace.out.gz"
+    path_0_d = proj_dir / "result/restore_ko_000_0c0c00/blindside_1_0d_/trace.out.gz"
+    path_1_c = proj_dir / "result/restore_ko_111_0c0c00/blindside_1_0c_/trace.out.gz"
+    path_1_d = proj_dir / "result/restore_ko_111_0c0c00/blindside_1_0d_/trace.out.gz"
 
     output_dir = script_dir / "plot"
 
-    grep_file(path_0_c, output_dir / "000_0c", match_list)
-    grep_file(path_0_d, output_dir / "000_0d", match_list)
-    grep_file(path_1_c, output_dir / "111_0c", match_list)
-    grep_file(path_1_d, output_dir / "111_0d", match_list)
+    grep_file(path_0_c, output_dir / "000_0c_2", match_list)
+    grep_file(path_0_d, output_dir / "000_0d_2", match_list)
+    grep_file(path_1_c, output_dir / "111_0c_2", match_list)
+    grep_file(path_1_d, output_dir / "111_0d_2", match_list)
 
 
 if __name__ == '__main__':
