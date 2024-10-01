@@ -89,6 +89,7 @@ def convert_all_spec_cmd(all_cmd_dir: Path, bench_list: list):
 def gen_spec_script_scheduled(
         cwd: str, cmd: str,
         output_path: Path,
+        user_delta: int,
         warmup_ns: int = 10 ** 9,
         sim_ns: int = 10 ** 9,
 ):
@@ -96,6 +97,8 @@ def gen_spec_script_scheduled(
     exit_wait_ns = 10000000
 
     s = (
+        f"cd /home/gem5/experiments/modules\n"
+        f"insmod set_protection.ko user_delta={user_delta}\n"
         f"cd {cwd}\n"
         f"m5 exit {warmup_ns + sim_ns + exit_wait_ns} &\n"
         f"m5 resetstats {reset_wait_ns} &\n"
@@ -114,6 +117,7 @@ def gen_spec_script_scheduled(
 def gen_spec_script_path_list(
         bench_name_list: list, bench_input_id_list: list,
         output_dir: Path,
+        user_delta: int,
         warmup_ns: int = 10 ** 9,
         sim_ns: int = 10 ** 9,
 ):
@@ -129,7 +133,13 @@ def gen_spec_script_path_list(
 
         for i, cmd_str in enumerate(cmd_list):
             output_path = output_dir / f"{bench_name}-input{i}.rcS"
-            gen_spec_script_scheduled(cwd_str, cmd_str, output_path, warmup_ns, sim_ns)
+            gen_spec_script_scheduled(
+                cwd=cwd_str,
+                cmd=cmd_str,
+                user_delta=user_delta,
+                output_path=output_path,
+                warmup_ns=warmup_ns, sim_ns=sim_ns
+            )
             input_id_list = bench_input_id_list[k]
             if input_id_list is None or (i in input_id_list):
                 result.append(output_path)
@@ -257,6 +267,11 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     default="ref"
 )
 @click.option(
+    "--user-delta",
+    type=click.INT,
+    default=32,
+)
+@click.option(
     "--warmup-ns",
     type=click.INT,
     default=1000000000
@@ -275,6 +290,7 @@ def main(
         num_cpt: int,
         num_cores: int,
         spec_size: str,
+        user_delta: int,
         warmup_ns: int,
         sim_ns: int,
 ):
@@ -322,6 +338,7 @@ def main(
     # exp_script_path_list = gen_spec2017_script_path_list(run_bench_list, spec_size, gen_spec2017_script_full)
     exp_script_path_list = gen_spec_script_path_list(
         bench_name_list=run_bench_list, bench_input_id_list=bench_input_id_list,
+        user_delta=user_delta,
         output_dir=script_dir / "spec2017_scripts", warmup_ns=warmup_ns, sim_ns=sim_ns
     )
     for x in exp_script_path_list:
