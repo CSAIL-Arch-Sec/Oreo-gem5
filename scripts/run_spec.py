@@ -132,7 +132,7 @@ def gen_spec_script_path_list(
             cmd_list = cmd_file.readlines()
 
         for i, cmd_str in enumerate(cmd_list):
-            output_path = output_dir / f"{bench_name}-input{i}.rcS"
+            output_path = output_dir / f"{bench_name}-input{i}-delta{user_delta}.rcS"
             gen_spec_script_scheduled(
                 cwd=cwd_str,
                 cmd=cmd_str,
