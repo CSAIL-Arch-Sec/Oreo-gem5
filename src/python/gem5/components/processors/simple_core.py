@@ -47,6 +47,7 @@ class SimpleCore(BaseCPUCore):
             protect_module_kaslr: bool = False,
             protect_user_aslr: bool = False,
             kaslr_offset: int = 0,
+            clear_tlb_roi: bool = False,
     ):
         requires(isa_required=isa)
         super().__init__(
@@ -56,6 +57,7 @@ class SimpleCore(BaseCPUCore):
                 protect_module_kaslr=protect_module_kaslr,
                 protect_user_aslr=protect_user_aslr,
                 kaslr_offset=kaslr_offset,
+                clear_tlb_roi=clear_tlb_roi,
             ),
             isa=isa,
         )
@@ -154,7 +156,8 @@ class SimpleCore(BaseCPUCore):
             protect_kaslr: bool = False,
             protect_module_kaslr: bool = False,
             protect_user_aslr: bool = False,
-            kaslr_offset: int = 0
+            kaslr_offset: int = 0,
+            clear_tlb_roi: bool = False,
     ) -> BaseCPUCore:
         """
         A factory used to return the SimObject core object given the cpu type,
@@ -186,6 +189,10 @@ class SimpleCore(BaseCPUCore):
         else:
             print("@@@ In cpu core disable protect_user_aslr")
 
+        if clear_tlb_roi:
+            print("@@@ Clear TLB at ROI")
+        else:
+            print("@@@ Do not clear TLB at ROI")
 
         if issubclass(to_return_cls, BaseCPU):
             return to_return_cls(
@@ -194,6 +201,7 @@ class SimpleCore(BaseCPUCore):
                 protectModuleKaslr=protect_module_kaslr,
                 protectUserAslr=protect_user_aslr,
                 kaslrOffset=kaslr_offset,
+                clearTlbRoi=clear_tlb_roi,
             )
 
         return to_return_cls(

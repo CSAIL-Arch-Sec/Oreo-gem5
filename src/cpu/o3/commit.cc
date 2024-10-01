@@ -1149,11 +1149,11 @@ Commit::commitInsts()
                 static uint64_t j = 0;
                 if (head_inst->staticInst->getName() == "gem5Op") {
                     start_print = !start_print;
-//                    if (clear_tlb) {
-//                        cpu->flushTLBs();
-//                        std::cout << "@@@ Tick " << curTick() << " clear_tlb" << std::endl;
-//                        clear_tlb = false;
-//                    }
+                    if (cpu->clearTlbRoi && clear_tlb) {
+                        cpu->flushTLBs();
+                        std::cout << "@@@ Tick " << curTick() << " clear_tlb" << std::endl;
+                        clear_tlb = false;
+                    }
 //                    if (clear_bp) {
 //                        cpu->clear_bp(tid);
 //                        std::cout << "@@@ Tick " << curTick() << " clear_bp" << std::endl;

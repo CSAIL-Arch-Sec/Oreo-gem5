@@ -59,6 +59,7 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
         protect_module_kaslr: bool = False,
         protect_user_aslr: bool = False,
         kaslr_offset: int = 0,
+        clear_tlb_roi: bool = False,
     ) -> None:
         """
         :param starting_core_type: The CPU type for each type in the processor
@@ -86,7 +87,8 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
                            protect_kaslr=protect_kaslr,
                            protect_module_kaslr=protect_module_kaslr,
                            protect_user_aslr=protect_user_aslr,
-                           kaslr_offset=kaslr_offset)
+                           kaslr_offset=kaslr_offset,
+                           clear_tlb_roi=clear_tlb_roi)
                 for i in range(num_cores)
             ],
             self._switch_key: [
@@ -94,7 +96,8 @@ class SimpleSwitchableProcessor(SwitchableProcessor):
                            protect_kaslr=protect_kaslr,
                            protect_module_kaslr=protect_module_kaslr,
                            protect_user_aslr=protect_user_aslr,
-                           kaslr_offset=kaslr_offset)
+                           kaslr_offset=kaslr_offset,
+                           clear_tlb_roi=clear_tlb_roi)
                 for i in range(num_cores)
             ],
         }

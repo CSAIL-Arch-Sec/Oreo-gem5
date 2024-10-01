@@ -140,6 +140,8 @@ public:
     //  when apply mask and offset
     Addr kaslrOffset;
 
+    bool clearTlbRoi;
+
     bool isKaslrMaskedAddr(Addr addr, size_t region) const {
         return protectKaslr[region] &&
                addr >= regionStart[region] &&

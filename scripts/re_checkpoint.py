@@ -12,7 +12,8 @@ def re_one_checkpoint(
         cpt_tick: int,
         uuid_str: str,
         suffix: str,
-        exp_script_path: Path = None
+        exp_script_path: Path = None,
+        clear_tlb_roi: bool = False,
 ):
     protect_arg_dict = gen_protect_args(protect_args)
     delta_arg_dict = gen_delta_args(delta_args)
@@ -30,6 +31,7 @@ def re_one_checkpoint(
         use_uuid=False,
         uuid_str=uuid_str,
         suffix=suffix,
+        clear_tlb_roi=clear_tlb_roi,
         **protect_arg_dict,
         **delta_arg_dict,
     )
@@ -113,10 +115,10 @@ def main():
         # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_00],
         # ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_00],
 
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c],
-        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c, True],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d, True],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0c, True],
+        ["opt", "Branch,RubyCache,TLB,PageTableWalker,DRAM", "kvm", "o3", "1,1,1", "c,c,0", None, "default", "", blindside_path_0d, True],
 
         # ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0c],
         # ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, "default", "", blindside_path_0d],

@@ -33,6 +33,12 @@ parser.add_argument(
     help="root partiton of disk image"
 )
 
+parser.add_argument(
+    "--clear-tlb-roi",
+    action="store_true",
+    help="Whether to clear TLB at ROI.",
+)
+
 add_cpu_arguments(parser, default_type=CPUTypes.O3)
 
 add_run_script_arguments(parser)
@@ -186,7 +192,8 @@ processor = SimpleProcessor(
     protect_kaslr=protect_kaslr,
     protect_module_kaslr=protect_module_kaslr,
     protect_user_aslr=protect_user_aslr,
-    kaslr_offset=kaslr_offset
+    kaslr_offset=kaslr_offset,
+    clear_tlb_roi=args.clear_tlb_roi,
 )
 
 board = X86Board(

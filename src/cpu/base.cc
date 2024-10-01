@@ -231,6 +231,9 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
         regionMask[i] = ~(getMaxMask((regionSize[i] >> regionAlignBits[i]) - 1) << regionAlignBits[i]);
         printf("@@@ kernelAddrMask: %lx\n", regionMask[i]);
     }
+
+    // [Shixin] Config whether to clear tlb at the beginning of ROI
+    clearTlbRoi = p.clearTlbRoi;
 }
 
 void

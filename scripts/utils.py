@@ -301,7 +301,8 @@ def run_one_test(
         gem5_kaslr_delta: int, gem5_module_kaslr_delta: int, gem5_user_aslr_delta: int,
         exp_script_path: Path,
         add_checkpoint: str,
-        use_uuid: bool, uuid_str: str, suffix: str
+        use_uuid: bool, uuid_str: str, suffix: str,
+        clear_tlb_roi: bool = False,
 ):
     if sim_option not in ["fast", "opt"]:
         print(f"Error: sim option {sim_option} is not supported!!!")
@@ -352,6 +353,9 @@ def run_one_test(
             f"--gem5-module-kaslr-delta={gem5_module_kaslr_delta}",
             f"--gem5-user-aslr-delta={gem5_user_aslr_delta}",
         ])
+
+    if clear_tlb_roi:
+        cmd.append("--clear-tlb-roi")
 
     cmd.extend(get_checkpoint_args(
         sim_mode,
