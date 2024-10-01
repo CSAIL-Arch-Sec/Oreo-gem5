@@ -112,14 +112,15 @@ def gen_spec_script_scheduled(
 
 
 def gen_spec_script_path_list(
-        bench_name_list: list, output_dir: Path,
+        bench_name_list: list, bench_input_id_list: list,
+        output_dir: Path,
         warmup_ns: int = 10 ** 9,
         sim_ns: int = 10 ** 9,
 ):
     output_dir.mkdir(exist_ok=True)
     all_cmd_dir = script_dir / "spec_cmd"
     result = []
-    for bench_name in bench_name_list:
+    for k, bench_name in enumerate(bench_name_list):
         cmd_dir = all_cmd_dir / bench_name
         with (cmd_dir / "cwd").open() as cwd_file:
             cwd_str = cwd_file.read().strip()
@@ -129,7 +130,9 @@ def gen_spec_script_path_list(
         for i, cmd_str in enumerate(cmd_list):
             output_path = output_dir / f"{bench_name}-input{i}.rcS"
             gen_spec_script_scheduled(cwd_str, cmd_str, output_path, warmup_ns, sim_ns)
-            result.append(output_path)
+            input_id_list = bench_input_id_list[k]
+            if input_id_list is None or (i in input_id_list):
+                result.append(output_path)
     return result
 
 
@@ -308,11 +311,19 @@ def main(
     # run_bench_list = [ "401.bzip2" ]
     # run_bench_list = spec2006_bench_list
     # run_bench_list = [ "525.x264_r" ]
+
+    # run_bench_list = [ "557.xz_r" ]
+    # bench_input_id_list = [[2]]
+
     run_bench_list = spec2017_intrate_bench_list
+    bench_input_id_list = [ None ] * len(run_bench_list)
 
     # exp_script_path_list = gen_spec2006_script_path_list(run_bench_list, spec_size, warmup_ns=warmup_ns, sim_ns=sim_ns)
     # exp_script_path_list = gen_spec2017_script_path_list(run_bench_list, spec_size, gen_spec2017_script_full)
-    exp_script_path_list = gen_spec_script_path_list(run_bench_list, script_dir / "spec2017_scripts", warmup_ns=warmup_ns, sim_ns=sim_ns)
+    exp_script_path_list = gen_spec_script_path_list(
+        bench_name_list=run_bench_list, bench_input_id_list=bench_input_id_list,
+        output_dir=script_dir / "spec2017_scripts", warmup_ns=warmup_ns, sim_ns=sim_ns
+    )
     for x in exp_script_path_list:
         print(x)
 

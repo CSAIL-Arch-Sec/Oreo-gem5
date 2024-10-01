@@ -12,7 +12,7 @@ useful_columns = {
     "hostSeconds": "hostSeconds",
     "board.processor.cores.core.numCycles": "numCycles",
     "board.processor.cores.core.idleCycles": "idleCycles",
-    "board.processor.cores.core.quiesceCycles": "quiesceCycles",
+    # "board.processor.cores.core.quiesceCycles": "quiesceCycles",
     "board.processor.cores.core.commitStats0.numInsts": "committedInsts",
     "board.processor.cores.core.cpi": "cpi",
     "board.processor.cores.core.ipc": "ipc",
@@ -108,7 +108,8 @@ def parse_all(
             board_path = result_dir / "board.pc.com_1.device"
             with board_path.open() as board_file:
                 board_last_line = board_file.readlines()[-1].strip()
-            if board_last_line != "Loading new script...":
+            # if board_last_line != "Loading new script...":
+            if board_last_line == "finish runspec with ret code $?":
                 print(f"Warning: {board_path} might encounter an error")
                 print(board_last_line)
             # Parse stats file
@@ -125,9 +126,9 @@ def parse_all(
                     )
                 )
                 if len(split_lines) != expected_stats:
-                    print(f"Do not have all roi for {stats_path}")
+                    print(f"Do not have all roi for {stats_path}\n")
             else:
-                print(f"Do not have roi for {stats_path}")
+                print(f"Do not have roi for {stats_path}\n")
         df = pd.concat(df_list)
         df["setup"] = setup_name
         setup_df_list.append(df)
@@ -227,28 +228,28 @@ def main(
             benchmark_list=benchmark_list,
             ckpt_id_list=list(range(begin_cpt, begin_cpt + num_cpt))
         )
-        df.to_csv(output_dir / "test.csv")
+        df.to_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}.csv")
     else:
-        df = pd.read_csv(output_dir / "test.csv")
+        df = pd.read_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}.csv")
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["ipc"])
-        mean_df.to_csv(output_dir / "separate_input_mean_ipc.csv")
-        overhead_df.to_csv(output_dir / "separate_input_overhead_ipc.csv", float_format="%.10f")
+        mean_df.to_csv(output_dir / f"separate_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        overhead_df.to_csv(output_dir / f"separate_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
         print(overhead_df.mean(axis=0))
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["ipc"])
-        mean_df.to_csv(output_dir / "merge_input_mean_ipc.csv")
-        overhead_df.to_csv(output_dir / "merge_input_overhead_ipc.csv", float_format="%.10f")
+        mean_df.to_csv(output_dir / f"merge_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        overhead_df.to_csv(output_dir / f"merge_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
         print(overhead_df.mean(axis=0))
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["cpi"])
-        mean_df.to_csv(output_dir / "separate_input_mean_cpi.csv")
-        overhead_df.to_csv(output_dir / "separate_input_overhead_cpi.csv", float_format="%.10f")
+        mean_df.to_csv(output_dir / f"separate_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        overhead_df.to_csv(output_dir / f"separate_input_overhead_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
         print(overhead_df.mean(axis=0))
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["cpi"])
-        mean_df.to_csv(output_dir / "merge_input_mean_cpi.csv")
-        overhead_df.to_csv(output_dir / "merge_input_overhead_cpi.csv", float_format="%.10f")
+        mean_df.to_csv(output_dir / f"merge_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        overhead_df.to_csv(output_dir / f"merge_input_overhead_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
         print(overhead_df.mean(axis=0))
 
         # cal_overhead(df, "cpi", True)
