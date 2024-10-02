@@ -131,7 +131,7 @@ spec2017_intrate_bench_list = [
     "531.deepsjeng_r",
     "541.leela_r",
     "548.exchange2_r",
-    "557.xz_r",
+    # "557.xz_r",
     "999.specrand_ir",
 ]
 
