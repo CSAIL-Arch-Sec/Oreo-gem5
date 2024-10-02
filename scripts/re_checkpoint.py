@@ -37,9 +37,9 @@ def re_one_checkpoint(
     )
 
     if ret:
-        print(f"Failed restoring from one checkpoint, ret = {ret}!!!")
+        print(f"Failed restoring from one checkpoint, ret = {ret} {protect_args} {delta_args} {exp_script_path}!!!")
     else:
-        print("Successfully restoring from one checkpoint.")
+        print(f"Successfully restoring from one checkpoint {protect_args} {delta_args} {exp_script_path}.")
 
 
 def get_script(module_delta: int, user_delta: int):
