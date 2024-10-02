@@ -45,7 +45,9 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
 
 
 def gen_lebench_script_single_bench(bench_id: int, output_dir: Path):
-    s = f"cd /home/gem5/LEBench-Sim\n" \
+    s = f"cd /home/gem5/experiments/modules\n"\
+        f"insmod set_protection.ko user_delta=32\n"\
+        f"cd /home/gem5/LEBench-Sim\n" \
         f"rm -f lebench_stats.csv\n" \
         f"./bin/LEBench-hook {bench_id} 1\n" \
         f"m5 writefile {lebench_result_name}\n" \
