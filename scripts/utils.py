@@ -412,7 +412,7 @@ def gen_protect_args(input: str):
     return {
         "protect_kaslr": data[0],
         "protect_module_kaslr": data[1],
-        "protect_user_aslr": data[2]
+        "protect_user_aslr": data[2] # NOTE: this argument is deparated
     }
 
 

@@ -146,27 +146,6 @@ def gen_spec_script_path_list(
     return result
 
 
-def gen_spec2017_script_full(
-        bench_name: str, size: str,
-        output_dir: Path,
-):
-    s = (
-        f"cd /home/gem5/spec2017\n"
-        f"source shrc\n"
-        f"m5 resetstats\n"
-        f"runcpu --size {size} --iterations 1 --config myconfig.x86.cfg --define gcc_dir=\"/usr\" --noreportable --nobuild {bench_name}\n"
-        # f"echo 'finish runspec with ret code $?'\n"
-        f"m5 dumpresetstats\n"
-        f"m5 exit\n"
-    )
-
-    output_path = output_dir / f"{bench_name}.rcS"
-    with output_path.open(mode="w") as output_file:
-        output_file.write(s)
-
-    return output_path
-
-
 def gen_spec2017_script_path_list(
         bench_name_list: list, size: str,
         gen_fun
@@ -174,52 +153,6 @@ def gen_spec2017_script_path_list(
     output_dir = script_dir / "spec2017_scripts"
     output_dir.mkdir(exist_ok=True)
     return list(map(lambda x: gen_fun(x, size, output_dir), bench_name_list))
-
-
-def gen_spec2006_script_single_bench(
-        bench_name: str, size: str, output_dir: Path,
-        warmup_ns: int = 10 ** 9,
-        sim_ns: int = 10 ** 9,
-):
-    # warmup_ns = 10 ** 10
-    # warmup_ns = 10 ** 9
-    # sim_ns = 10 ** 9
-
-    reset_wait_ns = 1000000
-    exit_wait_ns = 5000000
-
-    s = (
-        f"cd /home/gem5/spec2006\n"
-        f"source shrc\n"
-        f"ls\n"
-        # f"m5 resetstats\n"
-        # f"m5 dumpstats\n"
-        f"m5 exit {warmup_ns + sim_ns + exit_wait_ns} &\n"
-        f"m5 resetstats {reset_wait_ns} &\n"
-        f"m5 dumpresetstats {warmup_ns + reset_wait_ns} &\n"
-        f"m5 dumpstats {warmup_ns + sim_ns + reset_wait_ns} &\n"
-        # f"echo hh\n"
-        # f"sleep 1\n"
-        f"runspec --size {size} --iterations 1 --config myconfig.cfg --noreportable --nobuild {bench_name}\n"
-        f"echo 'finish runspec with ret code $?'\n"
-        # f"m5 exit\n"
-    )
-
-    output_path = output_dir / f"{bench_name}.rcS"
-    with output_path.open(mode="w") as output_file:
-        output_file.write(s)
-
-    return output_path
-
-
-def gen_spec2006_script_path_list(
-        bench_name_list: list, size: str,
-        warmup_ns: int = 10 ** 9,
-        sim_ns: int = 10 ** 9,
-):
-    output_dir = script_dir / "spec_scripts"
-    output_dir.mkdir(exist_ok=True)
-    return list(map(lambda x: gen_spec2006_script_single_bench(x, size, output_dir, warmup_ns=warmup_ns, sim_ns=sim_ns), bench_name_list))
 
 
 def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
@@ -262,11 +195,6 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     default=12,
 )
 @click.option(
-    "--spec-size",
-    type=click.STRING,
-    default="ref"
-)
-@click.option(
     "--user-delta",
     type=click.INT,
     default=32,
@@ -289,13 +217,13 @@ def main(
         begin_cpt: int,
         num_cpt: int,
         num_cores: int,
-        spec_size: str,
         user_delta: int,
         warmup_ns: int,
         sim_ns: int,
 ):
     if copy_spec_cmd:
         copy_all_spec_cmd(
+            # This is a hard code ip for a local vm that does not work for others
             "gem5@172.16.65.128",
             script_dir / "spec_cmd",
             spec2017_intrate_bench_list
@@ -313,7 +241,6 @@ def main(
     sim_setup_base = [
         ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, ""],
         ["fast", "", "kvm", "o3", "1,1,1", "c,c,0", None, ""],
-        # ["fast", "", "kvm", "o3", "1,1,1", "c,c,1", None, ""],
     ]
 
     sim_setup = []
@@ -334,8 +261,6 @@ def main(
     run_bench_list = spec2017_intrate_bench_list
     bench_input_id_list = [ None ] * len(run_bench_list)
 
-    # exp_script_path_list = gen_spec2006_script_path_list(run_bench_list, spec_size, warmup_ns=warmup_ns, sim_ns=sim_ns)
-    # exp_script_path_list = gen_spec2017_script_path_list(run_bench_list, spec_size, gen_spec2017_script_full)
     exp_script_path_list = gen_spec_script_path_list(
         bench_name_list=run_bench_list, bench_input_id_list=bench_input_id_list,
         user_delta=user_delta,
