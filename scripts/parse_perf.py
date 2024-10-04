@@ -134,9 +134,14 @@ def get_overhead_df_helper(df: pd.DataFrame, col: ColName, prefix: ColNamePrefix
 
 def get_overhead_df(df: pd.DataFrame):
     # cols = [col for col in all_data.columns if col not in [ColName.mean, ColName.closest_k]]
+    # df_list = [
+    #     [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).mean(), ColNamePrefix.mean],
+    #     [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).median(), ColNamePrefix.median]
+    # ]
+
     df_list = [
-        [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).mean(), ColNamePrefix.mean],
-        [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean, ColName.closest_k]].groupby([ColName.setup, ColName.bench_id, ColName.name]).median(), ColNamePrefix.median]
+        [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean]].groupby([ColName.setup, ColName.bench_id, ColName.name]).mean(), ColNamePrefix.mean],
+        [df[[ColName.setup, ColName.bench_id, ColName.name, ColName.mean]].groupby([ColName.setup, ColName.bench_id, ColName.name]).median(), ColNamePrefix.median]
     ]
 
     # print(df_list[0][0])
@@ -144,7 +149,8 @@ def get_overhead_df(df: pd.DataFrame):
 
     overhead_df = pd.DataFrame()
     for df, prefix in df_list:
-        for col in [ColName.closest_k, ColName.mean]:
+        # for col in [ColName.closest_k, ColName.mean]:
+        for col in [ColName.mean]:
             get_overhead_df_helper(df, col, prefix, overhead_df)
 
     overhead_df.loc[(len(overhead_df.index), "Avg"), :] = overhead_df.mean()
