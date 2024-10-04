@@ -88,12 +88,12 @@ def main():
     path_1_c = proj_dir / "result/restore_ko_111_0c0c00/blindside_1_0c_/trace.out.gz"
     path_1_d = proj_dir / "result/restore_ko_111_0c0c00/blindside_1_0d_/trace.out.gz"
 
-    output_dir = script_dir / "plot"
+    output_dir = script_dir / "plot" / "trace"
 
-    grep_file(path_0_c, output_dir / "000_0c_2", match_list)
-    grep_file(path_0_d, output_dir / "000_0d_2", match_list)
-    grep_file(path_1_c, output_dir / "111_0c_2", match_list)
-    grep_file(path_1_d, output_dir / "111_0d_2", match_list)
+    grep_file(path_0_c, output_dir / "baseline_valid", match_list)
+    grep_file(path_0_d, output_dir / "baseline_invalid", match_list)
+    grep_file(path_1_c, output_dir / "oreo_valid", match_list)
+    grep_file(path_1_d, output_dir / "oreo_invalid", match_list)
 
 
 if __name__ == '__main__':
