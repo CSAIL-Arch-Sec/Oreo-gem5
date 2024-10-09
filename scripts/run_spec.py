@@ -93,16 +93,22 @@ def gen_spec_script_scheduled(
         warmup_ns: int = 10 ** 9,
         sim_ns: int = 10 ** 9,
 ):
-    reset_wait_ns = 1000000
+    reset_wait_ns = 10000000
     exit_wait_ns = 10000000
+
+    dump_step = 5 * (10 ** 8)
+    dump_ns_list = list(range(dump_step, warmup_ns + dump_step, dump_step))
+    dump_str_list = map(lambda x: f"m5 dumpresetstats {x + reset_wait_ns} &", dump_ns_list)
+    dump_str = "\n".join(dump_str_list)
 
     s = (
         f"cd /home/gem5/experiments/modules\n"
         f"insmod set_protection.ko user_delta={user_delta}\n"
         f"cd {cwd}\n"
-        f"m5 exit {warmup_ns + sim_ns + exit_wait_ns} &\n"
+        f"m5 exit {warmup_ns + sim_ns + reset_wait_ns + exit_wait_ns} &\n"
         f"m5 resetstats {reset_wait_ns} &\n"
-        f"m5 dumpresetstats {warmup_ns + reset_wait_ns} &\n"
+        f"{dump_str}\n"
+        # f"m5 dumpresetstats {warmup_ns + reset_wait_ns} &\n"
         f"m5 dumpstats {warmup_ns + sim_ns + reset_wait_ns} &\n"
         f"{cmd}\n"
         f"echo 'finish runspec with ret code $?'\n"
