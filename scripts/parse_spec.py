@@ -2,6 +2,8 @@ from utils import *
 import click
 import pandas as pd
 import re
+import seaborn as sns
+import matplotlib.pyplot as plt
 from pprint import pprint
 
 term_str = "term"
@@ -148,28 +150,39 @@ def cal_mean_overhead(df: pd.DataFrame, group_columns: list, overhead_terms: lis
     overhead_df = pd.DataFrame(index=baseline_df.index)
     for term in overhead_terms:
         overhead_df[term] = (oreo_df[term] - baseline_df[term]) / baseline_df[term] * 100
+        overhead_df[f"Baseline {term}"] = baseline_df[term]
+        overhead_df[f"Oreo {term}"] = oreo_df[term]
     return mean_df, overhead_df
 
 
-def cal_overhead(df: pd.DataFrame, term_name: str, need_avg: bool):
-    if need_avg:
-        df[term_name] = (df[f"0.{term_name}"] + df[f"1.{term_name}"]) / 2
+def plot_mean(mean_df: pd.DataFrame, overhead_df: pd.DataFrame, y_name: str, output_path: Path):
+    plt.figure()
+    sns.set_theme(style="ticks", palette="pastel", font_scale=1)
+    ax = sns.barplot(mean_df, x="name", y=y_name, hue="setup")
+    ax.set(xlabel=None, ylabel=f"{y_name.upper()}")
+    print(list(overhead_df[y_name]))
+    labels = [f"{x:,.2f}" for x in list(overhead_df[y_name])]
+    print(labels)
+    ax.bar_label(ax.containers[1], labels=labels, fontsize=10)
+    # for container in ax.containers:
+    #     ax.bar_label(container, labels=labels)
+    # ax.yaxis.set_major_locator(MultipleLocator(2))
+    ax.grid()
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig(output_path)
 
-    baseline_df = df.loc[df["setup"] == "Baseline"]
-    oreo_df = df.loc[df["setup"] == "Oreo"]
 
-    baseline_df.set_index("name", inplace=True)
-    oreo_df.set_index("name", inplace=True)
-    # print(baseline_df)
-    # print(oreo_df)
-
-    cmp_df = pd.DataFrame()
-    cmp_df["Baseline"] = baseline_df[term_name]
-    cmp_df["Oreo"] = oreo_df[term_name]
-    cmp_df = cmp_df[cmp_df[["Baseline", "Oreo"]].notnull().all(1)]
-    cmp_df["Overhead"] = (cmp_df["Oreo"] - cmp_df["Baseline"]) / cmp_df["Baseline"]
-    print(cmp_df)
-    print(cmp_df.mean())
+def plot_overhead(overhead_df: pd.DataFrame, y_name: str, output_path: Path):
+    plt.figure()
+    sns.set_theme(style="ticks", palette="pastel", font_scale=1)
+    ax = sns.barplot(overhead_df, x="name", y=y_name)
+    ax.set(xlabel=None, ylabel=f"{y_name.upper()} Difference (%)")
+    # ax.yaxis.set_major_locator(MultipleLocator(2))
+    ax.grid()
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig(output_path)
 
 
 @click.command()
@@ -232,28 +245,28 @@ def main(
     else:
         df = pd.read_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}.csv")
 
-        mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["ipc"])
-        mean_df.to_csv(output_dir / f"separate_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
-        overhead_df.to_csv(output_dir / f"separate_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
-        print(overhead_df.mean(axis=0))
+        # mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["ipc"])
+        # mean_df.to_csv(output_dir / f"separate_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        # overhead_df.to_csv(output_dir / f"separate_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
+        # print(overhead_df.mean(axis=0))
 
         mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["ipc"])
         mean_df.to_csv(output_dir / f"merge_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
         overhead_df.to_csv(output_dir / f"merge_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
         print(overhead_df.mean(axis=0))
+        y_name = "ipc"
+        plot_mean(mean_df, overhead_df, y_name, output_dir / f"merge_input_mean_{y_name}_{begin_cpt}_{begin_cpt + num_cpt}.pdf")
+        plot_overhead(overhead_df, y_name, output_dir / f"merge_input_overhead_{y_name}_{begin_cpt}_{begin_cpt + num_cpt}.pdf")
 
-        mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["cpi"])
-        mean_df.to_csv(output_dir / f"separate_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
-        overhead_df.to_csv(output_dir / f"separate_input_overhead_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
-        print(overhead_df.mean(axis=0))
-
-        mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["cpi"])
-        mean_df.to_csv(output_dir / f"merge_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
-        overhead_df.to_csv(output_dir / f"merge_input_overhead_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
-        print(overhead_df.mean(axis=0))
-
-        # cal_overhead(df, "cpi", True)
-        # cal_overhead(df, "ipc", True)
+        # mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["cpi"])
+        # mean_df.to_csv(output_dir / f"separate_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        # overhead_df.to_csv(output_dir / f"separate_input_overhead_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
+        # print(overhead_df.mean(axis=0))
+        #
+        # mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["cpi"])
+        # mean_df.to_csv(output_dir / f"merge_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        # overhead_df.to_csv(output_dir / f"merge_input_overhead_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
+        # print(overhead_df.mean(axis=0))
 
 
 if __name__ == '__main__':
