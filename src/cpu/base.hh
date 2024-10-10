@@ -154,6 +154,14 @@ public:
                addr < regionStart[region] + regionSize[region];
     }
 
+    bool isKaslrRegionAddr(Addr addr) const {
+        bool result = false;
+        for (size_t i = 0; i < NumKaslrRegionType; i++) {
+            result |= isKaslrRegionAddr(addr, i);
+        }
+        return result;
+    }
+
     Addr getKaslrDeltaFromPC(Addr corrAddr) const {
         for (size_t i = 0; i < NumKaslrRegionType; i++) {
             if (isKaslrRegionAddr(corrAddr, i)) {
@@ -949,6 +957,9 @@ protected:
         statistics::Scalar numInsts;
         statistics::Scalar numOps;
 
+        /* Number of simulated instructions with PC needs to be masked */
+        statistics::Scalar numInstsNeedMask;
+
         /* Number of instructions committed that are not NOP or prefetches */
         statistics::Scalar numInstsNotNOP;
         statistics::Scalar numOpsNotNOP;
@@ -959,6 +970,9 @@ protected:
 
         /* Number of committed memory references. */
         statistics::Scalar numMemRefs;
+
+        /* Number of committed memory references with address needs to be masked */
+        statistics::Scalar numMemRefsNeedMask;
 
         /* Number of float instructions */
         statistics::Scalar numFpInsts;

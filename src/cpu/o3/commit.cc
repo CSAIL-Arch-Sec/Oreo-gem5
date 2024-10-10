@@ -1644,6 +1644,10 @@ Commit::updateComInstStats(const DynInstPtr &inst)
     if (!inst->isMicroop() || inst->isLastMicroop()) {
         cpu->commitStats[tid]->numInsts++;
         cpu->baseStats.numInsts++;
+
+        if (cpu->isKaslrRegionAddr(inst->pcState().instAddr())) {
+            cpu->commitStats[tid]->numInstsNeedMask++;
+        }
     }
     cpu->commitStats[tid]->numOps++;
 
@@ -1663,6 +1667,10 @@ Commit::updateComInstStats(const DynInstPtr &inst)
     //
     if (inst->isMemRef()) {
         cpu->commitStats[tid]->numMemRefs++;
+
+        if (cpu->isKaslrRegionAddr(inst->realAddr)) {
+            cpu->commitStats[tid]->numMemRefsNeedMask++;
+        }
 
         if (inst->isLoad()) {
             cpu->commitStats[tid]->numLoadInsts++;
