@@ -161,7 +161,7 @@ def plot_mean(mean_df: pd.DataFrame, overhead_df: pd.DataFrame, y_name: str, out
     ax = sns.barplot(mean_df, x="name", y=y_name, hue="setup")
     ax.set(xlabel=None, ylabel=f"{y_name.upper()}")
     print(list(overhead_df[y_name]))
-    labels = [f"{x:,.2f}" for x in list(overhead_df[y_name])]
+    labels = [f"{x:,.2f}%" for x in list(overhead_df[y_name])]
     print(labels)
     ax.bar_label(ax.containers[1], labels=labels, fontsize=10)
     # for container in ax.containers:
