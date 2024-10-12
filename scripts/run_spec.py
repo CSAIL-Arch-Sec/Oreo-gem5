@@ -99,7 +99,7 @@ def gen_spec_script_scheduled(
         f"cd /home/gem5/experiments/modules\n"
         f"insmod set_protection.ko user_delta={user_delta}\n"
         f"cd {cwd}\n"
-        f"m5 exit {warmup_ns + sim_ns + exit_wait_ns} &\n"
+        f"m5 exit {warmup_ns + sim_ns + exit_wait_ns}\n"
         f"m5 dumpresetstats {sim_ns} {sim_ns}\n"
         f"{cmd}\n"
         f"echo 'finish runspec with ret code $?'\n"
