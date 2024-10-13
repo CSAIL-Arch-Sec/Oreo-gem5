@@ -127,7 +127,7 @@ def parse_all(
                         name=benchmark, input_id=input_id, ckpt_id=ckpt_id,
                     )
                 )
-                if len(split_lines) != expected_stats:
+                if len(split_lines) < expected_stats:
                     print(f"Do not have all roi for {stats_path}\n")
             else:
                 print(f"Do not have roi for {stats_path}\n")
@@ -191,6 +191,14 @@ def plot_overhead(overhead_df: pd.DataFrame, y_name: str, output_path: Path):
     is_flag=True,
 )
 @click.option(
+    "--roi-idx",
+    type=click.INT,
+)
+@click.option(
+    "--expected-stats",
+    type=click.INT,
+)
+@click.option(
     "--begin-cpt",
     type=click.INT,
     default=0,
@@ -202,6 +210,7 @@ def plot_overhead(overhead_df: pd.DataFrame, y_name: str, output_path: Path):
 )
 def main(
         parse_raw: bool,
+        roi_idx: int, expected_stats: int,
         begin_cpt: int, num_cpt: int,
 ):
     raw_result_dir = proj_dir / "result"
@@ -234,8 +243,10 @@ def main(
     if parse_raw:
         df = parse_all(
             input_dir=raw_result_dir,
-            roi_idx=1,
-            expected_stats=3,
+            # roi_idx=1,
+            roi_idx=roi_idx,
+            # expected_stats=3,
+            expected_stats=expected_stats,
             core_id=None,
             setup_map=default_setup_map,
             benchmark_list=benchmark_list,
