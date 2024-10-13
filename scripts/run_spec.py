@@ -206,6 +206,11 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     type=click.INT,
     default=1000000000
 )
+@click.option(
+    "--spec-selector",
+    type=click.INT,
+    default=0,
+)
 def main(
         copy_spec_cmd: bool,
         convert_spec_cmd: bool,
@@ -217,6 +222,7 @@ def main(
         user_delta: int,
         warmup_ns: int,
         sim_ns: int,
+        spec_selector: int,
 ):
     if copy_spec_cmd:
         copy_all_spec_cmd(
@@ -255,7 +261,12 @@ def main(
     # run_bench_list = [ "557.xz_r" ]
     # bench_input_id_list = [[2]]
 
-    run_bench_list = spec2017_intrate_bench_list
+    if spec_selector == 0:
+        run_bench_list = spec2017_intrate_bench_list
+    elif spec_selector == 1:
+        run_bench_list = spec2017_intrate_bench_list_first_half
+    else:
+        run_bench_list = spec2017_intrate_bench_list_second_half
     bench_input_id_list = [ None ] * len(run_bench_list)
 
     exp_script_path_list = gen_spec_script_path_list(
