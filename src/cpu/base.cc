@@ -1018,6 +1018,8 @@ CommitCPUStats::CommitCPUStats(statistics::Group *parent, int thread_id)
              "Number of ops (including micro ops) committed (thread level)"),
     ADD_STAT(numInstsNeedMask, statistics::units::Count::get(),
              "Number of instructions committed (thread level) with PC needs to be masked"),
+    ADD_STAT(numInstsUser, statistics::units::Count::get(),
+             "Number of user space instructions committed (thread level)"),
     ADD_STAT(numInstsNotNOP, statistics::units::Count::get(),
              "Number of instructions committed excluding NOPs or prefetches"),
     ADD_STAT(numOpsNotNOP, statistics::units::Count::get(),

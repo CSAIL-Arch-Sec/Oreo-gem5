@@ -960,6 +960,9 @@ protected:
         /* Number of simulated instructions with PC needs to be masked */
         statistics::Scalar numInstsNeedMask;
 
+        /* Number of simulated user space instructions */
+        statistics::Scalar numInstsUser;
+
         /* Number of instructions committed that are not NOP or prefetches */
         statistics::Scalar numInstsNotNOP;
         statistics::Scalar numOpsNotNOP;

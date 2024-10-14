@@ -1648,6 +1648,10 @@ Commit::updateComInstStats(const DynInstPtr &inst)
         if (cpu->isKaslrRegionAddr(inst->pcState().instAddr())) {
             cpu->commitStats[tid]->numInstsNeedMask++;
         }
+
+        if ((int64_t) inst->pcState().instAddr() >= 0) {
+            cpu->commitStats[tid]->numInstsUser++;
+        }
     }
     cpu->commitStats[tid]->numOps++;
 
