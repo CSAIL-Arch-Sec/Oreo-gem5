@@ -15,7 +15,11 @@ useful_columns = {
     "board.processor.cores.core.numCycles": "numCycles",
     "board.processor.cores.core.idleCycles": "idleCycles",
     # "board.processor.cores.core.quiesceCycles": "quiesceCycles",
-    "board.processor.cores.core.commitStats0.numInsts": "committedInsts",
+    "board.processor.cores.core.commitStats0.numInsts": "numInsts",
+    "board.processor.cores.core.commitStats0.numInstsNeedMask": "numInstsNeedMask",
+    "board.processor.cores.core.commitStats0.numInstsUser": "numInstsUser",
+    "board.processor.cores.core.commitStats0.numMemRefs": "numMemRefs",
+    "board.processor.cores.core.commitStats0.numMemRefsNeedMask": "numMemRefsNeedMask",
     "board.processor.cores.core.cpi": "cpi",
     "board.processor.cores.core.ipc": "ipc",
 }
@@ -208,18 +212,30 @@ def plot_overhead(overhead_df: pd.DataFrame, y_name: str, output_path: Path):
     type=click.INT,
     default=0,
 )
+@click.option(
+    "--spec-selector",
+    type=click.STRING,
+    default="0",
+)
 def main(
         parse_raw: bool,
         roi_idx: int, expected_stats: int,
         begin_cpt: int, num_cpt: int,
+        spec_selector: str,
 ):
     raw_result_dir = proj_dir / "result"
     output_dir = script_dir / "spec_output"
     output_dir.mkdir(exist_ok=True)
 
     # benchmark_list = ["401.bzip2"]
-    benchmark_list = spec2017_intrate_bench_list
-    benchmark_suffix = "_0"
+    if spec_selector == "0":
+        benchmark_list = spec2017_intrate_bench_list
+    elif spec_selector == "1":
+        benchmark_list = spec2017_intrate_bench_list_first_half
+    elif spec_selector == "2":
+        benchmark_list = spec2017_intrate_bench_list_second_half
+    else:
+        benchmark_list = spec2017_intrate_bench_list
 
     # import subprocess
     # server_path = Path("/home/shixins/protect-kaslr/gem5-new/result")
@@ -252,9 +268,18 @@ def main(
             benchmark_list=benchmark_list,
             ckpt_id_list=list(range(begin_cpt, begin_cpt + num_cpt))
         )
-        df.to_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        df.to_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}_{spec_selector}.csv")
     else:
-        df = pd.read_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        spec_selector_list = spec_selector.split("_")
+        df_list = []
+        for x in spec_selector_list:
+            df_list.append(pd.read_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}_{x}.csv"))
+        df = pd.concat(df_list)
+
+        if len(spec_selector_list) > 1:
+            df.to_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}_{spec_selector}.csv")
+        exit(0)
+        # df = pd.read_csv(output_dir / f"test_{begin_cpt}_{begin_cpt + num_cpt}.csv")
 
         # mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["ipc"])
         # mean_df.to_csv(output_dir / f"separate_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
