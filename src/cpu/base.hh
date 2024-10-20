@@ -120,6 +120,8 @@ class BaseCPU : public ClockedObject
     }
 
 public:
+    bool m5_reset_or_dump = false;
+
     enum KaslrRegionType : size_t
     {
         KaslrKernelRegion = 0,

@@ -99,8 +99,9 @@ def gen_spec_script_scheduled(
         f"cd /home/gem5/experiments/modules\n"
         f"insmod set_protection.ko user_delta={user_delta}\n"
         f"cd {cwd}\n"
-        f"m5 exit {warmup_ns + sim_ns + exit_wait_ns}\n"
-        f"m5 dumpresetstats {sim_ns} {sim_ns}\n"
+        # f"m5 exit {warmup_ns + sim_ns + exit_wait_ns}\n"
+        # f"m5 dumpresetstats {sim_ns} {sim_ns}\n"
+        f"m5 dumpresetstats\n"
         f"{cmd}\n"
         f"echo 'finish runspec with ret code $?'\n"
         f"sleep 1\n"
@@ -257,6 +258,7 @@ def main(
     # run_bench_list = [ "401.bzip2" ]
     # run_bench_list = spec2006_bench_list
     # run_bench_list = [ "525.x264_r" ]
+    # bench_input_id_list = [[0]]
 
     # run_bench_list = [ "557.xz_r" ]
     # bench_input_id_list = [[2]]

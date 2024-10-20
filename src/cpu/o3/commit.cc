@@ -68,6 +68,8 @@
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
 #include "debug/PTW.hh"
+#include "arch/x86/pseudo_inst_abi.hh"
+#include "sim/pseudo_inst.hh"
 
 namespace gem5
 {
@@ -1247,6 +1249,28 @@ Commit::commitInsts()
 //                    }
 //                    std::cout << std::endl;
 //                }
+
+                // Start from the first m5op, dump and reset stats on every 1B user insts
+                static bool user_inst_count_started = false;
+                static uint64_t dump_count = 0;
+                const uint64_t step = 1000000000;
+                const uint64_t exit = 12;
+                if (cpu->m5_reset_or_dump && !user_inst_count_started) {
+                    user_inst_count_started = true;
+                    std::cout << "@@@ start_dump_reset_count at " << curTick() << std::endl;
+                }
+                if (user_inst_count_started && (!head_inst->isMicroop() || head_inst->isLastMicroop()) && (int64_t) pc[tid]->instAddr() > 0) {
+                    auto count_diff = (uint64_t) cpu->commitStats[tid]->numInstsUser.value();
+                    if (count_diff % step == 0) {
+                        std::cout << "@@@ try to call dumpresetstats " << curTick() << " " << count_diff << " " << dump_count++ << std::endl;
+                        pseudo_inst::dumpresetstats(thread[tid]->getTC(), 0, 0);
+//                        pseudo_inst::pseudoInst<X86PseudoInstABI, true>(thread[tid]->getTC(), M5OP_DUMP_RESET_STATS);
+                    }
+                    if (dump_count > exit) {
+                        std::cout << "@@@ try to call m5exit" << curTick() << " " << count_diff << std::endl;
+                        pseudo_inst::m5exit(thread[tid]->getTC(), 0);
+                    }
+                }
 
                 if (start_print) {
                     if ((int64_t) pc[tid]->instAddr() < 0) total_kernel_op++;

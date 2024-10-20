@@ -350,6 +350,9 @@ dumpresetstats(ThreadContext *tc, Tick delay, Tick period)
     Tick when = curTick() + delay * sim_clock::as_int::ns;
     Tick repeat = period * sim_clock::as_int::ns;
 
+    tc->getCpuPtr()->m5_reset_or_dump = true;
+    std::cout << "@@@ dumpresetstats " << when << " " << repeat << std::endl;
+
     statistics::schedStatEvent(true, true, when, repeat);
 }
 
