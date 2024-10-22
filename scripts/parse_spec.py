@@ -30,14 +30,15 @@ default_setup_map = {
 }
 
 
-def get_useful_columns(core_id: int | None):
-    if core_id is None:
+def get_useful_columns(core_id_list: list[int] | None):
+    if core_id_list is None:
         return useful_columns
 
     result = {}
     for key, value in useful_columns.items():
-        new_key = re.sub(r"core0", f"core{core_id}", key)
-        result[new_key] = value
+        for core_id in core_id_list:
+            new_key = re.sub(r"cores", f"cores{core_id}", key)
+            result[new_key] = f"{value}{core_id}"
     return result
 
 
@@ -69,8 +70,8 @@ def parse_stats_line(line: str):
         return None
 
 
-def parse_stats_lines(lines: list, core_id: int | None, **kwargs):
-    core_useful_columns = get_useful_columns(core_id)
+def parse_stats_lines(lines: list, core_id_list: list[int] | None, **kwargs):
+    core_useful_columns = get_useful_columns(core_id_list)
     data = []
     for line in lines:
         x = parse_stats_line(line)
@@ -82,8 +83,8 @@ def parse_stats_lines(lines: list, core_id: int | None, **kwargs):
     df = df[core_useful_columns.values()]
     for key, value in kwargs.items():
         df[key] = value
-    if core_id is not None:
-        df["core-id"] = core_id
+    # if core_id is not None:
+    #     df["core-id"] = core_id
     # print(df)
     return df
 
@@ -102,11 +103,13 @@ def parse_all(
         setup_dir = input_dir / setup_dir_name
         for result_dir in setup_dir.iterdir():
             result_dir_name = result_dir.name
-            x = re.search(r"([\w.]+)-input(\d+)-delta\d+_(\d+)", result_dir_name)
+            x = re.search(r"([\w.]+)-input(\d+)-delta(\d+)_(\d+)", result_dir_name)
             if x is None:
                 continue
-            benchmark, input_id, ckpt_id = x.groups()
+            benchmark, input_id, delta, ckpt_id = x.groups()
             if benchmark not in benchmark_list:
+                continue
+            if delta != "32":
                 continue
             if int(ckpt_id) not in ckpt_id_list:
                 continue
@@ -139,15 +142,41 @@ def parse_all(
         df["setup"] = setup_name
         setup_df_list.append(df)
     df = pd.concat(setup_df_list)
+    df["user ipc"] = df["numInstsUser"].astype(int) / df["numCycles"].astype(int)
+    df["user cpi"] = df["numCycles"].astype(int) / df["numInstsUser"].astype(int)
     df.sort_values(["setup", "name", "input_id", "ckpt_id"], inplace=True)
     return df
+
+
+def get_mean(df: pd.DataFrame, group_by_setup: bool):
+    if group_by_setup:
+        mean_rows = df.groupby(["setup"]).mean(numeric_only=True).drop(columns="Unnamed: 0")
+        mean_rows.reset_index(inplace=True)
+    else:
+        mean_rows = df.mean(numeric_only=True).drop(columns="Unnamed: 0")
+    mean_rows["name"] = "Avg"
+    return pd.concat([df, mean_rows])
 
 
 def cal_mean_overhead(df: pd.DataFrame, group_columns: list, overhead_terms: list):
     mean_df = df.groupby(group_columns).mean()
     mean_df.reset_index(inplace=True)
+    # mean_rows = df.groupby(["setup"]).mean(numeric_only=True).drop(columns="Unnamed: 0")
+    # mean_rows["name"] = "Avg"
+    # mean_rows.reset_index(inplace=True)
+    # print(mean_rows)
+    # mean_df = pd.concat([mean_df, mean_rows])
+    # mean_df.loc[len(mean_df.index)] = mean_df.mean(numeric_only=True)
+    # mean_df.loc[len(mean_df.index) - 1, "name"] = "Avg"
     baseline_df = mean_df.loc[mean_df["setup"] == "Baseline"]
     oreo_df = mean_df.loc[mean_df["setup"] == "Oreo"]
+
+    mean_rows = df.groupby(["setup"]).mean(numeric_only=True)
+    mean_rows.reset_index(inplace=True)
+    mean_rows["name"] = "Avg"
+    mean_df = pd.concat([mean_df, mean_rows])
+    # print(mean_df)
+
     index_columns = [ x for x in group_columns if x != "setup" ]
     baseline_df.set_index(index_columns, inplace=True)
     oreo_df.set_index(index_columns, inplace=True)
@@ -156,15 +185,25 @@ def cal_mean_overhead(df: pd.DataFrame, group_columns: list, overhead_terms: lis
         overhead_df[term] = (oreo_df[term] - baseline_df[term]) / baseline_df[term] * 100
         overhead_df[f"Baseline {term}"] = baseline_df[term]
         overhead_df[f"Oreo {term}"] = oreo_df[term]
-    return mean_df, overhead_df
+    # print(overhead_df)
+    overhead_mean_rows = overhead_df.mean(numeric_only=True)
+    overhead_df.loc["Avg"] = overhead_mean_rows
+    # print(overhead_df)
+
+    oreo_df["Masked Ratio"] = (oreo_df["numInstsNeedMask"] + oreo_df["numMemRefsNeedMask"]) / (oreo_df["numInsts"] + oreo_df["numMemRefs"]) * 100
+    oreo_df.loc["Min"] = oreo_df.min(numeric_only=True)
+
+    return mean_df, overhead_df, oreo_df
 
 
 def plot_mean(mean_df: pd.DataFrame, overhead_df: pd.DataFrame, y_name: str, output_path: Path):
     plt.figure(figsize=(8, 4))
     sns.set_theme(style="ticks", palette="pastel", font_scale=1)
-    ax = sns.barplot(mean_df, x="name", y=y_name, hue="setup")
-    ax.set(xlabel=None, ylabel=f"{y_name.upper()}")
-    plt.ylim(0, 2)
+    ax = sns.barplot(mean_df, x="name", y=y_name, hue="setup", palette=["m", "g"])
+    ax.set(xlabel=None, ylabel=f"{(y_name.split()[-1]).upper()}")
+    ax.legend(title=None)
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+    plt.ylim(0, 2.25)
     print(list(overhead_df[y_name]))
     labels = [f"{x:,.2f}%" for x in list(overhead_df[y_name])]
     print(labels)
@@ -188,6 +227,18 @@ def plot_overhead(overhead_df: pd.DataFrame, y_name: str, output_path: Path):
     plt.xticks(rotation=90)
     plt.tight_layout()
     plt.savefig(output_path)
+
+
+def plot_everything(df: pd.DataFrame, y_name: str, output_dir: Path, suffix: str):
+    y_name_no_space = y_name.replace(" ", "_")
+    mean_df, overhead_df, oreo_df = cal_mean_overhead(df, ["name", "setup"], [y_name])
+    mean_df.to_csv(output_dir / f"merge_input_mean_{y_name_no_space}{suffix}.csv")
+    overhead_df.to_csv(output_dir / f"merge_input_overhead_{y_name_no_space}{suffix}.csv", float_format="%.10f")
+    oreo_df.to_csv(output_dir / f"merge_input_oreo_{y_name_no_space}{suffix}.csv", float_format="%.10f")
+    print(overhead_df.mean(axis=0))
+    # y_name = "ipc"
+    plot_mean(mean_df, overhead_df, y_name, output_dir / f"merge_input_mean_{y_name_no_space}{suffix}.pdf")
+    plot_overhead(overhead_df, y_name, output_dir / f"merge_input_overhead_{y_name_no_space}{suffix}.pdf")
 
 
 @click.command()
@@ -287,13 +338,17 @@ def main(
         # overhead_df.to_csv(output_dir / f"separate_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
         # print(overhead_df.mean(axis=0))
 
-        mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["ipc"])
-        mean_df.to_csv(output_dir / f"merge_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
-        overhead_df.to_csv(output_dir / f"merge_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
-        print(overhead_df.mean(axis=0))
-        y_name = "ipc"
-        plot_mean(mean_df, overhead_df, y_name, output_dir / f"merge_input_mean_{y_name}_{begin_cpt}_{begin_cpt + num_cpt}.pdf")
-        plot_overhead(overhead_df, y_name, output_dir / f"merge_input_overhead_{y_name}_{begin_cpt}_{begin_cpt + num_cpt}.pdf")
+        plot_everything(df, "ipc", output_dir, f"_{begin_cpt}_{begin_cpt + num_cpt}")
+        plot_everything(df, "user ipc", output_dir, f"_{begin_cpt}_{begin_cpt + num_cpt}")
+        plot_everything(df, "user cpi", output_dir, f"_{begin_cpt}_{begin_cpt + num_cpt}")
+
+        # mean_df, overhead_df = cal_mean_overhead(df, ["name", "setup"], ["ipc"])
+        # mean_df.to_csv(output_dir / f"merge_input_mean_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv")
+        # overhead_df.to_csv(output_dir / f"merge_input_overhead_ipc_{begin_cpt}_{begin_cpt + num_cpt}.csv", float_format="%.10f")
+        # print(overhead_df.mean(axis=0))
+        # y_name = "ipc"
+        # plot_mean(mean_df, overhead_df, y_name, output_dir / f"merge_input_mean_{y_name}_{begin_cpt}_{begin_cpt + num_cpt}.pdf")
+        # plot_overhead(overhead_df, y_name, output_dir / f"merge_input_overhead_{y_name}_{begin_cpt}_{begin_cpt + num_cpt}.pdf")
 
         # mean_df, overhead_df = cal_mean_overhead(df, ["name", "input_id", "setup"], ["cpi"])
         # mean_df.to_csv(output_dir / f"separate_input_mean_cpi_{begin_cpt}_{begin_cpt + num_cpt}.csv")
