@@ -31,6 +31,7 @@ def re_one_checkpoint(
         use_uuid=False,
         uuid_str=uuid_str,
         suffix=suffix,
+        disk_root_partition="",
         clear_tlb_roi=clear_tlb_roi,
         **protect_arg_dict,
         **delta_arg_dict,

@@ -13,6 +13,7 @@ def gen_one_checkpoint(
         add_checkpoint: str,
         use_uuid: bool,
         suffix: str,
+        disk_root_partition: str,
 ):
     protect_arg_dict = gen_protect_args(protect_args)
     delta_arg_dict = gen_delta_args(delta_args)
@@ -28,6 +29,7 @@ def gen_one_checkpoint(
         use_uuid=use_uuid,
         uuid_str="",
         suffix=suffix,
+        disk_root_partition=disk_root_partition,
         **protect_arg_dict,
         **delta_arg_dict,
     )
@@ -40,10 +42,16 @@ def gen_one_checkpoint(
         return output_dir
 
 
-def main():
+@click.command()
+@click.option(
+    "--disk-root-partition",
+    type=click.STRING,
+    default="1",
+)
+def main(disk_root_partition: str):
     args_list = [
-        ["kvm", 1, "0,0,0", "c,c,0", "", False, ""],
-        ["kvm", 1, "1,1,1", "c,c,0", "", False, ""],
+        ["kvm", 1, "0,0,0", "c,c,0", "", False, "", disk_root_partition],
+        ["kvm", 1, "1,1,1", "c,c,0", "", False, "", disk_root_partition],
     ]
 
     with multiprocessing.Pool(1) as p:

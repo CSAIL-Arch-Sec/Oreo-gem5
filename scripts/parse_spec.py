@@ -197,7 +197,7 @@ def cal_mean_overhead(df: pd.DataFrame, group_columns: list, overhead_terms: lis
 
 
 def plot_mean(mean_df: pd.DataFrame, overhead_df: pd.DataFrame, y_name: str, output_path: Path):
-    plt.figure(figsize=(8, 4))
+    plt.figure(figsize=(8, 3))
     sns.set_theme(style="ticks", palette="pastel", font_scale=1)
     ax = sns.barplot(mean_df, x="name", y=y_name, hue="setup", palette=["m", "g"])
     ax.set(xlabel=None, ylabel=f"{(y_name.split()[-1]).upper()}")

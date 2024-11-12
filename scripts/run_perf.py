@@ -6,7 +6,7 @@ import click
 import multiprocessing
 
 
-def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
+def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool, disk_root_partition: str):
     def get_gen_setup(
             sim_option: str, debug_flags: str,
             starting_core: str, swith_core: str,
@@ -20,7 +20,7 @@ def gen_cpt_for_sim_setup(sim_setup_list: list, use_uuid: bool):
             cpt_str = ""
         else:
             cpt_str = str(cpt_tick)
-        return [starting_core, 2, protect_args, delta_args, cpt_str, use_uuid, suffix]
+        return [starting_core, 2, protect_args, delta_args, cpt_str, use_uuid, suffix, disk_root_partition]
 
     gen_setup_list = list(map(lambda x: get_gen_setup(*x), sim_setup_list))
     print(gen_setup_list)
@@ -79,6 +79,11 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
 
 @click.command()
 @click.option(
+    "--disk-root-partition",
+    type=click.STRING,
+    default="1",
+)
+@click.option(
     "--gen-cpt",
     is_flag=True,
 )
@@ -99,7 +104,7 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     type=click.INT,
     default=12,
 )
-def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores: int):
+def main(disk_root_partition: str, gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores: int):
     sim_setup_base = [
         # ["fast", "", "kvm", "o3", "0,0,0", "0,0,0", None, ""],
         ["fast", "", "kvm", "o3", "0,0,0", "c,c,0", None, ""],
@@ -127,7 +132,7 @@ def main(gen_cpt: bool, use_uuid: bool, begin_cpt: int, num_cpt: int, num_cores:
 
     if gen_cpt:
         # NOTE: This would change sim_setup!!!
-        ret = gen_cpt_for_sim_setup(sim_setup_list=sim_setup, use_uuid=use_uuid)
+        ret = gen_cpt_for_sim_setup(sim_setup_list=sim_setup, use_uuid=use_uuid, disk_root_partition=disk_root_partition)
         if ret:
             print("Error when generating checkpoint. Stopping...")
             return

@@ -4,6 +4,7 @@ import os
 import sys
 from uuid import uuid4
 import glob
+import re
 
 from gem5.utils.requires import requires
 from gem5.components.boards.x86_board import X86Board
@@ -26,12 +27,12 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
 )
 
-parser.add_argument(
-    "--disk-root-partition",
-    type=str,
-    default="2",
-    help="root partiton of disk image"
-)
+# parser.add_argument(
+#     "--disk-root-partition",
+#     type=str,
+#     # default="1",
+#     help="root partiton of disk image"
+# )
 
 parser.add_argument(
     "--clear-tlb-roi",
@@ -207,6 +208,8 @@ board = X86Board(
     kaslr_offset=kaslr_offset,
 )
 
+disk_root_partition = re.search(r"root=/dev/sda(\d)", kernel_args).group(1)
+
 board.set_kernel_disk_workload(
     kernel=KernelResource(
         local_path=kernel_path
@@ -214,7 +217,7 @@ board.set_kernel_disk_workload(
     # disk_image=Resource("x86-ubuntu-18.04-img"),
     disk_image=DiskImageResource(
         local_path=disk_image_path,
-        root_partition=args.disk_root_partition
+        root_partition=disk_root_partition
     ),
     readfile=args.script,
     kernel_args=[kernel_args]

@@ -147,7 +147,7 @@ def add_kernel_disk_arguments(parser):
     parser.add_argument(
         "--disk-root-partition",
         type=str,
-        default="2",
+        # default="1",
         help="root partiton of disk image"
     )
 

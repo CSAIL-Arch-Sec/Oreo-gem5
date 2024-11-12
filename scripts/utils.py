@@ -317,6 +317,7 @@ def run_one_test(
         exp_script_path: Path,
         add_checkpoint: str,
         use_uuid: bool, uuid_str: str, suffix: str,
+        disk_root_partition: str,
         clear_tlb_roi: bool = False,
 ):
     if sim_option not in ["fast", "opt"]:
@@ -368,6 +369,9 @@ def run_one_test(
             f"--gem5-module-kaslr-delta={gem5_module_kaslr_delta}",
             f"--gem5-user-aslr-delta={gem5_user_aslr_delta}",
         ])
+
+    if sim_mode == SimMode.SAVE:
+        cmd.append(f"--disk-root-partition={disk_root_partition}")
 
     if clear_tlb_roi:
         cmd.append("--clear-tlb-roi")
