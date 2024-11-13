@@ -65,7 +65,17 @@ def parse_all_perf(
     "--parse-raw",
     is_flag=True,
 )
-def main(parse_raw: bool):
+@click.option(
+    "--begin-cpt",
+    type=click.INT,
+    default=0,
+)
+@click.option(
+    "--num-cpt",
+    type=click.INT,
+    default=0,
+)
+def main(parse_raw: bool, begin_cpt: int, num_cpt: int,):
     raw_result_dir = proj_dir / "result"
     output_dir = script_dir / "lebench_output"
     output_dir.mkdir(exist_ok=True)
@@ -85,18 +95,19 @@ def main(parse_raw: bool):
             core_id_list=[0, 1],
             setup_map=setup_map,
             benchmark_list=benchmark_list,
-            ckpt_id_list=[50]
+            ckpt_id_list=list(range(begin_cpt, begin_cpt + num_cpt))
         )
 
         df.to_csv(output_dir / "test.csv")
     else:
         df = pd.read_csv(output_dir / "test.csv")
-        df["Masked Ratio"] = ((df["numInstsNeedMask0"] + df["numInstsNeedMask1"] + df["numMemRefsNeedMask0"] + df["numMemRefsNeedMask1"]) /
-                              (df["numInsts0"] + df["numInsts1"] + df["numMemRefs0"] + df["numMemRefs1"]) * 100)
-        df.loc["Min"] = df.min(numeric_only=True)
-        df.loc["Max"] = df.max(numeric_only=True)
-        df.loc["Avg"] = df.mean(numeric_only=True)
-        df.to_csv(output_dir / "test_mask_ratio.csv")
+
+    df["Masked Ratio"] = ((df["numInstsNeedMask0"] + df["numInstsNeedMask1"] + df["numMemRefsNeedMask0"] + df["numMemRefsNeedMask1"]) /
+                          (df["numInsts0"] + df["numInsts1"] + df["numMemRefs0"] + df["numMemRefs1"]) * 100)
+    df.loc["Min"] = df.min(numeric_only=True)
+    df.loc["Max"] = df.max(numeric_only=True)
+    df.loc["Avg"] = df.mean(numeric_only=True)
+    df.to_csv(output_dir / "test_mask_ratio.csv")
 
 
 if __name__ == '__main__':
