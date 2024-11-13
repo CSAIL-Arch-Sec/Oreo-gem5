@@ -61,10 +61,10 @@ def parse_all_perf(
 
 
 @click.command()
-@click.option(
-    "--parse-raw",
-    is_flag=True,
-)
+# @click.option(
+#     "--parse-raw",
+#     is_flag=True,
+# )
 @click.option(
     "--begin-cpt",
     type=click.INT,
@@ -75,7 +75,7 @@ def parse_all_perf(
     type=click.INT,
     default=0,
 )
-def main(parse_raw: bool, begin_cpt: int, num_cpt: int,):
+def main(begin_cpt: int, num_cpt: int,):
     raw_result_dir = proj_dir / "result"
     output_dir = script_dir / "lebench_output"
     output_dir.mkdir(exist_ok=True)
@@ -87,20 +87,20 @@ def main(parse_raw: bool, begin_cpt: int, num_cpt: int,):
         "Oreo": "restore_ko_111_0c0c00"
     }
 
-    if parse_raw:
-        df = parse_all_perf(
-            input_dir=raw_result_dir,
-            roi_idx=1,
-            expected_stats=2,
-            core_id_list=[0, 1],
-            setup_map=setup_map,
-            benchmark_list=benchmark_list,
-            ckpt_id_list=list(range(begin_cpt, begin_cpt + num_cpt))
-        )
+    # if parse_raw:
+    df = parse_all_perf(
+        input_dir=raw_result_dir,
+        roi_idx=1,
+        expected_stats=2,
+        core_id_list=[0, 1],
+        setup_map=setup_map,
+        benchmark_list=benchmark_list,
+        ckpt_id_list=list(range(begin_cpt, begin_cpt + num_cpt))
+    )
 
-        df.to_csv(output_dir / "test.csv")
-    else:
-        df = pd.read_csv(output_dir / "test.csv")
+    df.to_csv(output_dir / "test.csv")
+
+    df = pd.read_csv(output_dir / "test.csv")
 
     df["Masked Ratio"] = ((df["numInstsNeedMask0"] + df["numInstsNeedMask1"] + df["numMemRefsNeedMask0"] + df["numMemRefsNeedMask1"]) /
                           (df["numInsts0"] + df["numInsts1"] + df["numMemRefs0"] + df["numMemRefs1"]) * 100)
