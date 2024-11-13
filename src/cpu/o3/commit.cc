@@ -1253,8 +1253,10 @@ Commit::commitInsts()
                 // Start from the first m5op, dump and reset stats on every 1B user insts
                 static bool user_inst_count_started = false;
                 static uint64_t dump_count = 0;
-                const uint64_t step = 1000000000;
-                const uint64_t exit = 12;
+                // const uint64_t step = 1000000000;
+                uint64_t step = cpu->specInstCountStep;
+                // const uint64_t exit = 12;
+                uint64_t exit = cpu->specInstWarmupStep;
                 if (cpu->m5_reset_or_dump && !user_inst_count_started) {
                     user_inst_count_started = true;
                     std::cout << "@@@ start_dump_reset_count at " << curTick() << std::endl;

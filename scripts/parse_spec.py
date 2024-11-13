@@ -132,6 +132,7 @@ def parse_all(
                     parse_stats_lines(
                         lines=lines, core_id=core_id,
                         name=benchmark, input_id=input_id, ckpt_id=ckpt_id,
+                        core_id_list=None,
                     )
                 )
                 if len(split_lines) < expected_stats:

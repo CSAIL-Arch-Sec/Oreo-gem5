@@ -90,8 +90,8 @@ def gen_spec_script_scheduled(
         cwd: str, cmd: str,
         output_path: Path,
         user_delta: int,
-        warmup_ns: int = 10 ** 9,
-        sim_ns: int = 10 ** 9,
+        # warmup_ns: int = 10 ** 9,
+        # sim_ns: int = 10 ** 9,
 ):
     exit_wait_ns = 10000000
 
@@ -116,8 +116,8 @@ def gen_spec_script_path_list(
         bench_name_list: list, bench_input_id_list: list,
         output_dir: Path,
         user_delta: int,
-        warmup_ns: int = 10 ** 9,
-        sim_ns: int = 10 ** 9,
+        # warmup_ns: int = 10 ** 9,
+        # sim_ns: int = 10 ** 9,
 ):
     output_dir.mkdir(exist_ok=True)
     all_cmd_dir = script_dir / "spec_cmd"
@@ -136,7 +136,7 @@ def gen_spec_script_path_list(
                 cmd=cmd_str,
                 user_delta=user_delta,
                 output_path=output_path,
-                warmup_ns=warmup_ns, sim_ns=sim_ns
+                # warmup_ns=warmup_ns, sim_ns=sim_ns
             )
             input_id_list = bench_input_id_list[k]
             if input_id_list is None or (i in input_id_list):
@@ -202,15 +202,25 @@ def gen_full_arg_list(sim_arg_list: list, exp_script_path_list: list):
     type=click.INT,
     default=32,
 )
+# @click.option(
+#     "--warmup-ns",
+#     type=click.INT,
+#     default=1000000000
+# )
+# @click.option(
+#     "--sim-ns",
+#     type=click.INT,
+#     default=1000000000
+# )
 @click.option(
-    "--warmup-ns",
+    "--spec-inst-count-step",
     type=click.INT,
-    default=1000000000
+    default=1000000000,
 )
 @click.option(
-    "--sim-ns",
+    "--spec-inst-warmup-step",
     type=click.INT,
-    default=1000000000
+    default=10,
 )
 @click.option(
     "--spec-selector",
@@ -227,8 +237,10 @@ def main(
         num_cpt: int,
         num_cores: int,
         user_delta: int,
-        warmup_ns: int,
-        sim_ns: int,
+        # warmup_ns: int,
+        # sim_ns: int,
+        spec_inst_count_step: int,
+        spec_inst_warmup_step: int,
         spec_selector: int,
 ):
     if copy_spec_cmd:
@@ -280,7 +292,8 @@ def main(
     exp_script_path_list = gen_spec_script_path_list(
         bench_name_list=run_bench_list, bench_input_id_list=bench_input_id_list,
         user_delta=user_delta,
-        output_dir=script_dir / "spec2017_scripts", warmup_ns=warmup_ns, sim_ns=sim_ns
+        output_dir=script_dir / "spec2017_scripts",
+        # warmup_ns=warmup_ns, sim_ns=sim_ns
     )
     for x in exp_script_path_list:
         print(x)
@@ -296,6 +309,10 @@ def main(
             s[7] = "default_" + s[8]
 
     args_list = gen_full_arg_list(sim_setup, exp_script_path_list)
+
+    for x in args_list:
+        x.extend([False, spec_inst_count_step, spec_inst_warmup_step])
+
     for x in args_list:
         print(x)
 

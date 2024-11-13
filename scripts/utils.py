@@ -319,6 +319,8 @@ def run_one_test(
         use_uuid: bool, uuid_str: str, suffix: str,
         disk_root_partition: str,
         clear_tlb_roi: bool = False,
+        spec_inst_count_step: int = 1000000000,
+        spec_inst_warmup_step: int = 10,
 ):
     if sim_option not in ["fast", "opt"]:
         print(f"Error: sim option {sim_option} is not supported!!!")
@@ -375,6 +377,12 @@ def run_one_test(
 
     if clear_tlb_roi:
         cmd.append("--clear-tlb-roi")
+
+    if sim_mode == SimMode.RESTORE:
+        cmd.extend([
+            f"--spec-inst-count-step={spec_inst_count_step}",
+            f"--spec-inst-warmup-step={spec_inst_warmup_step}",
+        ])
 
     cmd.extend(get_checkpoint_args(
         sim_mode,

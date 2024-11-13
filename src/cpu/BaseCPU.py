@@ -163,6 +163,8 @@ class BaseCPU(ClockedObject):
     protectUserAslr = Param.Bool(False, "Protect user ASLR or not")
     kaslrOffset = Param.UInt64(0, "KASLR offset")
     clearTlbRoi = Param.Bool(False, "Clear TLB at ROI")
+    specInstCountStep = Param.UInt64(1000000000, "Spec inst count step")
+    specInstWarmupStep = Param.UInt64(10, "Spec warmup steps")
     # [Shixin]
 
     icache_port = RequestPort("Instruction Port")

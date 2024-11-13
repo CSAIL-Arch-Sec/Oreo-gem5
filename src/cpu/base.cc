@@ -234,6 +234,8 @@ BaseCPU::BaseCPU(const Params &p, bool is_checker)
 
     // [Shixin] Config whether to clear tlb at the beginning of ROI
     clearTlbRoi = p.clearTlbRoi;
+    specInstCountStep = p.specInstCountStep;
+    specInstWarmupStep = p.specInstWarmupStep;
 }
 
 void

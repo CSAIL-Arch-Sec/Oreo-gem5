@@ -48,6 +48,8 @@ class SimpleCore(BaseCPUCore):
             protect_user_aslr: bool = False,
             kaslr_offset: int = 0,
             clear_tlb_roi: bool = False,
+            spec_inst_count_step: int = 1000000000,
+            spec_inst_warmup_step: int = 10,
     ):
         requires(isa_required=isa)
         super().__init__(
@@ -58,6 +60,8 @@ class SimpleCore(BaseCPUCore):
                 protect_user_aslr=protect_user_aslr,
                 kaslr_offset=kaslr_offset,
                 clear_tlb_roi=clear_tlb_roi,
+                spec_inst_count_step=spec_inst_count_step,
+                spec_inst_warmup_step=spec_inst_warmup_step,
             ),
             isa=isa,
         )
@@ -158,6 +162,8 @@ class SimpleCore(BaseCPUCore):
             protect_user_aslr: bool = False,
             kaslr_offset: int = 0,
             clear_tlb_roi: bool = False,
+            spec_inst_count_step: int = 1000000000,
+            spec_inst_warmup_step: int = 10,
     ) -> BaseCPUCore:
         """
         A factory used to return the SimObject core object given the cpu type,
@@ -194,6 +200,9 @@ class SimpleCore(BaseCPUCore):
         else:
             print("@@@ Do not clear TLB at ROI")
 
+        print("@@@ spec_inst_count_step = ", spec_inst_count_step)
+        print("@@@ spec_inst_warmup_step = ", spec_inst_warmup_step)
+
         if issubclass(to_return_cls, BaseCPU):
             return to_return_cls(
                 cpu_id=core_id,
@@ -202,6 +211,8 @@ class SimpleCore(BaseCPUCore):
                 protectUserAslr=protect_user_aslr,
                 kaslrOffset=kaslr_offset,
                 clearTlbRoi=clear_tlb_roi,
+                specInstCountStep=spec_inst_count_step,
+                specInstWarmupStep=spec_inst_warmup_step,
             )
 
         return to_return_cls(

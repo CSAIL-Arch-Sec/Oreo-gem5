@@ -14,6 +14,8 @@ def re_one_checkpoint(
         suffix: str,
         exp_script_path: Path = None,
         clear_tlb_roi: bool = False,
+        spec_inst_count_step: int = 1000000000,
+        spec_inst_warmup_step: int = 10,
 ):
     protect_arg_dict = gen_protect_args(protect_args)
     delta_arg_dict = gen_delta_args(delta_args)
@@ -33,6 +35,8 @@ def re_one_checkpoint(
         suffix=suffix,
         disk_root_partition="",
         clear_tlb_roi=clear_tlb_roi,
+        spec_inst_count_step=spec_inst_count_step,
+        spec_inst_warmup_step=spec_inst_warmup_step,
         **protect_arg_dict,
         **delta_arg_dict,
     )

@@ -40,6 +40,17 @@ parser.add_argument(
     help="Whether to clear TLB at ROI.",
 )
 
+parser.add_argument(
+    "--spec-inst-count-step",
+    type=int,
+    help="Spec inst count step.",
+)
+parser.add_argument(
+    "--spec-inst-warmup-step",
+    type=int,
+    help="Spec inst warmup steps.",
+)
+
 add_cpu_arguments(parser, default_type=CPUTypes.O3)
 
 add_run_script_arguments(parser)
@@ -195,6 +206,8 @@ processor = SimpleProcessor(
     protect_user_aslr=protect_user_aslr,
     kaslr_offset=kaslr_offset,
     clear_tlb_roi=args.clear_tlb_roi,
+    spec_inst_count_step=args.spec_inst_count_step,
+    spec_inst_warmup_step=args.spec_inst_warmup_step,
 )
 
 board = X86Board(

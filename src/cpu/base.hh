@@ -144,6 +144,9 @@ public:
 
     bool clearTlbRoi;
 
+    uint64_t specInstCountStep;
+    uint64_t specInstWarmupStep;
+
     bool isKaslrMaskedAddr(Addr addr, size_t region) const {
         return protectKaslr[region] &&
                addr >= regionStart[region] &&

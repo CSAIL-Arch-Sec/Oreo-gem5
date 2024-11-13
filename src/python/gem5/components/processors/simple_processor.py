@@ -48,6 +48,8 @@ class SimpleProcessor(BaseCPUProcessor):
         protect_user_aslr: bool = False,
         kaslr_offset: int = 0,
         clear_tlb_roi: bool = False,
+        spec_inst_count_step: int = 1000000000,
+        spec_inst_warmup_step: int = 10,
     ) -> None:
         """
         :param cpu_type: The CPU type for each type in the processor.
@@ -63,7 +65,9 @@ class SimpleProcessor(BaseCPUProcessor):
                            protect_module_kaslr=protect_module_kaslr,
                            protect_user_aslr=protect_user_aslr,
                            kaslr_offset=kaslr_offset,
-                           clear_tlb_roi=clear_tlb_roi)
+                           clear_tlb_roi=clear_tlb_roi,
+                           spec_inst_count_step=spec_inst_count_step,
+                           spec_inst_warmup_step=spec_inst_warmup_step)
                 for i in range(num_cores)
             ]
         )
