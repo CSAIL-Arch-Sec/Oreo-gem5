@@ -20,6 +20,10 @@ def main(num_cores: int):
     print(build_opt_gem5)
     subprocess.run(build_opt_gem5, shell=True, cwd=proj_dir)
 
+    build_m5 = f"scons build/x86/out/m5"
+    print(build_m5)
+    subprocess.run(build_m5, shell=True, cwd=(proj_dir / "util/m5"))
+
 
 if __name__ == '__main__':
     main()
