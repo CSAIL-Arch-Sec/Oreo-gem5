@@ -203,8 +203,12 @@ def plot_mean(mean_df: pd.DataFrame, overhead_df: pd.DataFrame, y_name: str, out
     ax = sns.barplot(mean_df, x="name", y=y_name, hue="setup", palette=["m", "g"])
     ax.set(xlabel=None, ylabel=f"{(y_name.split()[-1]).upper()}")
     ax.legend(title=None)
-    sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
-    plt.ylim(0, 2.25)
+    # sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+    baseline_df = mean_df.loc[mean_df["setup"] == "Baseline"]
+    print(baseline_df["name"])
+    labels = list(map(lambda x: x.split(".")[-1].split("_")[0], list(baseline_df["name"])))
+    ax.set_xticklabels(labels)
+    plt.ylim(0, 2.3)
     print(list(overhead_df[y_name]))
     labels = [f"{x:,.2f}%" for x in list(overhead_df[y_name])]
     print(labels)
