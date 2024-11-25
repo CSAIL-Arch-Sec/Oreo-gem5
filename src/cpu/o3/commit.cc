@@ -1057,14 +1057,14 @@ Commit::commitInsts()
                     if (checkPcDelta[tid] || cpu->protectKaslrMask(archPCAddr) != cpu->protectKaslrMask(updatePCAddr)) {
                         std::clog << "Tick " << std::hex << curTick() << " ArchPC " << origPC << " CorrPC " << updatePC << std::endl;
                         std::clog << std::hex << origPCDelta << "=>" << origNPCDelta << " " << updatePCDelta << "=>" << updateNPCDelta << std::endl;
-                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
+                        panic("### tick (%lx) cpu (%lx) ASLR violation at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
                               curTick(), cpu->cpuId(), tid,
                               cpu->totalInsts(),
                               archPCAddr, updatePCAddr);
                     } else {
                         std::clog << "Tick " << std::hex << curTick() << " ArchPC " << origPC << " CorrPC " << updatePC << std::endl;
                         std::clog << std::hex << origPCDelta << "=>" << origNPCDelta << " " << updatePCDelta << "=>" << updateNPCDelta << std::endl;
-                        warn("### tick (%lx) cpu (%lx) skip KASLR violation on non indirect branch at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
+                        warn("### tick (%lx) cpu (%lx) skip ASLR violation on non indirect branch at thread (%lx) (total inst: %lx) commit inst, arch pc: %lx, corr pc: %lx\n",
                               curTick(), cpu->cpuId(), tid,
                               cpu->totalInsts(),
                               archPCAddr, updatePCAddr);
@@ -1074,7 +1074,7 @@ Commit::commitInsts()
                     if (cpu->protectKaslrMask(archPCAddr) != cpu->protectKaslrMask(updatePCAddr)) {
                         std::clog << "Tick " << std::hex << curTick() << " ArchPC " << origPC << " CorrPC " << updatePC << std::endl;
                         std::clog << std::hex << origPCDelta << "=>" << origNPCDelta << " " << updatePCDelta << "=>" << updateNPCDelta << std::endl;
-                        panic("### tick (%lx) cpu (%lx) KASLR violation at thread (%lx) (total inst: %lx) commit inst origPC != corrPC\n",
+                        panic("### tick (%lx) cpu (%lx) ASLR violation at thread (%lx) (total inst: %lx) commit inst origPC != corrPC\n",
                               curTick(), cpu->cpuId(), tid,
                               cpu->totalInsts());
                     }
@@ -1100,7 +1100,7 @@ Commit::commitInsts()
                 /// KASLR security check for ld/st
                 if (head_inst->kaslrDMemDelayError()) {
                     if (head_inst->isDataPrefetch() || head_inst->isInstPrefetch()) {
-                        warn("### KASLR prefetch from address with incorrect KASLR offset"
+                        warn("### ASLR prefetch from address with incorrect ASLR offset"
                              "at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
                              num_committed,
                              pc[tid]->instAddr(), head_inst->realAddr);
@@ -1111,7 +1111,7 @@ Commit::commitInsts()
                                pc[tid]->instAddr(), pc[tid]->microPC()
                         );
                         // [Shixin] TODO: Add raising fault here!
-                        panic("### KASLR ld/st violation at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
+                        panic("### ASLR ld/st violation at %lx commit inst, pc: %lx, ld/st addr: %lx\n",
                               num_committed,
                               pc[tid]->instAddr(), head_inst->realAddr);
                     }
