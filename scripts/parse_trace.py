@@ -1,5 +1,6 @@
 import re
 import gzip
+import filecmp
 from utils import *
 from pathlib import Path
 
@@ -68,6 +69,20 @@ def extract_dram(line: str):
     return x.group(1) + "\n"
 
 
+def cmp_one_pair_traces(input_dir1: Path, input_dir2: Path, filename: str):
+    equal = filecmp.cmp(input_dir1 / filename, input_dir2 / filename)
+    if not equal:
+        print(f"{input_dir1.name} {input_dir2.name} have different {filename} trace")
+    else:
+        print(f"{input_dir1.name} {input_dir2.name} have the same {filename} trace")
+    return equal
+
+
+def cmp_traces(input_dir1: Path, input_dir2: Path, file_list: list):
+    for file in file_list:
+        cmp_one_pair_traces(input_dir1, input_dir2, file)
+
+
 def main():
     match_list = [
         ["Branch predictor predicted", "branchPred", extract_branch_pred],
@@ -94,6 +109,11 @@ def main():
     grep_file(path_0_d, output_dir / "baseline_invalid", match_list)
     grep_file(path_1_c, output_dir / "oreo_valid", match_list)
     grep_file(path_1_d, output_dir / "oreo_invalid", match_list)
+
+    trace_list = list(map(lambda x: x[1], match_list))
+    cmp_traces(output_dir / "baseline_valid", output_dir / "baseline_invalid", trace_list)
+    cmp_traces(output_dir / "oreo_valid", output_dir / "oreo_invalid", trace_list)
+
 
 
 if __name__ == '__main__':
