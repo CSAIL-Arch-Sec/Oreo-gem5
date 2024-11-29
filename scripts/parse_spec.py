@@ -294,25 +294,6 @@ def main(
     else:
         benchmark_list = spec2017_intrate_bench_list
 
-    # import subprocess
-    # server_path = Path("/home/shixins/protect-kaslr/gem5-new/result")
-    # for setup_dir_name in default_setup_map.values():
-    #     result_path = raw_result_dir / setup_dir_name
-    #     for benchmark in spec2006_bench_list:
-    #         cmd = f"scp -r shixins@dobby.csail.mit.edu:{server_path / setup_dir_name / f"{benchmark}{benchmark_suffix}"} {result_path}"
-    #         print(cmd)
-    #         subprocess.run(cmd, shell=True)
-
-    # for setup_dir_name in default_setup_map.values():
-    #     for benchmark in spec2006_bench_list:
-    #         output_path = raw_result_dir / setup_dir_name / f"{benchmark}{benchmark_suffix}" / "board.pc.com_1.device"
-    #         with output_path.open() as output_file:
-    #             s = output_file.read()
-    #         if re.search("Error loading parse.pl!", s) is not None:
-    #             print("Fail", setup_dir_name, benchmark)
-    #         else:
-    #             print("Success", setup_dir_name, benchmark)
-
     if parse_raw:
         df = parse_all(
             input_dir=raw_result_dir,
